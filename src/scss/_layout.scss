@@ -1,0 +1,82 @@
+.item-icons {
+  height: 32px;
+  width: 32px;
+}
+
+.pixelated-icon {
+  image-rendering: pixelated;
+}
+
+.logo-dark {
+  background: url('../assets/images/logo/logo-dark.png');
+  height: 80px;
+  width: 336px;
+  align-self: center;
+}
+
+.logo-light {
+  background: url('../assets/images/logo/logo-light.png');
+  height: 80px;
+  width: 336px;
+  align-self: center;
+}
+
+.flex-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.flex-item {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.list-container {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.grid-cols-auto-fit {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  overflow-y: auto;
+}
+
+.chest-items {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.chest-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: #888;
+  font-style: italic;
+  text-align: center;
+  min-height: 50px;
+}
+
+.chest-placeholder.light {
+  border: 2px dashed #ccc;
+}
+
+.chest-placeholder.dark {
+  border: 2px dashed #555;
+}
+.item-dragging {
+  opacity: 1; /* Do not hide the original component */
+}
+
+.Toastify__toast-body {
+  white-space: nowrap;
+}
+
+.Toastify__toast-container {
+  width: auto!important;
+}
