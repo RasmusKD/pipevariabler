@@ -5,6 +5,9 @@ import ItemComponent from './ItemComponent';
 import { FaTimes, FaEdit, FaRegCopy } from 'react-icons/fa';
 import { toast, Zoom } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import itemsData from './data.json';
+import Portal from './Portal';
+import { pixelatedIcons, useCompassImage, useClockImage } from './utils';
 
 interface Item {
   item: string;
@@ -16,6 +19,7 @@ interface Chest {
   id: number;
   label: string;
   items: Item[];
+  icon: string;
 }
 
 interface ChestComponentProps {
@@ -25,6 +29,7 @@ interface ChestComponentProps {
   isDarkMode: boolean;
   removeChest: (id: number) => void;
   updateChestLabel: (id: number, label: string) => void;
+  updateChestIcon: (id: number, icon: string) => void;
   removeItemFromChest: (chestId: number, item: Item) => void;
   moveChest: (dragIndex: number, hoverIndex: number) => void;
 }
@@ -36,10 +41,27 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
   isDarkMode,
   removeChest,
   updateChestLabel,
+  updateChestIcon,
   removeItemFromChest,
   moveChest
 }) => {
   const ref = useRef<HTMLDivElement>(null);
+  const iconButtonRef = useRef<HTMLDivElement>(null);
+  const compassRef = useRef<HTMLDivElement>(null);
+  const [compassImage, setCompassImage] = useState<string>(chest.icon === 'compass' ? 'compass_00.png' : chest.icon === 'recovery_compass' ? 'recovery_compass_00.png' : `${chest.icon}.png`);
+  const [clockImage, setClockImage] = useState<string>(chest.icon === 'clock' ? 'clock_00.png' : `${chest.icon}.png`);
+  const dragPreviewRef = useRef<HTMLImageElement>(new Image());
+
+  console.log("Chest Component Rendered: ", chest);
+
+  useCompassImage(chest.icon, setCompassImage, compassRef);
+  useClockImage(chest.icon, setClockImage);
+
+  useEffect(() => {
+    const img = dragPreviewRef.current;
+    img.src = `assets/images/icons/${chest.icon === 'compass' || chest.icon === 'recovery_compass' ? compassImage : chest.icon === 'clock' ? clockImage : `${chest.icon}.png`}`;
+    console.log("Image Updated: ", img.src);
+  }, [compassImage, clockImage, chest.icon]);
 
   const [{ isOver }, drop] = useDrop({
     accept: [ItemType.ITEM, ItemType.CHEST],
@@ -83,22 +105,34 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
     }),
   });
 
-  const [{ isDragging }, drag] = useDrag({
+  const [{ isDragging }, drag, preview] = useDrag({
     type: ItemType.CHEST,
     item: { type: ItemType.CHEST, index },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
+    canDrag: () => !isEditing,
   });
+
+  useEffect(() => {
+    preview(dragPreviewRef.current);
+    console.log("Drag Preview Set");
+  }, [preview]);
 
   drag(drop(ref));
 
   const [isEditing, setIsEditing] = useState(false);
-  const [chestLabel, setChestLabel] = useState(chest.label);
+  const [chestLabel, setChestLabel] = useState(chest.label || "Barrel");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; positionAbove: boolean }>({ top: 0, left: 0, positionAbove: false });
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const availableIcons = Array.from(new Set(itemsData.items.map(item => item.image.replace('.png', ''))));
+  const filteredIcons = availableIcons.filter(icon => icon.toLowerCase().includes(searchTerm.toLowerCase().replace(/ /g, '_')));
 
   useEffect(() => {
     if (isEditing) {
-      setChestLabel(chest.label);
+      setChestLabel(chest.label || "Barrel");
     }
   }, [isEditing, chest.label]);
 
@@ -108,7 +142,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
   };
 
   const handleCopy = () => {
-    const command = `/se 3 ${chest.items.map(item => item.variable).join(';')}`;
+    const command = `/signedit 3 ${chest.items.map(item => item.variable).join(';')}`;
     navigator.clipboard.writeText(command);
     toast.dismiss();
     toast.success(
@@ -131,6 +165,80 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
     );
   };
 
+  const calculateDropdownPosition = () => {
+    if (iconButtonRef.current) {
+      const rect = iconButtonRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const dropdownHeight = 300;
+      const spaceBelow = viewportHeight - rect.bottom;
+      const positionAbove = spaceBelow < dropdownHeight;
+      const top = positionAbove ? rect.top + window.scrollY - dropdownHeight : rect.bottom + window.scrollY;
+      const left = rect.left + window.scrollX;
+      setDropdownPosition({ top, left, positionAbove });
+    }
+  };
+
+  const toggleDropdown = () => {
+    calculateDropdownPosition();
+    setDropdownOpen(!dropdownOpen);
+  };
+
+  useEffect(() => {
+    const handleScrollOrResize = () => {
+      if (dropdownOpen) {
+        calculateDropdownPosition();
+        const iconButtonRect = iconButtonRef.current?.getBoundingClientRect();
+        const chestRect = ref.current?.getBoundingClientRect();
+        if (iconButtonRect && chestRect) {
+          const isIconVisible = (
+            iconButtonRect.top >= 0 &&
+            iconButtonRect.left >= 0 &&
+            iconButtonRect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+            iconButtonRect.right <= (window.innerWidth || document.documentElement.clientWidth)
+          );
+          if (!isIconVisible) {
+            setDropdownOpen(false);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScrollOrResize);
+    window.addEventListener('resize', handleScrollOrResize);
+    const chestDiv = ref.current?.parentElement;
+    chestDiv?.addEventListener('scroll', handleScrollOrResize);
+
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrResize);
+      window.removeEventListener('resize', handleScrollOrResize);
+      chestDiv?.removeEventListener('scroll', handleScrollOrResize);
+    };
+  }, [dropdownOpen]);
+
+  const selectIcon = (icon: string) => {
+    updateChestIcon(chest.id, icon);
+    setDropdownOpen(false);
+  };
+
+  const IconComponent: React.FC<{ icon: string }> = ({ icon }) => {
+    const [compassImage, setCompassImage] = useState<string>(icon === 'compass' ? 'compass_00.png' : icon === 'recovery_compass' ? 'recovery_compass_00.png' : `${icon}.png`);
+    const [clockImage, setClockImage] = useState<string>(icon === 'clock' ? 'clock_00.png' : `${icon}.png`);
+    const compassRef = useRef<HTMLDivElement>(null);
+
+    useCompassImage(icon, setCompassImage, compassRef);
+    useClockImage(icon, setClockImage);
+
+    return (
+      <div ref={compassRef} className="cursor-pointer flex items-center justify-center" onClick={() => selectIcon(icon)}>
+        <img
+          src={`assets/images/icons/${icon === 'compass' || icon === 'recovery_compass' ? compassImage : icon === 'clock' ? clockImage : `${icon}.png`}`}
+          alt={icon}
+          className={`w-8 h-8 ${pixelatedIcons.includes(icon) ? 'pixelated-icon' : ''}`}
+        />
+      </div>
+    );
+  };
+
   return (
     <div
       ref={ref}
@@ -141,16 +249,50 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
         #{index + 1}
       </div>
       <div className="flex justify-between items-center gap-2">
-        <img src="assets/images/icons/chest.png" alt="chest icon" className="item-icons" />
+        <div className="relative" ref={iconButtonRef}>
+          <div ref={compassRef}>
+            <img
+              src={`assets/images/icons/${chest.icon === 'compass' || chest.icon === 'recovery_compass' ? compassImage : chest.icon === 'clock' ? clockImage : `${chest.icon}.png`}`}
+              alt="icon"
+              className={`item-icons cursor-pointer ${pixelatedIcons.includes(chest.icon) ? 'pixelated-icon' : ''}`}
+              onClick={toggleDropdown}
+            />
+          </div>
+          {dropdownOpen && (
+            <Portal style={{ position: 'absolute', top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 1000 }}>
+              <div
+                className={`w-48 p-2 flex flex-col gap-2 ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-200 border-gray-200 text-black'} rounded shadow-lg`}
+                style={{ maxHeight: '300px'}}
+              >
+                <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 1)' : 'rgba(255, 255, 255, 1)' }}>
+                  <input
+                    type="text"
+                    placeholder="Søg..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className={`w-full p-2 rounded ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}
+                  />
+                </div>
+                <div className={`${isDarkMode ? 'dark-theme' : 'light-theme'}`} style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0', overflow: 'auto' }}>
+                  {filteredIcons.map((icon) => (
+                    <IconComponent key={icon} icon={icon} />
+                  ))}
+                </div>
+              </div>
+            </Portal>
+          )}
+        </div>
         {isEditing ? (
           <input
             className={`border p-1 flex-1 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white'}`}
             value={chestLabel}
             onChange={(e) => setChestLabel(e.target.value)}
+            onBlur={handleSave}
+            autoFocus
           />
         ) : (
           <>
-            <span className="flex-1">{chest.label}</span>
+            <span className="flex-1" onDoubleClick={() => setIsEditing(true)}>{chest.label || "Barrel"}</span>
             <button className="text-blue-500 hover:text-blue-700" onClick={() => setIsEditing(true)}>
               <FaEdit />
             </button>

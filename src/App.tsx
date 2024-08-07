@@ -23,6 +23,7 @@ interface Chest {
   id: number;
   label: string;
   items: Item[];
+  icon: string;
 }
 
 interface Profile {
@@ -35,7 +36,14 @@ const App: React.FC = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [chests, setChests] = useState<Chest[]>(() => {
     const savedProfile = localStorage.getItem('profile');
-    return savedProfile ? JSON.parse(savedProfile).chests : [];
+    if (savedProfile) {
+      const profile = JSON.parse(savedProfile);
+      return profile.chests.map((chest: any) => ({
+        ...chest,
+        icon: chest.icon || 'barrel',
+      }));
+    }
+    return [];
   });
   const [profileName, setProfileName] = useState<string>(() => {
     const savedProfile = localStorage.getItem('profile');
@@ -89,7 +97,10 @@ const App: React.FC = () => {
     const savedProfile = localStorage.getItem('profile');
     if (savedProfile) {
       const profile = JSON.parse(savedProfile);
-      setChests(profile.chests);
+      setChests(profile.chests.map((chest: any) => ({
+        ...chest,
+        icon: chest.icon || 'barrel',
+      })));
       setProfileName(profile.name);
     }
   }, []);
@@ -167,7 +178,10 @@ const App: React.FC = () => {
 
   const confirmImportProfile = () => {
     if (pendingProfile) {
-      setChests(pendingProfile.chests);
+      setChests(pendingProfile.chests.map((chest: any) => ({
+        ...chest,
+        icon: chest.icon || 'barrel',
+      })));
       setProfileName(pendingProfile.name);
       setPendingProfile(null);
       setImportProfileModalVisible(false);
@@ -218,7 +232,7 @@ const App: React.FC = () => {
     setUndoStack(prevStack => [...prevStack, chests]);
     setRedoStack([]);
     const newChestId = chests.length > 0 ? Math.max(...chests.map(chest => chest.id)) + 1 : 1;
-    const newChest = { id: newChestId, label: `Kiste ${newChestId}`, items: [] };
+    const newChest = { id: newChestId, label: 'Barrel', items: [], icon: 'barrel' };
     setChests(prevChests => [...prevChests, newChest]);
   }, [chests]);
 
@@ -241,6 +255,10 @@ const App: React.FC = () => {
 
   const updateChestLabel = useCallback((id: number, label: string) => {
     setChests(prevChests => prevChests.map(chest => (chest.id === id ? { ...chest, label } : chest)));
+  }, []);
+
+  const updateChestIcon = useCallback((id: number, icon: string) => {
+    setChests(prevChests => prevChests.map(chest => (chest.id === id ? { ...chest, icon } : chest)));
   }, []);
 
   const removeItemFromChest = useCallback((chestId: number, item: Item) => {
@@ -375,7 +393,7 @@ const App: React.FC = () => {
       const [movedChest] = newChests.splice(dragIndex, 1);
       newChests.splice(hoverIndex, 0, movedChest);
 
-      // Update chest IDs to match their new indices
+
       return newChests.map((chest, idx) => ({ ...chest, id: idx + 1 }));
     });
   };
@@ -502,6 +520,44 @@ const App: React.FC = () => {
                       >
                         Ny Profil
                       </button>
+                      <div className="border-t border-dashed my-2"></div>
+                      <div className="flex gap-2 p-2">
+                        <div className="relative group">
+                          <a href="https://github.com/RasmusKD" target="_blank" rel="noopener noreferrer">
+                            <img
+                              src="assets/images/icons/whotoldyou.png"
+                              alt="WhoToldYou"
+                              className="w-6 h-6 cursor-pointer group-hover:hidden"
+                            />
+                            <img
+                              src="assets/images/icons/whotoldyou2.png"
+                              alt="WhoToldYou Hover"
+                              className="w-6 h-6 cursor-pointer hidden group-hover:block"
+                            />
+                          </a>
+                          <div className="absolute label-pos bottom-full mb-1 w-40 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <div className="relative">
+                              <div className="arrow-down"></div>
+                              <div className="bg-gray-900 text-white py-2 rounded">
+                                <p className="font-bold">WhoToldYou</p>
+                                <p className="text-sm">Udvikling af siden</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="relative group">
+                          <img src="assets/images/icons/iver.png" alt="Iver" className="w-6 h-6 cursor-pointer" />
+                          <div className="absolute label-pos bottom-full mb-1 w-40 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <div className="relative">
+                              <div className="arrow-down"></div>
+                              <div className="bg-gray-900 text-white py-2 rounded">
+                                <p className="font-bold">Iver</p>
+                                <p className="text-sm">Idé og Design</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -517,6 +573,7 @@ const App: React.FC = () => {
                   isDarkMode={isDarkMode}
                   removeChest={confirmDeleteChest}
                   updateChestLabel={updateChestLabel}
+                  updateChestIcon={updateChestIcon}
                   removeItemFromChest={removeItemFromChest}
                   moveChest={moveChest}
                 />

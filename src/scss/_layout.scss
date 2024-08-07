@@ -70,7 +70,7 @@
   border: 2px dashed #555;
 }
 .item-dragging {
-  opacity: 1; /* Do not hide the original component */
+  opacity: 1;
 }
 
 .Toastify__toast-body {
@@ -79,4 +79,23 @@
 
 .Toastify__toast-container {
   width: auto!important;
+}
+.group .arrow-down {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid #1f2937;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 100%;
+}
+
+.group:hover .arrow-down {
+  visibility: visible;
+}
+
+.label-pos {
+  right: -72px;
 }
