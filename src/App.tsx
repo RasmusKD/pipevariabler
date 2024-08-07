@@ -393,7 +393,6 @@ const App: React.FC = () => {
       const [movedChest] = newChests.splice(dragIndex, 1);
       newChests.splice(hoverIndex, 0, movedChest);
 
-
       return newChests.map((chest, idx) => ({ ...chest, id: idx + 1 }));
     });
   };
@@ -522,38 +521,26 @@ const App: React.FC = () => {
                       </button>
                       <div className="border-t border-dashed my-2"></div>
                       <div className="flex gap-2 p-2">
-                        <div className="relative group">
-                          <a href="https://github.com/RasmusKD" target="_blank" rel="noopener noreferrer">
-                            <img
-                              src="assets/images/icons/whotoldyou.png"
-                              alt="WhoToldYou"
-                              className="w-6 h-6 cursor-pointer group-hover:hidden"
-                            />
-                            <img
-                              src="assets/images/icons/whotoldyou2.png"
-                              alt="WhoToldYou Hover"
-                              className="w-6 h-6 cursor-pointer hidden group-hover:block"
-                            />
-                          </a>
-                          <div className="absolute label-pos bottom-full mb-1 w-40 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <div className="relative">
-                              <div className="arrow-down"></div>
-                              <div className="bg-gray-900 text-white py-2 rounded">
-                                <p className="font-bold">WhoToldYou</p>
-                                <p className="text-sm">Udvikling af siden</p>
-                              </div>
+                        <div className="group">
+                          <div
+                            className="head-icon head-icon-1 cursor-pointer"
+                            onClick={() => window.open('https://github.com/RasmusKD', '_blank')}
+                          />
+                          <div className="label-container">
+                            <div className="arrow-down"></div>
+                            <div className="bg-gray-900 text-white py-2 rounded">
+                              <p className="font-bold">WhoToldYou</p>
+                              <p className="text-sm">Udvikling af siden</p>
                             </div>
                           </div>
                         </div>
-                        <div className="relative group">
-                          <img src="assets/images/icons/iver.png" alt="Iver" className="w-6 h-6 cursor-pointer" />
-                          <div className="absolute label-pos bottom-full mb-1 w-40 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <div className="relative">
-                              <div className="arrow-down"></div>
-                              <div className="bg-gray-900 text-white py-2 rounded">
-                                <p className="font-bold">Iver</p>
-                                <p className="text-sm">Idé og Design</p>
-                              </div>
+                        <div className="group">
+                          <div className="head-icon head-icon-2 cursor-pointer" />
+                          <div className="label-container">
+                            <div className="arrow-down"></div>
+                            <div className="bg-gray-900 text-white py-2 rounded">
+                              <p className="font-bold">Iver</p>
+                              <p className="text-sm">Idé og Design</p>
                             </div>
                           </div>
                         </div>

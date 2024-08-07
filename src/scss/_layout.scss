@@ -7,18 +7,19 @@
   image-rendering: pixelated;
 }
 
-.logo-dark {
-  background: url('../assets/images/logo/logo-dark.png');
-  height: 80px;
-  width: 336px;
-  align-self: center;
-}
-
-.logo-light {
-  background: url('../assets/images/logo/logo-light.png');
-  height: 80px;
-  width: 336px;
-  align-self: center;
+.logo {
+  &-dark,
+  &-light {
+    height: 80px;
+    width: 336px;
+    align-self: center;
+  }
+  &-dark {
+    background: url('../assets/images/logo/logo-dark.png');
+  }
+  &-light {
+    background: url('../assets/images/logo/logo-light.png');
+  }
 }
 
 .flex-container {
@@ -60,15 +61,15 @@
   font-style: italic;
   text-align: center;
   min-height: 50px;
+
+  &.light {
+    border: 2px dashed #ccc;
+  }
+  &.dark {
+    border: 2px dashed #555;
+  }
 }
 
-.chest-placeholder.light {
-  border: 2px dashed #ccc;
-}
-
-.chest-placeholder.dark {
-  border: 2px dashed #555;
-}
 .item-dragging {
   opacity: 1;
 }
@@ -78,24 +79,63 @@
 }
 
 .Toastify__toast-container {
-  width: auto!important;
-}
-.group .arrow-down {
-  width: 0;
-  height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 5px solid #1f2937;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  top: 100%;
+  width: auto !important;
 }
 
-.group:hover .arrow-down {
-  visibility: visible;
-}
+.group {
+  position: relative;
+  display: inline-block;
 
-.label-pos {
-  right: -72px;
+  &:hover .label-container {
+    display: block;
+  }
+
+  &:hover .arrow-down {
+    display: block;
+  }
+
+  .arrow-down {
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid #111827;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -5px;
+    z-index: 10;
+  }
+
+  .label-container {
+    display: none;
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 5px;
+    width: 160px;
+    text-align: center;
+    z-index: 10;
+  }
+
+  .head-icon {
+    width: 1rem;
+    height: 1rem;
+
+    &-1 {
+      background: url('../assets/images/icons/whotoldyou.png');
+      background-size: contain;
+
+      &:hover {
+        background: url('../assets/images/icons/whotoldyou2.png');
+        background-size: contain;
+      }
+    }
+
+    &-2 {
+      background: url('../assets/images/icons/iver.png');
+      background-size: contain;
+    }
+  }
 }
