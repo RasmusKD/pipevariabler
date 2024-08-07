@@ -277,7 +277,7 @@ const App: React.FC = () => {
   const handleDrop = useCallback(
     (item: Item, chestId: number) => {
       const chestIndex = chests.findIndex(chest => chest.id === chestId);
-      const command = `/se 3 ${[...chests[chestIndex].items, item].map(i => i.variable).join(';')}`;
+      const command = `/signedit 3 ${[...chests[chestIndex].items, item].map(i => i.variable).join(';')}`;
       if (command.length > 256) {
         toast.error('Du kan ikke tilføje mere til kisten kommandoen vil overstige 256 tegn.', {
           position: "top-center",
