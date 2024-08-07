@@ -2,7 +2,7 @@
   "name": "my-app",
   "version": "1.1.0",
   "private": true,
-  "homepage": "https://RasmusKD.github.io/mælkvariabler",
+  "homepage": "https://rasmuskd.github.io/pipevariabler",
   "dependencies": {
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
