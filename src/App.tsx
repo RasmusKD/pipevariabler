@@ -277,7 +277,7 @@ const App: React.FC = () => {
   const handleDrop = useCallback(
     (item: Item, chestId: number) => {
       const chestIndex = chests.findIndex(chest => chest.id === chestId);
-      const command = `/signedit 3 ${[...chests[chestIndex].items, item].map(i => i.variable).join(';')}`;
+      const command = `/signedit 3 ${[...chests[chestIndex].items, item].map(i => i.variable).join(',')}`;
       if (command.length > 256) {
         toast.error('Du kan ikke tilføje mere til kisten kommandoen vil overstige 256 tegn.', {
           position: "top-center",
@@ -524,23 +524,23 @@ const App: React.FC = () => {
                         <div className="group">
                           <div
                             className="head-icon head-icon-1 cursor-pointer"
-                            onClick={() => window.open('https://github.com/RasmusKD', '_blank')}
+                            onClick={() => window.open('https://github.com/RasmusKD')}
                           />
                           <div className="label-container">
                             <div className="arrow-down"></div>
-                            <div className="bg-gray-900 text-white py-2 rounded">
+                            <div className={`py-2 rounded ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-200'}`}>
                               <p className="font-bold">WhoToldYou</p>
                               <p className="text-sm">Udvikling af siden</p>
                             </div>
                           </div>
                         </div>
                         <div className="group">
-                          <div className="head-icon head-icon-2 cursor-pointer" />
+                          <div className="head-icon head-icon-2" />
                           <div className="label-container">
                             <div className="arrow-down"></div>
-                            <div className="bg-gray-900 text-white py-2 rounded">
+                            <div className={`py-2 rounded ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-200'}`}>
                               <p className="font-bold">Iver</p>
-                              <p className="text-sm">Idé og Design</p>
+                              <p className="text-sm">Idé & Basis Design</p>
                             </div>
                           </div>
                         </div>

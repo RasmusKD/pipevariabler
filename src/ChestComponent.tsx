@@ -7,7 +7,7 @@ import { toast, Zoom } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import itemsData from './data.json';
 import Portal from './Portal';
-import { pixelatedIcons, useCompassImage, useClockImage } from './utils';
+import { pixelatedIcons, useCompassImage, useClockImage, useDragPreviewImage } from './utils';
 
 interface Item {
   item: string;
@@ -50,12 +50,14 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
   const compassRef = useRef<HTMLDivElement>(null);
   const [compassImage, setCompassImage] = useState<string>(chest.icon === 'compass' ? 'compass_00.png' : chest.icon === 'recovery_compass' ? 'recovery_compass_00.png' : `${chest.icon}.png`);
   const [clockImage, setClockImage] = useState<string>(chest.icon === 'clock' ? 'clock_00.png' : `${chest.icon}.png`);
+  const [dragPreviewImage, setDragPreviewImage] = useState<string | null>(null);
   const dragPreviewRef = useRef<HTMLImageElement>(new Image());
 
   console.log("Chest Component Rendered: ", chest);
 
   useCompassImage(chest.icon, setCompassImage, compassRef);
   useClockImage(chest.icon, setClockImage);
+  useDragPreviewImage(chest.icon, compassImage, clockImage, setDragPreviewImage);
 
   useEffect(() => {
     const img = dragPreviewRef.current;
@@ -115,9 +117,13 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
   });
 
   useEffect(() => {
-    preview(dragPreviewRef.current);
-    console.log("Drag Preview Set");
-  }, [preview]);
+    if (dragPreviewImage) {
+      const img = new Image();
+      img.src = dragPreviewImage;
+      preview(img, { offsetX: -16, offsetY: -16 });
+      console.log("Drag Preview Set");
+    }
+  }, [dragPreviewImage, preview]);
 
   drag(drop(ref));
 
@@ -142,7 +148,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
   };
 
   const handleCopy = () => {
-    const command = `/signedit 3 ${chest.items.map(item => item.variable).join(';')}`;
+    const command = `/signedit 3 ${chest.items.map(item => item.variable).join(',')}`;
     navigator.clipboard.writeText(command);
     toast.dismiss();
     toast.success(

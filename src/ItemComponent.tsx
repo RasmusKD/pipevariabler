@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
 import { ItemType } from './ItemType';
 import { FaTimes } from 'react-icons/fa';
-import { pixelatedIcons, useCompassImage, useClockImage } from './utils';
+import { pixelatedIcons, useCompassImage, useClockImage, useDragPreviewImage } from './utils';
 
 interface Item {
   item: string;
@@ -22,11 +22,13 @@ interface ItemComponentProps {
 const ItemComponent: React.FC<ItemComponentProps> = ({ item, isDarkMode, index, chestIds, removeItem }) => {
   const [compassImage, setCompassImage] = useState<string>(item.image);
   const [clockImage, setClockImage] = useState<string>(item.image);
+  const [dragPreviewImage, setDragPreviewImage] = useState<string | null>(null);
   const compassRef = useRef<HTMLDivElement>(null);
   const dragPreviewRef = useRef<HTMLImageElement>(new Image());
 
   useCompassImage(item.item, setCompassImage, compassRef);
   useClockImage(item.item, setClockImage);
+  useDragPreviewImage(item.item, compassImage, clockImage, setDragPreviewImage);
 
   useEffect(() => {
     const img = dragPreviewRef.current;
@@ -42,8 +44,12 @@ const ItemComponent: React.FC<ItemComponentProps> = ({ item, isDarkMode, index, 
   });
 
   useEffect(() => {
-    preview(dragPreviewRef.current);
-  }, [preview]);
+    if (dragPreviewImage) {
+      const img = new Image();
+      img.src = dragPreviewImage;
+      preview(img);
+    }
+  }, [dragPreviewImage, preview]);
 
   return (
     <li

@@ -5998,7 +5998,7 @@
         {
             "item": "crafter",
             "variable": "%v1065%",
-            "image": "crafter_north.png"
+            "image": "crafter.png"
         },
         {
             "item": "trial_key",
