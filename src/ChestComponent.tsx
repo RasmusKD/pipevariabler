@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { ItemType } from './ItemType';
 import ItemComponent from './ItemComponent';
-import { FaTimes, FaEdit, FaRegCopy } from 'react-icons/fa';
+import { FaEdit, FaSave, FaTimes, FaRegCopy } from 'react-icons/fa';
 import { toast, Zoom } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import itemsData from './data.json';
@@ -20,6 +20,7 @@ interface Chest {
   label: string;
   items: Item[];
   icon: string;
+  checked: boolean;
 }
 
 interface ChestComponentProps {
@@ -32,6 +33,7 @@ interface ChestComponentProps {
   updateChestIcon: (id: number, icon: string) => void;
   removeItemFromChest: (chestId: number, item: Item) => void;
   moveChest: (dragIndex: number, hoverIndex: number) => void;
+  setChests: React.Dispatch<React.SetStateAction<Chest[]>>;
 }
 
 const ChestComponent: React.FC<ChestComponentProps> = ({
@@ -43,7 +45,8 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
   updateChestLabel,
   updateChestIcon,
   removeItemFromChest,
-  moveChest
+  moveChest,
+  setChests
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const iconButtonRef = useRef<HTMLDivElement>(null);
@@ -51,9 +54,8 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
   const [compassImage, setCompassImage] = useState<string>(chest.icon === 'compass' ? 'compass_00.png' : chest.icon === 'recovery_compass' ? 'recovery_compass_00.png' : `${chest.icon}.png`);
   const [clockImage, setClockImage] = useState<string>(chest.icon === 'clock' ? 'clock_00.png' : `${chest.icon}.png`);
   const [dragPreviewImage, setDragPreviewImage] = useState<string | null>(null);
+  const [isChecked, setIsChecked] = useState<boolean>(chest.checked);
   const dragPreviewRef = useRef<HTMLImageElement>(new Image());
-
-  console.log("Chest Component Rendered: ", chest);
 
   useCompassImage(chest.icon, setCompassImage, compassRef);
   useClockImage(chest.icon, setClockImage);
@@ -62,8 +64,15 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
   useEffect(() => {
     const img = dragPreviewRef.current;
     img.src = `assets/images/icons/${chest.icon === 'compass' || chest.icon === 'recovery_compass' ? compassImage : chest.icon === 'clock' ? clockImage : `${chest.icon}.png`}`;
-    console.log("Image Updated: ", img.src);
   }, [compassImage, clockImage, chest.icon]);
+
+  useEffect(() => {
+    setIsChecked(chest.checked);
+  }, [chest.checked]);
+
+  useEffect(() => {
+    localStorage.setItem(`chest-checked-${chest.id}`, JSON.stringify(isChecked));
+  }, [isChecked, chest.id]);
 
   const [{ isOver }, drop] = useDrop({
     accept: [ItemType.ITEM, ItemType.CHEST],
@@ -120,8 +129,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
     if (dragPreviewImage) {
       const img = new Image();
       img.src = dragPreviewImage;
-      preview(img, { offsetX: -16, offsetY: -16 });
-      console.log("Drag Preview Set");
+      preview(img);
     }
   }, [dragPreviewImage, preview]);
 
@@ -273,6 +281,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
                 <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 1)' : 'rgba(255, 255, 255, 1)' }}>
                   <input
                     type="text"
+                    spellCheck="false"
                     placeholder="Søg..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -288,38 +297,53 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
             </Portal>
           )}
         </div>
-        {isEditing ? (
-          <input
-            className={`border p-1 flex-1 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white'}`}
-            value={chestLabel}
-            onChange={(e) => setChestLabel(e.target.value)}
-            onBlur={handleSave}
-            autoFocus
-          />
-        ) : (
-          <>
+        <div className="flex-1 flex gap-2 items-center">
+          {isEditing ? (
+            <input
+              className={`border px-1 flex-1 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white'}`}
+              spellCheck="false"
+              value={chestLabel}
+              onChange={(e) => setChestLabel(e.target.value)}
+              onBlur={handleSave}
+              autoFocus
+            />
+          ) : (
+              <div className="gap-2 flex">
             <span className="flex-1" onDoubleClick={() => setIsEditing(true)}>{chest.label || "Barrel"}</span>
+            <input
+                type="checkbox"
+                checked={isChecked}
+                onChange={() => {
+                  setIsChecked(!isChecked);
+                  setChests((prevChests: Chest[]) =>
+                    prevChests.map(chestItem =>
+                      chestItem.id === chest.id ? { ...chestItem, checked: !chestItem.checked } : chestItem
+                    )
+                  );
+                }}
+                className="mr-2"
+              />
+              </div>
+          )}
+          {isEditing &&
+            <button className="text-blue-500 hover:text-blue-700" onClick={handleSave}>
+              <FaSave />
+            </button>}
+        </div>
+        <div className="flex items-center gap-2">
+        {!isEditing &&
             <button className="text-blue-500 hover:text-blue-700" onClick={() => setIsEditing(true)}>
               <FaEdit />
+            </button>}
+          {chest.items.length > 0 && (
+            <button className="text-green-500 hover:text-green-700" onClick={handleCopy}>
+              <FaRegCopy />
             </button>
-          </>
-        )}
-        {isEditing ? (
-          <button className="text-blue-500 hover:text-blue-700" onClick={handleSave}>
-            Gem
+          )}
+          <button className="text-red-500 hover:text-red-700" onClick={() => removeChest(chest.id)}>
+            <FaTimes />
           </button>
-        ) : (
-          <div className="flex items-center gap-2">
-            {chest.items.length > 0 && (
-              <button className="text-green-500 hover:text-green-700" onClick={handleCopy}>
-                <FaRegCopy />
-              </button>
-            )}
-            <button className="text-red-500 hover:text-red-700" onClick={() => removeChest(chest.id)}>
-              <FaTimes />
-            </button>
-          </div>
-        )}
+        </div>
       </div>
       {chest.items.length > 0 ? (
         <ul className={`chest-items ${isDarkMode ? 'dark-theme' : 'light-theme'}`}>

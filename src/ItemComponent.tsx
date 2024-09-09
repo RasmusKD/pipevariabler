@@ -65,7 +65,7 @@ const ItemComponent: React.FC<ItemComponentProps> = ({ item, isDarkMode, index, 
           loading="lazy"
         />
       </div>
-      <div className="flex-1">{item.item.replace(/_/g, ' ')}</div>
+      <div className="flex-1 line-clamp-1">{item.item.replace(/_/g, ' ')}</div>
       {chestIds && chestIds.length > 0 && (
         <span className="absolute flex items-center text-gray-400" style={{ top: '-2px', right: '3px', fontSize: 'small' }}>
           <img src="assets/images/icons/barrel.png" alt="chest icon" className="inline-block w-4 h-4 mr-1" />

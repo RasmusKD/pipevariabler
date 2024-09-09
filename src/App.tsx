@@ -24,6 +24,7 @@ interface Chest {
   label: string;
   items: Item[];
   icon: string;
+  checked: boolean;
 }
 
 interface Profile {
@@ -40,7 +41,8 @@ const App: React.FC = () => {
       const profile = JSON.parse(savedProfile);
       return profile.chests.map((chest: any) => ({
         ...chest,
-        icon: chest.icon || 'barrel',
+        icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
+        checked: chest.checked || false,
       }));
     }
     return [];
@@ -99,7 +101,8 @@ const App: React.FC = () => {
       const profile = JSON.parse(savedProfile);
       setChests(profile.chests.map((chest: any) => ({
         ...chest,
-        icon: chest.icon || 'barrel',
+        icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
+        checked: chest.checked || false,
       })));
       setProfileName(profile.name);
     }
@@ -176,29 +179,44 @@ const App: React.FC = () => {
     setNewProfileModalVisible(false);
   };
 
-  const confirmImportProfile = () => {
-    if (pendingProfile) {
-      setChests(pendingProfile.chests.map((chest: any) => ({
-        ...chest,
-        icon: chest.icon || 'barrel',
-      })));
-      setProfileName(pendingProfile.name);
-      setPendingProfile(null);
-      setImportProfileModalVisible(false);
-      toast.success('Profil importeret!', {
-        position: "top-center",
-        autoClose: 3000,
-        hideProgressBar: true,
-        closeOnClick: true,
-        pauseOnHover: false,
-        draggable: false,
-        progress: undefined,
-        theme: isDarkMode ? 'dark' : 'light',
-        transition: Zoom,
-        closeButton: false,
+const confirmImportProfile = () => {
+  if (pendingProfile) {
+
+    setChests(prevChests => {
+      prevChests.forEach(chest => {
+        localStorage.removeItem(`chest-checked-${chest.id}`);
       });
-    }
-  };
+
+      return prevChests.map(chest => ({
+        ...chest,
+        checked: false,
+      }));
+    });
+
+    setChests(pendingProfile.chests.map((chest: any) => ({
+      ...chest,
+      icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
+      checked: chest.checked || false,
+    })));
+
+    setProfileName(pendingProfile.name);
+    setPendingProfile(null);
+    setImportProfileModalVisible(false);
+
+    toast.success('Profil importeret!', {
+      position: "top-center",
+      autoClose: 3000,
+      hideProgressBar: true,
+      closeOnClick: true,
+      pauseOnHover: false,
+      draggable: false,
+      progress: undefined,
+      theme: isDarkMode ? 'dark' : 'light',
+      transition: Zoom,
+      closeButton: false,
+    });
+  }
+};
 
   const cancelImportProfile = () => {
     setPendingProfile(null);
@@ -232,7 +250,7 @@ const App: React.FC = () => {
     setUndoStack(prevStack => [...prevStack, chests]);
     setRedoStack([]);
     const newChestId = chests.length > 0 ? Math.max(...chests.map(chest => chest.id)) + 1 : 1;
-    const newChest = { id: newChestId, label: 'Barrel', items: [], icon: 'barrel' };
+    const newChest: Chest = { id: newChestId, label: 'Barrel', items: [], icon: 'barrel', checked: false }; // Include checked property
     setChests(prevChests => [...prevChests, newChest]);
   }, [chests]);
 
@@ -406,6 +424,7 @@ const App: React.FC = () => {
             <div className="relative">
               <input
                 type="text"
+                spellCheck="false"
                 value={searchTerm}
                 placeholder="Søg..."
                 className={`border p-2 pr-10 w-full ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white'}`}
@@ -454,6 +473,7 @@ const App: React.FC = () => {
                   <>
                     <input
                       type="text"
+                      spellCheck="false"
                       value={profileName}
                       onChange={(e) => setProfileName(e.target.value)}
                       className={`border p-2 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white'}`}
@@ -563,6 +583,7 @@ const App: React.FC = () => {
                   updateChestIcon={updateChestIcon}
                   removeItemFromChest={removeItemFromChest}
                   moveChest={moveChest}
+                  setChests={setChests} // Pass setChests to ChestComponent
                 />
               ))}
             </div>
