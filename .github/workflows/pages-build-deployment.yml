@@ -3,7 +3,12 @@ name: Deploy React app to GitHub Pages
 on:
   push:
     branches:
-      - master   # your default branch
+      - master    # or whatever your default branch is
+
+permissions:
+  contents: read             # for checkout
+  pages: write               # to deploy
+  id-token: write            # for Pages
 
 jobs:
   build-and-deploy:
@@ -18,8 +23,11 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      - uses: peaceiris/actions-gh-pages@v4
+      - uses: actions/configure-pages@v3
+        # No inputs needed here
+
+      - uses: actions/upload-pages-artifact@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./build
-          verbose: true
+          path: ./build
+
+      - uses: actions/deploy-pages@v1
