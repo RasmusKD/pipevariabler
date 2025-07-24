@@ -3,12 +3,12 @@ name: Deploy React app to GitHub Pages
 on:
   push:
     branches:
-      - master    # or whatever your default branch is
+      - master    # your default branch
 
 permissions:
-  contents: read             # for checkout
-  pages: write               # to deploy
-  id-token: write            # for Pages
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   build-and-deploy:
@@ -24,10 +24,9 @@ jobs:
       - run: npm run build
 
       - uses: actions/configure-pages@v3
-        # No inputs needed here
 
-      - uses: actions/upload-pages-artifact@v1
+      - uses: actions/upload-pages-artifact@v3   # ← bump to v3 to pull in upload‑artifact@v4 :contentReference[oaicite:0]{index=0}
         with:
           path: ./build
 
-      - uses: actions/deploy-pages@v1
+      - uses: actions/deploy-pages@v4            # ← bump to v4 so you’re not using a v1 that drags in upload‑artifact@v3 :contentReference[oaicite:1]{index=1}
