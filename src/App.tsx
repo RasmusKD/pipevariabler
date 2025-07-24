@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import Toggle from 'react-toggle';
 import { FaCog, FaCaretDown, FaTimes, FaEdit } from 'react-icons/fa';
 import { FixedSizeList as List } from 'react-window';
 import './scss/main.scss';
-import 'react-toggle/style.css';
 import itemsData from './data.json';
 import ItemComponent from './ItemComponent';
 import ChestComponent from './ChestComponent';
@@ -504,38 +502,37 @@ const confirmImportProfile = () => {
                   <div className={`absolute right-0 mt-2 w-48 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-black'} rounded shadow-lg`}>
                     <div className="p-2">
                       <button
-                        className={`w-full text-left px-2 py-2 text-sm flex items-center justify-between ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
-                        onClick={handleToggleMode}
+                          className={`w-full text-left px-2 py-2 text-sm flex items-center justify-between ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                          onClick={handleToggleMode}
                       >
                         Dark Mode
-                        <Toggle
-                          checked={isDarkMode}
-                          onChange={handleToggleMode}
-                          className="ml-2"
-                        />
+                        <span
+                            className={`ml-2 px-2 py-1 rounded text-xs ${isDarkMode ? 'bg-green-600 text-white' : 'bg-gray-300 text-black'}`}>
+    {isDarkMode ? 'ON' : 'OFF'}
+  </span>
                       </button>
                       <button
-                        className={`w-full text-left px-2 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
-                        onClick={() => document.getElementById('import-profile')?.click()}
+                          className={`w-full text-left px-2 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                          onClick={() => document.getElementById('import-profile')?.click()}
                       >
                         Importer Profil
                       </button>
                       <input
-                        type="file"
-                        onChange={handleImportProfile}
-                        className="hidden"
-                        accept="application/json"
-                        id="import-profile"
+                          type="file"
+                          onChange={handleImportProfile}
+                          className="hidden"
+                          accept="application/json"
+                          id="import-profile"
                       />
                       <button
-                        className={`w-full text-left px-2 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
-                        onClick={handleExportProfile}
+                          className={`w-full text-left px-2 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                          onClick={handleExportProfile}
                       >
                         Eksporter Profil
                       </button>
                       <button
-                        className={`w-full text-left px-2 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
-                        onClick={createNewProfile}
+                          className={`w-full text-left px-2 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                          onClick={createNewProfile}
                       >
                         Ny Profil
                       </button>
@@ -543,8 +540,8 @@ const confirmImportProfile = () => {
                       <div className="flex gap-2 p-2">
                         <div className="group">
                           <div
-                            className="head-icon head-icon-1 cursor-pointer"
-                            onClick={() => window.open('https://github.com/RasmusKD')}
+                              className="head-icon head-icon-1 cursor-pointer"
+                              onClick={() => window.open('https://github.com/RasmusKD')}
                           />
                           <div className="label-container">
                             <div className="arrow-down"></div>
@@ -555,7 +552,7 @@ const confirmImportProfile = () => {
                           </div>
                         </div>
                         <div className="group">
-                          <div className="head-icon head-icon-2" />
+                          <div className="head-icon head-icon-2"/>
                           <div className="label-container">
                             <div className="arrow-down"></div>
                             <div className={`py-2 rounded ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-200'}`}>
@@ -572,10 +569,10 @@ const confirmImportProfile = () => {
             </div>
             <div ref={gridContainerRef} className={`grid-cols-auto-fit ${isDarkMode ? 'dark-theme' : 'light-theme'}`}>
               {chests.map((chest, index) => (
-                <ChestComponent
-                  key={chest.id}
-                  chest={chest}
-                  index={index}
+                  <ChestComponent
+                      key={chest.id}
+                      chest={chest}
+                      index={index}
                   onDrop={handleDrop}
                   isDarkMode={isDarkMode}
                   removeChest={confirmDeleteChest}

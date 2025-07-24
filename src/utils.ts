@@ -55,7 +55,7 @@ export const useClockImage = (item: string, setClockImage: (image: string) => vo
 export const useDragPreviewImage = (icon: string, compassImage: string, clockImage: string, setDragPreviewImage: (image: string) => void) => {
     useEffect(() => {
         const img = new Image();
-        img.src = `assets/images/icons/${icon === 'compass' || icon === 'recovery_compass' ? compassImage : icon === 'clock' ? clockImage : `${icon}.png`}`;
+        img.src = `${process.env.PUBLIC_URL}/assets/images/icons/${icon === 'compass' || icon === 'recovery_compass' ? compassImage : icon === 'clock' ? clockImage : `${icon}.png`}`;
         img.onload = () => {
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');

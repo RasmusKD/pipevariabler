@@ -124,17 +124,17 @@
     height: 1rem;
 
     &-1 {
-      background: url('../assets/images/icons/whotoldyou.png');
+      background: url('../../public/assets/images/icons/whotoldyou.png');
       background-size: contain;
 
       &:hover {
-        background: url('../assets/images/icons/whotoldyou2.png');
+        background: url('../../public/assets/images/icons/whotoldyou2.png');
         background-size: contain;
       }
     }
 
     &-2 {
-      background: url('../assets/images/icons/iver.png');
+      background: url('../../public/assets/images/icons/iver.png');
       background-size: contain;
     }
   }

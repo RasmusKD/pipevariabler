@@ -6084,6 +6084,361 @@
             "item": "music_disc_creator_music_box",
             "variable": "%v1082%",
             "image": "music_disc_creator_music_box.png"
+        },
+        {
+            "item": "pale_oak_log",
+            "variable": "%v1083%",
+            "image": "pale_oak_log.png"
+        },
+        {
+            "item": "pale_oak_wood",
+            "variable": "%v1084%",
+            "image": "pale_oak_wood.png"
+        },
+        {
+            "item": "stripped_pale_oak_log",
+            "variable": "%v1085%",
+            "image": "stripped_pale_oak_log.png"
+        },
+        {
+            "item": "stripped_pale_oak_wood",
+            "variable": "%v1086%",
+            "image": "stripped_pale_oak_wood.png"
+        },
+        {
+            "item": "pale_oak_planks",
+            "variable": "%v1087%",
+            "image": "pale_oak_planks.png"
+        },
+        {
+            "item": "pale_oak_stairs",
+            "variable": "%v1088%",
+            "image": "pale_oak_stairs.png"
+        },
+        {
+            "item": "pale_oak_slab",
+            "variable": "%v1089%",
+            "image": "pale_oak_slab.png"
+        },
+        {
+            "item": "pale_oak_fence",
+            "variable": "%v1090%",
+            "image": "pale_oak_fence.png"
+        },
+        {
+            "item": "pale_oak_fence_gate",
+            "variable": "%v1091%",
+            "image": "pale_oak_fence_gate.png"
+        },
+        {
+            "item": "pale_oak_door",
+            "variable": "%v1092%",
+            "image": "pale_oak_door.png"
+        },
+        {
+            "item": "pale_oak_trapdoor",
+            "variable": "%v1093%",
+            "image": "pale_oak_trapdoor.png"
+        },
+        {
+            "item": "pale_oak_pressure_plate",
+            "variable": "%v1094%",
+            "image": "pale_oak_pressure_plate.png"
+        },
+        {
+            "item": "pale_oak_button",
+            "variable": "%v1095%",
+            "image": "pale_oak_button.png"
+        },
+        {
+            "item": "resin_bricks",
+            "variable": "%v1096%",
+            "image": "resin_bricks.png"
+        },
+        {
+            "item": "resin_brick_stairs",
+            "variable": "%v1097%",
+            "image": "resin_brick_stairs.png"
+        },
+        {
+            "item": "resin_brick_slab",
+            "variable": "%v1098%",
+            "image": "resin_brick_slab.png"
+        },
+        {
+            "item": "resin_brick_wall",
+            "variable": "%v1099%",
+            "image": "resin_brick_wall.png"
+        },
+        {
+            "item": "chiseled_resin_bricks",
+            "variable": "%v1100%",
+            "image": "chiseled_resin_bricks.png"
+        },
+        {
+            "item": "pale_moss_block",
+            "variable": "%v1101%",
+            "image": "pale_moss_block.png"
+        },
+        {
+            "item": "pale_moss_carpet",
+            "variable": "%v1102%",
+            "image": "pale_moss_carpet.png"
+        },
+        {
+            "item": "pale_hanging_moss",
+            "variable": "%v1103%",
+            "image": "pale_hanging_moss.png"
+        },
+        {
+            "item": "pale_oak_leaves",
+            "variable": "%v1104%",
+            "image": "pale_oak_leaves.png"
+        },
+        {
+            "item": "pale_oak_sapling",
+            "variable": "%v1105%",
+            "image": "pale_oak_sapling.png"
+        },
+        {
+            "item": "short_dry_grass",
+            "variable": "%v1106%",
+            "image": "short_dry_grass.png"
+        },
+        {
+            "item": "bush",
+            "variable": "%v1107%",
+            "image": "bush.png"
+        },
+        {
+            "item": "closed_eyeblossom",
+            "variable": "%v1108%",
+            "image": "closed_eyeblossom.png"
+        },
+        {
+            "item": "open_eyeblossom",
+            "variable": "%v1109%",
+            "image": "open_eyeblossom.png"
+        },
+        {
+            "item": "wildflowers",
+            "variable": "%v1110%",
+            "image": "wildflowers.png"
+        },
+        {
+            "item": "leaf_litter",
+            "variable": "%v1111%",
+            "image": "leaf_litter.png"
+        },
+        {
+            "item": "firefly_bush",
+            "variable": "%v1112%",
+            "image": "firefly_bush.png"
+        },
+        {
+            "item": "dried_ghast",
+            "variable": "%v1113%",
+            "image": "dried_ghast.png"
+        },
+        {
+            "item": "bundle",
+            "variable": "%v1114%",
+            "image": "bundle.png"
+        },
+        {
+            "item": "white_bundle",
+            "variable": "%v1115%",
+            "image": "white_bundle.png"
+        },
+        {
+            "item": "light_gray_bundle",
+            "variable": "%v1116%",
+            "image": "light_gray_bundle.png"
+        },
+        {
+            "item": "gray_bundle",
+            "variable": "%v1117%",
+            "image": "gray_bundle.png"
+        },
+        {
+            "item": "black_bundle",
+            "variable": "%v1118%",
+            "image": "black_bundle.png"
+        },
+        {
+            "item": "brown_bundle",
+            "variable": "%v1119%",
+            "image": "brown_bundle.png"
+        },
+        {
+            "item": "red_bundle",
+            "variable": "%v1120%",
+            "image": "red_bundle.png"
+        },
+        {
+            "item": "orange_bundle",
+            "variable": "%v1121%",
+            "image": "orange_bundle.png"
+        },
+        {
+            "item": "yellow_bundle",
+            "variable": "%v1122%",
+            "image": "yellow_bundle.png"
+        },
+        {
+            "item": "lime_bundle",
+            "variable": "%v1123%",
+            "image": "lime_bundle.png"
+        },
+        {
+            "item": "green_bundle",
+            "variable": "%v1124%",
+            "image": "green_bundle.png"
+        },
+        {
+            "item": "cyan_bundle",
+            "variable": "%v1125%",
+            "image": "cyan_bundle.png"
+        },
+        {
+            "item": "light_blue_bundle",
+            "variable": "%v1126%",
+            "image": "light_blue_bundle.png"
+        },
+        {
+            "item": "blue_bundle",
+            "variable": "%v1127%",
+            "image": "blue_bundle.png"
+        },
+        {
+            "item": "purple_bundle",
+            "variable": "%v1128%",
+            "image": "purple_bundle.png"
+        },
+        {
+            "item": "magenta_bundle",
+            "variable": "%v1129%",
+            "image": "magenta_bundle.png"
+        },
+        {
+            "item": "pink_bundle",
+            "variable": "%v1130%",
+            "image": "pink_bundle.png"
+        },
+        {
+            "item": "white_harness",
+            "variable": "%v1131%",
+            "image": "white_harness.png"
+        },
+        {
+            "item": "light_gray_harness",
+            "variable": "%v1132%",
+            "image": "light_gray_harness.png"
+        },
+        {
+            "item": "gray_harness",
+            "variable": "%v1133",
+            "image": "gray_harness.png"
+        },
+        {
+            "item": "black_harness",
+            "variable": "%v1134%",
+            "image": "black_harness.png"
+        },
+        {
+            "item": "brown_harness",
+            "variable": "%v1135%",
+            "image": "brown_harness.png"
+        },
+        {
+            "item": "red_harness",
+            "variable": "%v1136%",
+            "image": "red_harness.png"
+        },
+        {
+            "item": "orange_harness",
+            "variable": "%v1137%",
+            "image": "orange_harness.png"
+        },
+        {
+            "item": "yellow_harness",
+            "variable": "%v1138%",
+            "image": "yellow_harness.png"
+        },
+        {
+            "item": "lime_harness",
+            "variable": "%v1139%",
+            "image": "lime_harness.png"
+        },
+        {
+            "item": "green_harness",
+            "variable": "%v1140%",
+            "image": "green_harness.png"
+        },
+        {
+            "item": "cyan_harness",
+            "variable": "%v1141%",
+            "image": "cyan_harness.png"
+        },
+        {
+            "item": "light_blue_harness",
+            "variable": "%v1142%",
+            "image": "light_blue_harness.png"
+        },
+        {
+            "item": "blue_harness",
+            "variable": "%v1143%",
+            "image": "blue_harness.png"
+        },
+        {
+            "item": "purple_harness",
+            "variable": "%v1144%",
+            "image": "purple_harness.png"
+        },
+        {
+            "item": "magenta_harness",
+            "variable": "%v1145%",
+            "image": "magenta_harness.png"
+        },
+        {
+            "item": "pink_harness",
+            "variable": "%v1146%",
+            "image": "pink_harness.png"
+        },
+        {
+            "item": "music_disc_tears",
+            "variable": "%v1147%",
+            "image": "music_disc_tears.png"
+        },
+        {
+            "item": "music_disc_lava_chicken",
+            "variable": "%v1148%",
+            "image": "music_disc_lava_chicken.png"
+        },
+        {
+            "item": "brown_egg",
+            "variable": "%v1149%",
+            "image": "brown_egg.png"
+        },
+        {
+            "item": "blue_egg",
+            "variable": "%v1150%",
+            "image": "blue_egg.png"
+        },
+        {
+            "item": "resin_clump",
+            "variable": "%v1151%",
+            "image": "resin_clump.png"
+        },
+        {
+            "item": "resin_brick",
+            "variable": "%v1152%",
+            "image": "resin_brick.png"
+        },
+        {
+            "item": "creaking_heart",
+            "variable": "%v1153%",
+            "image": "creaking_heart.png"
         }
     ]
 }
