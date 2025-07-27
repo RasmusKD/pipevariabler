@@ -6444,6 +6444,11 @@
             "item": "armadillo_scute",
             "variable": "%v1155%",
             "image": "armadillo_scute.png"
+        },
+        {
+            "item": "dandelion",
+            "variable": "%v37%",
+            "image": "dandelion.png"
         }
     ]
 }
