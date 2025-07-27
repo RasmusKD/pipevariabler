@@ -6439,6 +6439,11 @@
             "item": "creaking_heart",
             "variable": "%v1153%",
             "image": "creaking_heart.png"
+        },
+        {
+            "item": "armadillo_scute",
+            "variable": "%v1155%",
+            "image": "armadillo_scute.png"
         }
     ]
 }
