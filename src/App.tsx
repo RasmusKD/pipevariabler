@@ -659,7 +659,6 @@ const App: React.FC = () => {
               {isGridView ? (
                 <div
                   className={`grid grid-cols-6 gap-2 overflow-x-hidden ${isDarkMode ? 'dark-theme' : 'light-theme'}`}
-                  style={{ height: listHeight }}
                 >
                   {itemsToShow.map((item, index) => (
                     <ItemComponent
