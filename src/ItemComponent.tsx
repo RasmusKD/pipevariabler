@@ -17,9 +17,17 @@ interface ItemComponentProps {
   lastIndex: number;
   chestIds?: number[];
   removeItem?: () => void;
+  isGridView?: boolean;
 }
 
-const ItemComponent: React.FC<ItemComponentProps> = ({ item, isDarkMode, index, chestIds, removeItem }) => {
+const ItemComponent: React.FC<ItemComponentProps> = ({
+  item,
+  isDarkMode,
+  index,
+  chestIds,
+  removeItem,
+  isGridView = false
+}) => {
   const [compassImage, setCompassImage] = useState<string>(item.image);
   const [clockImage, setClockImage] = useState<string>(item.image);
   const [dragPreviewImage, setDragPreviewImage] = useState<string | null>(null);
@@ -51,33 +59,76 @@ const ItemComponent: React.FC<ItemComponentProps> = ({ item, isDarkMode, index, 
     }
   }, [dragPreviewImage, preview]);
 
-  return (
-      <li
-          ref={drag}
-          className={`cursor-pointer p-2 flex items-center gap-4 border-b ${isDarkMode ? 'hover:bg-gray-600 border-gray-600' : 'hover:bg-gray-200 border-gray-300'} ${index === 0 ? 'border-t' : ''}`}
-          style={{ opacity: isDragging ? 0.5 : 1 }}
+  // Grid view rendering
+  if (isGridView) {
+    const tooltipText = `${item.item.replace(/_/g, ' ')}${
+      chestIds && chestIds.length > 0 ? ` (Chest IDs: ${chestIds.map(id => `#${id}`).join(', ')})` : ''
+    }`;
+
+    return (
+      <div
+        ref={drag}
+        className={`relative cursor-pointer p-1 rounded border transition-colors ${
+          isDarkMode
+            ? 'hover:bg-gray-600 border-gray-600 bg-gray-700'
+            : 'hover:bg-gray-200 border-gray-300 bg-gray-50'
+        }`}
+        style={{ opacity: isDragging ? 0.5 : 1 }}
+        title={tooltipText}
       >
-        <div ref={compassRef} className="item-icons">
+        <div ref={compassRef} className="w-8 h-8 mx-auto">
           <img
-              src={`${process.env.PUBLIC_URL}/assets/images/icons/${item.item === 'compass' || item.item === 'recovery_compass' ? compassImage : item.item === 'clock' ? clockImage : item.image}`}
-              alt={item.item}
-              className={`w-full h-full ${pixelatedIcons.includes(item.item) ? 'pixelated-icon' : ''}`}
-              loading="lazy"
+            src={`${process.env.PUBLIC_URL}/assets/images/icons/${item.item === 'compass' || item.item === 'recovery_compass' ? compassImage : item.item === 'clock' ? clockImage : item.image}`}
+            alt={item.item}
+            className={`w-full h-full ${pixelatedIcons.includes(item.item) ? 'pixelated-icon' : ''}`}
+            loading="lazy"
           />
         </div>
-        <div className="flex-1 line-clamp-1">{item.item.replace(/_/g, ' ')}</div>
         {chestIds && chestIds.length > 0 && (
-            <span className="absolute flex items-center text-gray-400" style={{ top: '-2px', right: '3px', fontSize: 'small' }}>
-          <img src={`${process.env.PUBLIC_URL}/assets/images/icons/barrel.png`} alt="chest icon" className="inline-block w-4 h-4 mr-1" />
-              {chestIds.map((id) => `#${id}`).join(', ')}
-        </span>
+          <div className="absolute -top-1 -right-1 bg-blue-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs">
+            {chestIds.length}
+          </div>
         )}
         {removeItem && (
-            <button className="text-gray-500 hover:text-gray-800" onClick={removeItem}>
-              <FaTimes />
-            </button>
+          <button
+            className="absolute -top-1 -left-1 text-red-500 hover:text-red-700 bg-white rounded-full w-4 h-4 flex items-center justify-center text-xs"
+            onClick={removeItem}
+          >
+            <FaTimes size={8} />
+          </button>
         )}
-      </li>
+      </div>
+    );
+  }
+
+  // List view rendering (original)
+  return (
+    <li
+      ref={drag}
+      className={`cursor-pointer p-2 flex items-center gap-4 border-b ${isDarkMode ? 'hover:bg-gray-600 border-gray-600' : 'hover:bg-gray-200 border-gray-300'} ${index === 0 ? 'border-t' : ''}`}
+      style={{ opacity: isDragging ? 0.5 : 1 }}
+    >
+      <div ref={compassRef} className="item-icons">
+        <img
+          src={`${process.env.PUBLIC_URL}/assets/images/icons/${item.item === 'compass' || item.item === 'recovery_compass' ? compassImage : item.item === 'clock' ? clockImage : item.image}`}
+          alt={item.item}
+          className={`w-full h-full ${pixelatedIcons.includes(item.item) ? 'pixelated-icon' : ''}`}
+          loading="lazy"
+        />
+      </div>
+      <div className="flex-1 line-clamp-1">{item.item.replace(/_/g, ' ')}</div>
+      {chestIds && chestIds.length > 0 && (
+        <span className="absolute flex items-center text-gray-400" style={{ top: '-2px', right: '3px', fontSize: 'small' }}>
+          <img src={`${process.env.PUBLIC_URL}/assets/images/icons/barrel.png`} alt="chest icon" className="inline-block w-4 h-4 mr-1" />
+          {chestIds.map((id) => `#${id}`).join(', ')}
+        </span>
+      )}
+      {removeItem && (
+        <button className="text-gray-500 hover:text-gray-800" onClick={removeItem}>
+          <FaTimes />
+        </button>
+      )}
+    </li>
   );
 };
 

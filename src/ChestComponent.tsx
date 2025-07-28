@@ -33,7 +33,7 @@ interface ChestComponentProps {
   updateChestIcon: (id: number, icon: string) => void;
   removeItemFromChest: (chestId: number, item: Item) => void;
   moveChest: (dragIndex: number, hoverIndex: number) => void;
-  setChests: React.Dispatch<React.SetStateAction<Chest[]>>;
+  setChests: (chests: Chest[]) => void;
 }
 
 const ChestComponent: React.FC<ChestComponentProps> = ({
@@ -253,6 +253,15 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
     );
   };
 
+  const handleCheckboxChange = () => {
+    const newCheckedState = !isChecked;
+    setIsChecked(newCheckedState);
+
+    // Update the checkbox state through localStorage
+    // The parent component will handle the state management in the tab system
+    localStorage.setItem(`chest-checked-${chest.id}`, JSON.stringify(newCheckedState));
+  };
+
   return (
       <div
           ref={ref}
@@ -260,7 +269,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
           style={{ opacity: isDragging || isOver ? 0.5 : 1 }}
       >
         <div className="absolute flex items-center gap-1 text-gray-400" style={{ top: '-2px', right: '3px', fontSize: 'small' }}>
-          #{index + 1}
+          #{chest.id}
         </div>
         <div className="flex justify-between items-center gap-2">
           <div className="relative" ref={iconButtonRef}>
@@ -313,14 +322,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
                   <input
                       type="checkbox"
                       checked={isChecked}
-                      onChange={() => {
-                        setIsChecked(!isChecked);
-                        setChests((prevChests: Chest[]) =>
-                            prevChests.map(chestItem =>
-                                chestItem.id === chest.id ? { ...chestItem, checked: !chestItem.checked } : chestItem
-                            )
-                        );
-                      }}
+                      onChange={handleCheckboxChange}
                       className="mr-2"
                   />
                 </div>

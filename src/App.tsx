@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { FaCog, FaCaretDown, FaTimes, FaEdit } from 'react-icons/fa';
+import { FaCog, FaCaretDown, FaTimes, FaEdit, FaPlus } from 'react-icons/fa';
 import { FixedSizeList as List } from 'react-window';
 import './scss/main.scss';
 import itemsData from './data.json';
@@ -25,33 +25,31 @@ interface Chest {
   checked: boolean;
 }
 
-interface Profile {
+interface Tab {
+  id: number;
   name: string;
   chests: Chest[];
+}
+
+interface Profile {
+  name: string;
+  tabs?: Tab[]; // Optional for backward compatibility
+  chests?: Chest[]; // Keep for backward compatibility
 }
 
 const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [items, setItems] = useState<Item[]>([]);
-  const [chests, setChests] = useState<Chest[]>(() => {
-    const savedProfile = localStorage.getItem('profile');
-    if (savedProfile) {
-      const profile = JSON.parse(savedProfile);
-      return profile.chests.map((chest: any) => ({
-        ...chest,
-        icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
-        checked: chest.checked || false,
-      }));
-    }
-    return [];
-  });
-  const [profileName, setProfileName] = useState<string>(() => {
-    const savedProfile = localStorage.getItem('profile');
-    return savedProfile ? JSON.parse(savedProfile).name : 'Ny Profil';
-  });
+  const [profileName, setProfileName] = useState<string>('');
+  const [tabs, setTabs] = useState<Tab[]>([]);
+  const [activeTabId, setActiveTabId] = useState<number>(1);
   const [showAll, setShowAll] = useState<boolean>(() => {
     const savedShowAll = localStorage.getItem('showAll');
     return savedShowAll ? JSON.parse(savedShowAll) : true;
+  });
+  const [isGridView, setIsGridView] = useState<boolean>(() => {
+    const savedGridView = localStorage.getItem('isGridView');
+    return savedGridView ? JSON.parse(savedGridView) : false;
   });
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const savedMode = localStorage.getItem('isDarkMode');
@@ -60,17 +58,95 @@ const App: React.FC = () => {
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [listHeight, setListHeight] = useState(window.innerHeight - 250);
-  const [undoStack, setUndoStack] = useState<Chest[][]>([]);
-  const [redoStack, setRedoStack] = useState<Chest[][]>([]);
+  const [undoStack, setUndoStack] = useState<Tab[][]>([]);
+  const [redoStack, setRedoStack] = useState<Tab[][]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [newProfileModalVisible, setNewProfileModalVisible] = useState(false);
   const [importProfileModalVisible, setImportProfileModalVisible] = useState(false);
+  const [deleteTabModalVisible, setDeleteTabModalVisible] = useState(false);
   const [chestToDelete, setChestToDelete] = useState<number | null>(null);
+  const [tabToDelete, setTabToDelete] = useState<number | null>(null);
   const [isEditingProfileName, setIsEditingProfileName] = useState(false);
+  const [isEditingTabName, setIsEditingTabName] = useState<number | null>(null);
   const [pendingProfile, setPendingProfile] = useState<Profile | null>(null);
 
   const listContainerRef = useRef<HTMLDivElement>(null);
   const gridContainerRef = useRef<HTMLDivElement>(null);
+
+  // Get current active tab and chests with proper memoization
+  const activeTab = useMemo(() => tabs.find(tab => tab.id === activeTabId), [tabs, activeTabId]);
+  const chests = useMemo(() => activeTab?.chests || [], [activeTab]);
+
+  // Helper function to get next unique chest ID across all tabs
+  const getNextChestId = useCallback(() => {
+    let maxId = 0;
+    tabs.forEach(tab => {
+      tab.chests.forEach(chest => {
+        if (chest.id > maxId) {
+          maxId = chest.id;
+        }
+      });
+    });
+    return maxId + 1;
+  }, [tabs]);
+
+  // Initialize profile and tabs
+  useEffect(() => {
+    const savedProfile = localStorage.getItem('profile');
+    if (savedProfile) {
+      const profile: Profile = JSON.parse(savedProfile);
+      setProfileName(profile.name);
+
+      // Handle backward compatibility
+      if (profile.tabs) {
+        // New format with tabs - ensure unique chest IDs
+        let globalChestId = 1;
+        const processedTabs = profile.tabs.map(tab => ({
+          ...tab,
+          chests: tab.chests.map((chest: any) => ({
+            ...chest,
+            id: globalChestId++, // Assign unique ID
+            icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
+            checked: chest.checked || false,
+          }))
+        }));
+        setTabs(processedTabs);
+        setActiveTabId(processedTabs[0]?.id || 1);
+      } else if (profile.chests) {
+        // Old format - convert to tab format with unique chest IDs
+        const processedChests = profile.chests.map((chest: any, index: number) => ({
+          ...chest,
+          id: index + 1, // Ensure unique ID
+          icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
+          checked: chest.checked || false,
+        }));
+        const defaultTab: Tab = {
+          id: 1,
+          name: 'Tab 1',
+          chests: processedChests
+        };
+        setTabs([defaultTab]);
+        setActiveTabId(1);
+      }
+    } else {
+      // Initialize with default profile, tab, and chest
+      setProfileName('Ny Profil');
+      const defaultChest: Chest = {
+        id: 1,
+        label: 'Min første kiste',
+        items: [],
+        icon: 'barrel',
+        checked: false
+      };
+      const defaultTab: Tab = {
+        id: 1,
+        name: 'Tab 1',
+        chests: [defaultChest]
+      };
+      setTabs([defaultTab]);
+      setActiveTabId(1);
+    }
+  }, []);
 
   useEffect(() => {
     const sortedItems = itemsData.items.sort((a, b) => a.item.localeCompare(b.item));
@@ -93,30 +169,24 @@ const App: React.FC = () => {
     localStorage.setItem('isDarkMode', JSON.stringify(isDarkMode));
   }, [isDarkMode]);
 
+  // Save profile with tabs
   useEffect(() => {
-    const savedProfile = localStorage.getItem('profile');
-    if (savedProfile) {
-      const profile = JSON.parse(savedProfile);
-      setChests(profile.chests.map((chest: any) => ({
-        ...chest,
-        icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
-        checked: chest.checked || false,
-      })));
-      setProfileName(profile.name);
+    if (tabs.length > 0 && profileName) {
+      const profile: Profile = {
+        name: profileName,
+        tabs
+      };
+      localStorage.setItem('profile', JSON.stringify(profile));
     }
-  }, []);
-
-  useEffect(() => {
-    const profile: Profile = {
-      name: profileName,
-      chests,
-    };
-    localStorage.setItem('profile', JSON.stringify(profile));
-  }, [chests, profileName]);
+  }, [tabs, profileName]);
 
   useEffect(() => {
     localStorage.setItem('showAll', JSON.stringify(showAll));
   }, [showAll]);
+
+  useEffect(() => {
+    localStorage.setItem('isGridView', JSON.stringify(isGridView));
+  }, [isGridView]);
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
@@ -145,7 +215,7 @@ const App: React.FC = () => {
   const handleExportProfile = useCallback(() => {
     const profile: Profile = {
       name: profileName,
-      chests,
+      tabs
     };
     const blob = new Blob([JSON.stringify(profile, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -154,72 +224,191 @@ const App: React.FC = () => {
     a.download = `${profileName}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [profileName, chests]);
-
-  const createNewProfile = useCallback(() => {
-    if (chests.length > 0) {
-      setNewProfileModalVisible(true);
-    } else {
-      setChests([]);
-      setProfileName('Ny Profil');
-      setShowAll(true);
-    }
-  }, [chests.length]);
+  }, [profileName, tabs]);
 
   const confirmNewProfile = () => {
-    setChests([]);
+    const defaultChest: Chest = {
+      id: 1,
+      label: 'Min første kiste',
+      items: [],
+      icon: 'barrel',
+      checked: false
+    };
+    const defaultTab: Tab = {
+      id: 1,
+      name: 'Tab 1',
+      chests: [defaultChest]
+    };
+    setTabs([defaultTab]);
+    setActiveTabId(1);
     setProfileName('Ny Profil');
     setShowAll(true);
     setNewProfileModalVisible(false);
   };
 
+  const createNewProfile = useCallback(() => {
+    if (tabs.some(tab => tab.chests.length > 0)) {
+      setNewProfileModalVisible(true);
+    } else {
+      const defaultChest: Chest = {
+        id: 1,
+        label: 'Min første kiste',
+        items: [],
+        icon: 'barrel',
+        checked: false
+      };
+      const defaultTab: Tab = {
+        id: 1,
+        name: 'Tab 1',
+        chests: [defaultChest]
+      };
+      setTabs([defaultTab]);
+      setActiveTabId(1);
+      setProfileName('Ny Profil');
+      setShowAll(true);
+    }
+  }, [tabs]);
+
   const cancelNewProfile = () => {
     setNewProfileModalVisible(false);
   };
 
-const confirmImportProfile = () => {
-  if (pendingProfile) {
-
-    setChests(prevChests => {
-      prevChests.forEach(chest => {
-        localStorage.removeItem(`chest-checked-${chest.id}`);
+  const confirmImportProfile = () => {
+    if (pendingProfile) {
+      // Clear existing checked states
+      tabs.forEach(tab => {
+        tab.chests.forEach(chest => {
+          localStorage.removeItem(`chest-checked-${chest.id}`);
+        });
       });
 
-      return prevChests.map(chest => ({
-        ...chest,
-        checked: false,
-      }));
-    });
+      setProfileName(pendingProfile.name);
 
-    setChests(pendingProfile.chests.map((chest: any) => ({
-      ...chest,
-      icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
-      checked: chest.checked || false,
-    })));
+      // Handle backward compatibility
+      if (pendingProfile.tabs) {
+        // New format with tabs - ensure unique chest IDs
+        let globalChestId = 1;
+        const processedTabs = pendingProfile.tabs.map(tab => ({
+          ...tab,
+          chests: tab.chests.map((chest: any) => ({
+            ...chest,
+            id: globalChestId++, // Assign unique ID
+            icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
+            checked: chest.checked || false,
+          }))
+        }));
+        setTabs(processedTabs);
+        setActiveTabId(processedTabs[0]?.id || 1);
+      } else if (pendingProfile.chests) {
+        // Old format - convert to tab format with unique chest IDs
+        const processedChests = pendingProfile.chests.map((chest: any, index: number) => ({
+          ...chest,
+          id: index + 1, // Ensure unique ID
+          icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
+          checked: chest.checked || false,
+        }));
+        const defaultTab: Tab = {
+          id: 1,
+          name: 'Tab 1',
+          chests: processedChests
+        };
+        setTabs([defaultTab]);
+        setActiveTabId(1);
+      }
 
-    setProfileName(pendingProfile.name);
-    setPendingProfile(null);
-    setImportProfileModalVisible(false);
+      setPendingProfile(null);
+      setImportProfileModalVisible(false);
 
-    toast.success('Profil importeret!', {
-      position: "top-center",
-      autoClose: 3000,
-      hideProgressBar: true,
-      closeOnClick: true,
-      pauseOnHover: false,
-      draggable: false,
-      progress: undefined,
-      theme: isDarkMode ? 'dark' : 'light',
-      transition: Zoom,
-      closeButton: false,
-    });
-  }
-};
+      toast.success('Profil importeret!', {
+        position: "top-center",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+        theme: isDarkMode ? 'dark' : 'light',
+        transition: Zoom,
+        closeButton: false,
+      });
+    }
+  };
 
   const cancelImportProfile = () => {
     setPendingProfile(null);
     setImportProfileModalVisible(false);
   };
+
+  // Tab management functions
+  const addTab = useCallback(() => {
+    const newTabId = Math.max(...tabs.map(tab => tab.id), 0) + 1;
+    const nextChestId = getNextChestId();
+    const defaultChest: Chest = {
+      id: nextChestId,
+      label: 'Min første kiste',
+      items: [],
+      icon: 'barrel',
+      checked: false
+    };
+    const newTab: Tab = {
+      id: newTabId,
+      name: `Tab ${newTabId}`,
+      chests: [defaultChest]
+    };
+    setTabs(prevTabs => [...prevTabs, newTab]);
+    setActiveTabId(newTabId);
+  }, [tabs, getNextChestId]);
+
+  const handleDeleteTab = useCallback((tabId: number) => {
+    const newTabs = tabs.filter(tab => tab.id !== tabId);
+    setTabs(newTabs);
+
+    if (activeTabId === tabId) {
+      setActiveTabId(newTabs[0]?.id || 1);
+    }
+    setDeleteTabModalVisible(false);
+  }, [tabs, activeTabId]);
+
+  const removeTab = useCallback((tabId: number) => {
+    if (tabs.length === 1) return; // Don't remove the last tab
+
+    const tabToRemove = tabs.find(tab => tab.id === tabId);
+    if (tabToRemove && tabToRemove.chests.some(chest => chest.items.length > 0)) {
+      setTabToDelete(tabId);
+      setDeleteTabModalVisible(true);
+    } else {
+      handleDeleteTab(tabId);
+    }
+  }, [tabs, handleDeleteTab]);
+
+  const confirmDeleteTab = () => {
+    if (tabToDelete !== null) {
+      handleDeleteTab(tabToDelete);
+      setTabToDelete(null);
+    }
+  };
+
+  const cancelDeleteTab = () => {
+    setTabToDelete(null);
+    setDeleteTabModalVisible(false);
+  };
+
+  const updateTabName = useCallback((tabId: number, name: string) => {
+    setTabs(prevTabs =>
+      prevTabs.map(tab =>
+        tab.id === tabId ? { ...tab, name } : tab
+      )
+    );
+  }, []);
+
+  // Update chest functions to work with active tab
+  const updateChests = useCallback((newChests: Chest[]) => {
+    setTabs(prevTabs =>
+      prevTabs.map(tab =>
+        tab.id === activeTabId ? { ...tab, chests: newChests } : tab
+      )
+    );
+  }, [activeTabId]);
 
   const filteredItems = useMemo(
     () => items.filter(item => item.item.toLowerCase().includes(searchTerm.toLowerCase().replace(/ /g, '_'))),
@@ -228,16 +417,19 @@ const confirmImportProfile = () => {
 
   const chestItemsMap = useMemo(() => {
     const map = new Map<string, number[]>();
-    chests.forEach((chest, index) => {
-      chest.items.forEach(item => {
-        if (!map.has(item.item)) {
-          map.set(item.item, []);
-        }
-        map.get(item.item)?.push(chest.id);
+    // Check all tabs, not just active tab
+    tabs.forEach(tab => {
+      tab.chests.forEach(chest => {
+        chest.items.forEach(item => {
+          if (!map.has(item.item)) {
+            map.set(item.item, []);
+          }
+          map.get(item.item)?.push(chest.id);
+        });
       });
     });
     return map;
-  }, [chests]);
+  }, [tabs]); // Changed dependency from chests to tabs
 
   const itemsToShow = useMemo(
     () => (showAll ? filteredItems : filteredItems.filter(item => !chestItemsMap.has(item.item))),
@@ -245,19 +437,21 @@ const confirmImportProfile = () => {
   );
 
   const addChest = useCallback(() => {
-    setUndoStack(prevStack => [...prevStack, chests]);
+    setUndoStack(prevStack => [...prevStack, tabs]);
     setRedoStack([]);
-    const newChestId = chests.length > 0 ? Math.max(...chests.map(chest => chest.id)) + 1 : 1;
-    const newChest: Chest = { id: newChestId, label: 'Barrel', items: [], icon: 'barrel', checked: false }; // Include checked property
-    setChests(prevChests => [...prevChests, newChest]);
-  }, [chests]);
+    const newChestId = getNextChestId();
+    const newChest: Chest = { id: newChestId, label: 'Barrel', items: [], icon: 'barrel', checked: false };
+    updateChests([...chests, newChest]);
+  }, [chests, tabs, updateChests, getNextChestId]);
 
   const handleDeleteChest = useCallback((id: number) => {
-    setUndoStack(prevStack => [...prevStack, chests]);
+    setUndoStack(prevStack => [...prevStack, tabs]);
     setRedoStack([]);
-    setChests(chests.filter(chest => chest.id !== id).map((chest, index) => ({ ...chest, id: index + 1 })));
+    const newChests = chests.filter(chest => chest.id !== id);
+    // Don't reindex - keep original IDs to maintain uniqueness
+    updateChests(newChests);
     setModalVisible(false);
-  }, [chests]);
+  }, [chests, tabs, updateChests]);
 
   const confirmDeleteChest = useCallback((id: number) => {
     const chestToRemove = chests.find(chest => chest.id === id);
@@ -270,25 +464,26 @@ const confirmImportProfile = () => {
   }, [chests, handleDeleteChest]);
 
   const updateChestLabel = useCallback((id: number, label: string) => {
-    setChests(prevChests => prevChests.map(chest => (chest.id === id ? { ...chest, label } : chest)));
-  }, []);
+    const newChests = chests.map(chest => (chest.id === id ? { ...chest, label } : chest));
+    updateChests(newChests);
+  }, [chests, updateChests]);
 
   const updateChestIcon = useCallback((id: number, icon: string) => {
-    setChests(prevChests => prevChests.map(chest => (chest.id === id ? { ...chest, icon } : chest)));
-  }, []);
+    const newChests = chests.map(chest => (chest.id === id ? { ...chest, icon } : chest));
+    updateChests(newChests);
+  }, [chests, updateChests]);
 
   const removeItemFromChest = useCallback((chestId: number, item: Item) => {
-    setUndoStack(prevStack => [...prevStack, chests]);
+    setUndoStack(prevStack => [...prevStack, tabs]);
     setRedoStack([]);
-    setChests(prevChests =>
-      prevChests.map(chest => {
-        if (chest.id === chestId) {
-          return { ...chest, items: chest.items.filter(chestItem => chestItem.item !== item.item) };
-        }
-        return chest;
-      })
-    );
-  }, [chests]);
+    const newChests = chests.map(chest => {
+      if (chest.id === chestId) {
+        return { ...chest, items: chest.items.filter(chestItem => chestItem.item !== item.item) };
+      }
+      return chest;
+    });
+    updateChests(newChests);
+  }, [chests, tabs, updateChests]);
 
   const handleDrop = useCallback(
     (item: Item, chestId: number) => {
@@ -308,42 +503,41 @@ const confirmImportProfile = () => {
           closeButton: false,
         });
       } else {
-        setUndoStack(prevStack => [...prevStack, chests]);
+        setUndoStack(prevStack => [...prevStack, tabs]);
         setRedoStack([]);
-        setChests(prevChests =>
-          prevChests.map(chest => {
-            if (chest.id === chestId) {
-              if (!chest.items.some(chestItem => chestItem.item === item.item)) {
-                return { ...chest, items: [...chest.items, item] };
-              }
+        const newChests = chests.map(chest => {
+          if (chest.id === chestId) {
+            if (!chest.items.some(chestItem => chestItem.item === item.item)) {
+              return { ...chest, items: [...chest.items, item] };
             }
-            return chest;
-          })
-        );
+          }
+          return chest;
+        });
+        updateChests(newChests);
       }
     },
-    [chests, isDarkMode]
+    [chests, isDarkMode, tabs, updateChests]
   );
 
   const handleUndo = useCallback(() => {
     if (undoStack.length > 0) {
       const newUndoStack = [...undoStack];
       const previousState = newUndoStack.pop()!;
-      setRedoStack(prevStack => [...prevStack, chests]);
-      setChests(previousState);
+      setRedoStack(prevStack => [...prevStack, tabs]);
+      setTabs(previousState);
       setUndoStack(newUndoStack);
     }
-  }, [undoStack, chests]);
+  }, [undoStack, tabs]);
 
   const handleRedo = useCallback(() => {
     if (redoStack.length > 0) {
       const newRedoStack = [...redoStack];
       const nextState = newRedoStack.pop()!;
-      setUndoStack(prevStack => [...prevStack, chests]);
-      setChests(nextState);
+      setUndoStack(prevStack => [...prevStack, tabs]);
+      setTabs(nextState);
       setRedoStack(newRedoStack);
     }
-  }, [redoStack, chests]);
+  }, [redoStack, tabs]);
 
   const handleClearSearch = () => {
     setSearchTerm('');
@@ -360,6 +554,7 @@ const confirmImportProfile = () => {
           index={index}
           lastIndex={itemsToShow.length - 1}
           chestIds={chestIds}
+          isGridView={false}
         />
       </div>
     );
@@ -404,13 +599,11 @@ const confirmImportProfile = () => {
   }, [handleUndo, handleRedo]);
 
   const moveChest = (dragIndex: number, hoverIndex: number) => {
-    setChests(prevChests => {
-      const newChests = [...prevChests];
-      const [movedChest] = newChests.splice(dragIndex, 1);
-      newChests.splice(hoverIndex, 0, movedChest);
-
-      return newChests.map((chest, idx) => ({ ...chest, id: idx + 1 }));
-    });
+    const newChests = [...chests];
+    const [movedChest] = newChests.splice(dragIndex, 1);
+    newChests.splice(hoverIndex, 0, movedChest);
+    // Don't reindex - keep original IDs to maintain uniqueness
+    updateChests(newChests);
   };
 
   return (
@@ -439,57 +632,152 @@ const confirmImportProfile = () => {
             </div>
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Item liste</h2>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={showAll}
-                  onChange={() => setShowAll(!showAll)}
-                  className="form-checkbox h-4 w-4 text-blue-600 dark:text-blue-400"
-                />
-                <span>Vis alle</span>
-              </label>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={showAll}
+                    onChange={() => setShowAll(!showAll)}
+                    className="form-checkbox h-4 w-4 text-blue-600 dark:text-blue-400"
+                  />
+                  <span>Vis alle</span>
+                </label>
+                <button
+                  onClick={() => setIsGridView(!isGridView)}
+                  className={`p-2 rounded transition-colors ${
+                    isDarkMode
+                      ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                      : 'bg-gray-200 hover:bg-gray-300 text-black'
+                  }`}
+                  title={isGridView ? 'Skift til liste visning' : 'Skift til gitter visning'}
+                >
+                  {isGridView ? '☰' : '⊞'}
+                </button>
+              </div>
             </div>
             <div ref={listContainerRef} className="flex-1 overflow-auto">
-              <List
-                className={`${isDarkMode ? 'dark-theme' : 'light-theme'}`}
-                height={listHeight}
-                itemCount={itemsToShow.length}
-                itemSize={50}
-                width="100%"
-              >
-                {renderRow}
-              </List>
+              {isGridView ? (
+                <div
+                  className={`grid grid-cols-6 gap-2 overflow-x-hidden ${isDarkMode ? 'dark-theme' : 'light-theme'}`}
+                  style={{ height: listHeight }}
+                >
+                  {itemsToShow.map((item, index) => (
+                    <ItemComponent
+                      key={item.item}
+                      item={item}
+                      isDarkMode={isDarkMode}
+                      index={index}
+                      lastIndex={itemsToShow.length - 1}
+                      chestIds={chestItemsMap.get(item.item)}
+                      isGridView={true}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <List
+                  className={`${isDarkMode ? 'dark-theme' : 'light-theme'}`}
+                  height={listHeight}
+                  itemCount={itemsToShow.length}
+                  itemSize={50}
+                  width="100%"
+                >
+                  {renderRow}
+                </List>
+              )}
             </div>
           </aside>
           <main className="flex-1 p-4 flex flex-col gap-4">
             <div className="flex justify-between items-center h-8">
-              <button className="bg-blue-500 hover:bg-blue-700 text-white px-2 rounded py-1 text-sm" onClick={addChest}>
-                Tilføj kiste
-              </button>
-              <div className="flex items-center">
-                {isEditingProfileName ? (
-                  <>
-                    <input
-                      type="text"
-                      spellCheck="false"
-                      value={profileName}
-                      onChange={(e) => setProfileName(e.target.value)}
-                      className={`border p-2 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white'}`}
-                      placeholder="Profilnavn"
-                    />
-                    <button className="text-blue-500 hover:text-blue-700 ml-2" onClick={() => setIsEditingProfileName(false)}>
-                      Gem
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-center text-xl font-bold">{profileName}</span>
-                    <button className="text-blue-500 hover:text-blue-700 ml-2" onClick={() => setIsEditingProfileName(true)}>
-                      <FaEdit />
-                    </button>
-                  </>
-                )}
+              <div className="flex items-center gap-4">
+                {/* Profile Name */}
+                <div className="flex items-center">
+                  {isEditingProfileName ? (
+                    <>
+                      <input
+                        type="text"
+                        spellCheck="false"
+                        value={profileName}
+                        onChange={(e) => setProfileName(e.target.value)}
+                        className={`border p-2 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white'}`}
+                        placeholder="Profilnavn"
+                      />
+                      <button className="text-blue-500 hover:text-blue-700 ml-2" onClick={() => setIsEditingProfileName(false)}>
+                        Gem
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-xl font-bold">{profileName}</span>
+                      <button className="text-blue-500 hover:text-blue-700 ml-2" onClick={() => setIsEditingProfileName(true)}>
+                        <FaEdit />
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Tab Bar */}
+                <div className="flex items-center gap-2">
+                  {tabs.map((tab) => (
+                    <div key={tab.id} className="flex items-center">
+                      {isEditingTabName === tab.id ? (
+                        <input
+                          type="text"
+                          spellCheck="false"
+                          value={tab.name}
+                          onChange={(e) => updateTabName(tab.id, e.target.value)}
+                          onBlur={() => setIsEditingTabName(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              setIsEditingTabName(null);
+                            }
+                          }}
+                          className={`px-3 py-1 text-sm border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                          autoFocus
+                        />
+                      ) : (
+                        <button
+                          className={`px-3 py-1 text-sm rounded border-b-2 transition-colors ${
+                            activeTabId === tab.id
+                              ? isDarkMode
+                                ? 'bg-gray-700 border-blue-400 text-white'
+                                : 'bg-white border-blue-500 text-black'
+                              : isDarkMode
+                              ? 'bg-gray-800 border-transparent text-gray-300 hover:text-white hover:bg-gray-700'
+                              : 'bg-gray-100 border-transparent text-gray-600 hover:text-black hover:bg-gray-200'
+                          }`}
+                          onClick={() => setActiveTabId(tab.id)}
+                          onDoubleClick={() => setIsEditingTabName(tab.id)}
+                        >
+                          {tab.name}
+                          {tabs.length > 1 && (
+                            <button
+                              className="ml-2 text-red-500 hover:text-red-700"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeTab(tab.id);
+                              }}
+                            >
+                              <FaTimes size={10} />
+                            </button>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    className={`px-2 py-1 text-sm rounded border-2 border-dashed transition-colors ${
+                      isDarkMode
+                        ? 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-white'
+                        : 'border-gray-300 text-gray-500 hover:border-gray-400 hover:text-black'
+                    }`}
+                    onClick={addTab}
+                    title="Tilføj nyt tab"
+                  >
+                    <FaPlus size={12} />
+                  </button>
+                </div>
               </div>
+
               <div className="relative z-50">
                 <button
                   className={`flex items-center space-x-2 p-2 rounded ${isDarkMode ? 'bg-gray-700 hover:bg-gray-800 text-white' : 'bg-gray-400 hover:bg-gray-500 text-black'}`}
@@ -508,8 +796,8 @@ const confirmImportProfile = () => {
                         Dark Mode
                         <span
                             className={`ml-2 px-2 py-1 rounded text-xs ${isDarkMode ? 'bg-green-600 text-white' : 'bg-gray-300 text-black'}`}>
-    {isDarkMode ? 'ON' : 'OFF'}
-  </span>
+                          {isDarkMode ? 'ON' : 'OFF'}
+                        </span>
                       </button>
                       <button
                           className={`w-full text-left px-2 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
@@ -567,22 +855,42 @@ const confirmImportProfile = () => {
                 )}
               </div>
             </div>
+
             <div ref={gridContainerRef} className={`grid-cols-auto-fit ${isDarkMode ? 'dark-theme' : 'light-theme'}`}>
               {chests.map((chest, index) => (
                   <ChestComponent
                       key={chest.id}
                       chest={chest}
                       index={index}
-                  onDrop={handleDrop}
-                  isDarkMode={isDarkMode}
-                  removeChest={confirmDeleteChest}
-                  updateChestLabel={updateChestLabel}
-                  updateChestIcon={updateChestIcon}
-                  removeItemFromChest={removeItemFromChest}
-                  moveChest={moveChest}
-                  setChests={setChests} // Pass setChests to ChestComponent
+                      onDrop={handleDrop}
+                      isDarkMode={isDarkMode}
+                      removeChest={confirmDeleteChest}
+                      updateChestLabel={updateChestLabel}
+                      updateChestIcon={updateChestIcon}
+                      removeItemFromChest={removeItemFromChest}
+                      moveChest={moveChest}
+                      setChests={updateChests}
                 />
               ))}
+
+              {/* Add Chest Button */}
+              <div className={`flex items-center justify-center border-2 border-dashed rounded p-4 min-h-[200px] transition-colors ${
+                isDarkMode
+                  ? 'border-gray-600 hover:border-gray-500 hover:bg-gray-800'
+                  : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+              }`}>
+                <button
+                  onClick={addChest}
+                  className={`flex flex-col items-center gap-3 p-6 rounded-lg transition-colors ${
+                    isDarkMode
+                      ? 'text-gray-400 hover:text-white hover:bg-gray-700'
+                      : 'text-gray-500 hover:text-black hover:bg-gray-100'
+                  }`}
+                >
+                  <FaPlus size={24} />
+                  <span className="text-lg font-medium">Tilføj kiste</span>
+                </button>
+              </div>
             </div>
           </main>
         </div>
@@ -624,6 +932,15 @@ const confirmImportProfile = () => {
             onCancel={cancelImportProfile}
             message="Har du husket at eksportere den nuværende profil? Ændringer kan gå tabt, hvis du fortsætter uden at gemme."
             title="Importer Profil"
+          />
+        )}
+        {deleteTabModalVisible && (
+          <ConfirmationModal
+            isDarkMode={isDarkMode}
+            onConfirm={confirmDeleteTab}
+            onCancel={cancelDeleteTab}
+            message="Er du sikker på, at du vil slette dette tab? Det indeholder kister med indhold."
+            title="Bekræft Tab Sletning"
           />
         )}
       </div>
