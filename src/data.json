@@ -6449,6 +6449,51 @@
             "item": "dandelion",
             "variable": "%v37%",
             "image": "dandelion.png"
+        },
+        {
+            "item": "cactus_flower",
+            "variable": "%v2271%",
+            "image": "cactus_flower.png"
+        },
+        {
+            "item": "tall_dry_grass",
+            "variable": "%v2272%",
+            "image": "tall_dry_grass.png"
+        },
+        {
+            "item": "bordure_indented_banner_pattern",
+            "variable": "%v2269%",
+            "image": "bordure_indented_banner_pattern.png"
+        },
+        {
+            "item": "field_masoned_banner_pattern",
+            "variable": "%v2268%",
+            "image": "field_masoned_banner_pattern.png"
+        },
+        {
+            "item": "resin_block",
+            "variable": "%v2270%",
+            "image": "resin_block.png"
+        },
+        {
+            "item": "pale_oak_hanging_sign",
+            "variable": "%v1159%",
+            "image": "pale_oak_hanging_sign.png"
+        },
+        {
+            "item": "pale_oak_sign",
+            "variable": "%v1158%",
+            "image": "pale_oak_sign.png"
+        },
+        {
+            "item": "Pale_oak_chest_boat",
+            "variable": "%v1157%",
+            "image": "Pale_oak_chest_boat.png"
+        },
+        {
+            "item": "pale_oak_boat",
+            "variable": "%v1156%",
+            "image": "pale_oak_boat.png"
         }
     ]
 }
