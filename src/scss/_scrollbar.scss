@@ -1,6 +1,7 @@
 /* Custom Scrollbar for Light Theme */
 .light-theme::-webkit-scrollbar {
   width: 0.5rem;
+  height: 0.5rem;
 }
 
 .light-theme::-webkit-scrollbar-track {
@@ -25,6 +26,7 @@
 /* Custom Scrollbar for Dark Theme */
 .dark-theme::-webkit-scrollbar {
   width: 0.75rem;
+  height: 0.75rem;
 }
 
 .dark-theme::-webkit-scrollbar-track {
