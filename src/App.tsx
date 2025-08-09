@@ -609,25 +609,25 @@ const App: React.FC = () => {
   return (
     <DndProvider backend={HTML5Backend}>
       <div className={`flex flex-col min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'}`}>
-        <div className="flex flex-1 flex-col md:flex-row h-full">
+        <div className="flex flex-1 flex-col md:flex-row h-full min-h-0">
           <aside className={`p-4 border-b md:border-r flex-shrink-0 gap-4 flex flex-col ${isDarkMode ? 'bg-gray-800 border-gray-700 dark-theme' : 'bg-white border-gray-200 light-theme'}`}>
             <div className={`${isDarkMode ? 'logo-dark' : 'logo-light'}`}/>
             <div className="relative">
               <input
-                type="text"
-                spellCheck="false"
-                value={searchTerm}
-                placeholder="Søg..."
-                className={`border p-2 pr-10 w-full ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white'}`}
-                onChange={handleSearch}
+                  type="text"
+                  spellCheck="false"
+                  value={searchTerm}
+                  placeholder="Søg..."
+                  className={`border p-2 pr-10 w-full ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white'}`}
+                  onChange={handleSearch}
               />
               {searchTerm && (
-                <button
-                  className="absolute right-0 top-0 mt-3 mr-3 text-gray-500 hover:text-gray-800"
-                  onClick={handleClearSearch}
-                >
-                  <FaTimes />
-                </button>
+                  <button
+                      className="absolute right-0 top-0 mt-3 mr-3 text-gray-500 hover:text-gray-800"
+                      onClick={handleClearSearch}
+                  >
+                    <FaTimes/>
+                  </button>
               )}
             </div>
             <div className="flex justify-between items-center">
@@ -635,54 +635,58 @@ const App: React.FC = () => {
               <div className="flex items-center gap-3">
                 <label className="flex items-center space-x-2">
                   <input
-                    type="checkbox"
-                    checked={showAll}
-                    onChange={() => setShowAll(!showAll)}
-                    className="form-checkbox h-4 w-4 text-blue-600 dark:text-blue-400"
+                      type="checkbox"
+                      checked={showAll}
+                      onChange={() => setShowAll(!showAll)}
+                      className="form-checkbox h-4 w-4 text-blue-600 dark:text-blue-400"
                   />
                   <span>Vis alle</span>
                 </label>
                 <button
-                  onClick={() => setIsGridView(!isGridView)}
-                  className={`p-2 rounded transition-colors ${
-                    isDarkMode
-                      ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                      : 'bg-gray-200 hover:bg-gray-300 text-black'
-                  }`}
-                  title={isGridView ? 'Skift til liste visning' : 'Skift til gitter visning'}
+                    onClick={() => setIsGridView(!isGridView)}
+                    className={`p-2 rounded transition-colors ${
+                        isDarkMode
+                            ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                            : 'bg-gray-200 hover:bg-gray-300 text-black'
+                    }`}
+                    title={isGridView ? 'Skift til liste visning' : 'Skift til gitter visning'}
                 >
                   {isGridView ? '☰' : '⊞'}
                 </button>
               </div>
             </div>
-            <div ref={listContainerRef} className="flex-1 overflow-auto">
+            <div ref={listContainerRef} className={`flex-1 overflow-auto ${isDarkMode ? 'dark-theme' : 'light-theme'}`}>
               {isGridView ? (
-                <div
-                  className={`grid grid-cols-6 gap-2 overflow-x-hidden ${isDarkMode ? 'dark-theme' : 'light-theme'}`}
-                >
-                  {itemsToShow.map((item, index) => (
-                    <ItemComponent
-                      key={item.item}
-                      item={item}
-                      isDarkMode={isDarkMode}
-                      index={index}
-                      lastIndex={itemsToShow.length - 1}
-                      chestIds={chestItemsMap.get(item.item)}
-                      isGridView={true}
-                    />
-                  ))}
-                </div>
+                  <div
+                      className={`h-full ${isDarkMode ? 'dark-theme' : 'light-theme'}`}
+                      style={{ height: listHeight }}                 // same height as <List/>
+                  >
+                    <div className="grid grid-cols-6 gap-2 overflow-y-auto">
+                      {itemsToShow.map((item, index) => (
+                          <ItemComponent
+                              key={item.item}
+                              item={item}
+                              isDarkMode={isDarkMode}
+                              index={index}
+                              lastIndex={itemsToShow.length - 1}
+                              chestIds={chestItemsMap.get(item.item)}
+                              isGridView={true}
+                          />
+                      ))}
+                    </div>
+                  </div>
               ) : (
-                <List
-                  className={`${isDarkMode ? 'dark-theme' : 'light-theme'}`}
-                  height={listHeight}
-                  itemCount={itemsToShow.length}
-                  itemSize={50}
-                  width="100%"
-                >
-                  {renderRow}
-                </List>
+                  <List
+                      className={`${isDarkMode ? 'dark-theme' : 'light-theme'}`}
+                      height={listHeight}
+                      itemCount={itemsToShow.length}
+                      itemSize={50}
+                      width="100%"
+                  >
+                    {renderRow}
+                  </List>
               )}
+
             </div>
           </aside>
           <main className="flex-1 p-4 flex flex-col gap-4">
@@ -691,166 +695,169 @@ const App: React.FC = () => {
                 {/* Profile Name */}
                 <div className="flex items-center">
                   {isEditingProfileName ? (
-                    <>
-                      <input
-                        type="text"
-                        spellCheck="false"
-                        value={profileName}
-                        onChange={(e) => setProfileName(e.target.value)}
-                        className={`border p-2 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white'}`}
-                        placeholder="Profilnavn"
-                      />
-                      <button className="text-blue-500 hover:text-blue-700 ml-2" onClick={() => setIsEditingProfileName(false)}>
-                        Gem
-                      </button>
-                    </>
+                      <>
+                        <input
+                            type="text"
+                            spellCheck="false"
+                            value={profileName}
+                            onChange={(e) => setProfileName(e.target.value)}
+                            className={`border p-2 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white'}`}
+                            placeholder="Profilnavn"
+                        />
+                        <button className="text-blue-500 hover:text-blue-700 ml-2"
+                                onClick={() => setIsEditingProfileName(false)}>
+                          Gem
+                        </button>
+                      </>
                   ) : (
-                    <>
-                      <span className="text-xl font-bold">{profileName}</span>
-                      <button className="text-blue-500 hover:text-blue-700 ml-2" onClick={() => setIsEditingProfileName(true)}>
-                        <FaEdit />
-                      </button>
-                    </>
+                      <>
+                        <span className="text-xl font-bold">{profileName}</span>
+                        <button className="text-blue-500 hover:text-blue-700 ml-2"
+                                onClick={() => setIsEditingProfileName(true)}>
+                          <FaEdit/>
+                        </button>
+                      </>
                   )}
                 </div>
 
                 {/* Tab Bar */}
                 <div className="flex items-center gap-2">
                   {tabs.map((tab) => (
-                    <div key={tab.id} className="flex items-center">
-                      {isEditingTabName === tab.id ? (
-                        <input
-                          type="text"
-                          spellCheck="false"
-                          value={tab.name}
-                          onChange={(e) => updateTabName(tab.id, e.target.value)}
-                          onBlur={() => setIsEditingTabName(null)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              setIsEditingTabName(null);
-                            }
-                          }}
-                          className={`px-3 py-1 text-sm border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
-                          autoFocus
-                        />
-                      ) : (
-                        <button
-                          className={`px-3 py-1 text-sm rounded border-b-2 transition-colors ${
-                            activeTabId === tab.id
-                              ? isDarkMode
-                                ? 'bg-gray-700 border-blue-400 text-white'
-                                : 'bg-white border-blue-500 text-black'
-                              : isDarkMode
-                              ? 'bg-gray-800 border-transparent text-gray-300 hover:text-white hover:bg-gray-700'
-                              : 'bg-gray-100 border-transparent text-gray-600 hover:text-black hover:bg-gray-200'
-                          }`}
-                          onClick={() => setActiveTabId(tab.id)}
-                          onDoubleClick={() => setIsEditingTabName(tab.id)}
-                        >
-                          {tab.name}
-                          {tabs.length > 1 && (
+                      <div key={tab.id} className="flex items-center">
+                        {isEditingTabName === tab.id ? (
+                            <input
+                                type="text"
+                                spellCheck="false"
+                                value={tab.name}
+                                onChange={(e) => updateTabName(tab.id, e.target.value)}
+                                onBlur={() => setIsEditingTabName(null)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    setIsEditingTabName(null);
+                                  }
+                                }}
+                                className={`px-3 py-1 text-sm border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                                autoFocus
+                            />
+                        ) : (
                             <button
-                              className="ml-2 text-red-500 hover:text-red-700"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeTab(tab.id);
-                              }}
+                                className={`px-3 py-1 text-sm rounded border-b-2 transition-colors ${
+                                    activeTabId === tab.id
+                                        ? isDarkMode
+                                            ? 'bg-gray-700 border-blue-400 text-white'
+                                            : 'bg-white border-blue-500 text-black'
+                                        : isDarkMode
+                                            ? 'bg-gray-800 border-transparent text-gray-300 hover:text-white hover:bg-gray-700'
+                                            : 'bg-gray-100 border-transparent text-gray-600 hover:text-black hover:bg-gray-200'
+                                }`}
+                                onClick={() => setActiveTabId(tab.id)}
+                                onDoubleClick={() => setIsEditingTabName(tab.id)}
                             >
-                              <FaTimes size={10} />
+                              {tab.name}
+                              {tabs.length > 1 && (
+                                  <button
+                                      className="ml-2 text-red-500 hover:text-red-700"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        removeTab(tab.id);
+                                      }}
+                                  >
+                                    <FaTimes size={10}/>
+                                  </button>
+                              )}
                             </button>
-                          )}
-                        </button>
-                      )}
-                    </div>
+                        )}
+                      </div>
                   ))}
                   <button
-                    className={`px-2 py-1 text-sm rounded border-2 border-dashed transition-colors ${
-                      isDarkMode
-                        ? 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-white'
-                        : 'border-gray-300 text-gray-500 hover:border-gray-400 hover:text-black'
-                    }`}
-                    onClick={addTab}
-                    title="Tilføj nyt tab"
+                      className={`px-2 py-1 text-sm rounded border-2 border-dashed transition-colors ${
+                          isDarkMode
+                              ? 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-white'
+                              : 'border-gray-300 text-gray-500 hover:border-gray-400 hover:text-black'
+                      }`}
+                      onClick={addTab}
+                      title="Tilføj nyt tab"
                   >
-                    <FaPlus size={12} />
+                    <FaPlus size={12}/>
                   </button>
                 </div>
               </div>
 
               <div className="relative z-50">
                 <button
-                  className={`flex items-center space-x-2 p-2 rounded ${isDarkMode ? 'bg-gray-700 hover:bg-gray-800 text-white' : 'bg-gray-400 hover:bg-gray-500 text-black'}`}
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                    className={`flex items-center space-x-2 p-2 rounded ${isDarkMode ? 'bg-gray-700 hover:bg-gray-800 text-white' : 'bg-gray-400 hover:bg-gray-500 text-black'}`}
+                    onClick={() => setDropdownOpen(!dropdownOpen)}
                 >
-                  <FaCog />
-                  <FaCaretDown />
+                  <FaCog/>
+                  <FaCaretDown/>
                 </button>
                 {dropdownOpen && (
-                  <div className={`absolute right-0 mt-2 w-48 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-black'} rounded shadow-lg`}>
-                    <div className="p-2">
-                      <button
-                          className={`w-full text-left px-2 py-2 text-sm flex items-center justify-between ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
-                          onClick={handleToggleMode}
-                      >
-                        Dark Mode
-                        <span
-                            className={`ml-2 px-2 py-1 rounded text-xs ${isDarkMode ? 'bg-green-600 text-white' : 'bg-gray-300 text-black'}`}>
+                    <div
+                        className={`absolute right-0 mt-2 w-48 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-black'} rounded shadow-lg`}>
+                      <div className="p-2">
+                        <button
+                            className={`w-full text-left px-2 py-2 text-sm flex items-center justify-between ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                            onClick={handleToggleMode}
+                        >
+                          Dark Mode
+                          <span
+                              className={`ml-2 px-2 py-1 rounded text-xs ${isDarkMode ? 'bg-green-600 text-white' : 'bg-gray-300 text-black'}`}>
                           {isDarkMode ? 'ON' : 'OFF'}
                         </span>
-                      </button>
-                      <button
-                          className={`w-full text-left px-2 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
-                          onClick={() => document.getElementById('import-profile')?.click()}
-                      >
-                        Importer Profil
-                      </button>
-                      <input
-                          type="file"
-                          onChange={handleImportProfile}
-                          className="hidden"
-                          accept="application/json"
-                          id="import-profile"
-                      />
-                      <button
-                          className={`w-full text-left px-2 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
-                          onClick={handleExportProfile}
-                      >
-                        Eksporter Profil
-                      </button>
-                      <button
-                          className={`w-full text-left px-2 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
-                          onClick={createNewProfile}
-                      >
-                        Ny Profil
-                      </button>
-                      <div className="border-t border-dashed my-2"></div>
-                      <div className="flex gap-2 p-2">
-                        <div className="group">
-                          <div
-                              className="head-icon head-icon-1 cursor-pointer"
-                              onClick={() => window.open('https://github.com/RasmusKD')}
-                          />
-                          <div className="label-container">
-                            <div className="arrow-down"></div>
-                            <div className={`py-2 rounded ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-200'}`}>
-                              <p className="font-bold">WhoToldYou</p>
-                              <p className="text-sm">Udvikling af siden</p>
+                        </button>
+                        <button
+                            className={`w-full text-left px-2 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                            onClick={() => document.getElementById('import-profile')?.click()}
+                        >
+                          Importer Profil
+                        </button>
+                        <input
+                            type="file"
+                            onChange={handleImportProfile}
+                            className="hidden"
+                            accept="application/json"
+                            id="import-profile"
+                        />
+                        <button
+                            className={`w-full text-left px-2 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                            onClick={handleExportProfile}
+                        >
+                          Eksporter Profil
+                        </button>
+                        <button
+                            className={`w-full text-left px-2 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                            onClick={createNewProfile}
+                        >
+                          Ny Profil
+                        </button>
+                        <div className="border-t border-dashed my-2"></div>
+                        <div className="flex gap-2 p-2">
+                          <div className="group">
+                            <div
+                                className="head-icon head-icon-1 cursor-pointer"
+                                onClick={() => window.open('https://github.com/RasmusKD')}
+                            />
+                            <div className="label-container">
+                              <div className="arrow-down"></div>
+                              <div className={`py-2 rounded ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-200'}`}>
+                                <p className="font-bold">WhoToldYou</p>
+                                <p className="text-sm">Udvikling af siden</p>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="group">
-                          <div className="head-icon head-icon-2"/>
-                          <div className="label-container">
-                            <div className="arrow-down"></div>
-                            <div className={`py-2 rounded ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-200'}`}>
-                              <p className="font-bold">Iver</p>
-                              <p className="text-sm">Idé & Basis Design</p>
+                          <div className="group">
+                            <div className="head-icon head-icon-2"/>
+                            <div className="label-container">
+                              <div className="arrow-down"></div>
+                              <div className={`py-2 rounded ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-200'}`}>
+                                <p className="font-bold">Iver</p>
+                                <p className="text-sm">Idé & Basis Design</p>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
                 )}
               </div>
             </div>
@@ -869,24 +876,25 @@ const App: React.FC = () => {
                       removeItemFromChest={removeItemFromChest}
                       moveChest={moveChest}
                       setChests={updateChests}
-                />
+                  />
               ))}
 
               {/* Add Chest Button */}
-              <div className={`flex items-center justify-center border-2 border-dashed rounded p-4 min-h-[200px] transition-colors ${
-                isDarkMode
-                  ? 'border-gray-600 hover:border-gray-500 hover:bg-gray-800'
-                  : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-              }`}>
+              <div
+                  className={`flex items-center justify-center border-2 border-dashed rounded p-4 min-h-[200px] transition-colors ${
+                      isDarkMode
+                          ? 'border-gray-600 hover:border-gray-500 hover:bg-gray-800'
+                          : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                  }`}>
                 <button
-                  onClick={addChest}
-                  className={`flex flex-col items-center gap-3 p-6 rounded-lg transition-colors ${
-                    isDarkMode
-                      ? 'text-gray-400 hover:text-white hover:bg-gray-700'
-                      : 'text-gray-500 hover:text-black hover:bg-gray-100'
-                  }`}
+                    onClick={addChest}
+                    className={`flex flex-col items-center gap-3 p-6 rounded-lg transition-colors ${
+                        isDarkMode
+                            ? 'text-gray-400 hover:text-white hover:bg-gray-700'
+                            : 'text-gray-500 hover:text-black hover:bg-gray-100'
+                    }`}
                 >
-                  <FaPlus size={24} />
+                  <FaPlus size={24}/>
                   <span className="text-lg font-medium">Tilføj kiste</span>
                 </button>
               </div>
@@ -894,8 +902,8 @@ const App: React.FC = () => {
           </main>
         </div>
         <ToastContainer
-          className="toast-container"
-          position="top-center"
+            className="toast-container"
+            position="top-center"
           autoClose={3000}
           limit={1}
           hideProgressBar={false}
