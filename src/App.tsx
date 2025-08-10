@@ -492,10 +492,10 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              <div ref={listContainerRef} className="flex-1 overflow-auto dark-theme">
+              <div ref={listContainerRef} className="flex-1 overflow-auto dark-theme overflow-x-hidden">
                 {isGridView ? (
                     <div className="h-full" style={{ height: listHeight }}>
-                      <div className="grid grid-cols-6 gap-2 overflow-y-auto">
+                      <div className="grid grid-cols-6 gap-2">
                         {itemsToShow.map((item, index) => (
                             <ItemComponent
                                 key={item.item}
