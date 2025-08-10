@@ -27,7 +27,6 @@ interface ChestComponentProps {
   chest: Chest;
   index: number;
   onDrop: (item: Item, chestId: number) => void;
-  isDarkMode: boolean;
   removeChest: (id: number) => void;
   updateChestLabel: (id: number, label: string) => void;
   updateChestIcon: (id: number, icon: string) => void;
@@ -40,13 +39,11 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
                                                          chest,
                                                          index,
                                                          onDrop,
-                                                         isDarkMode,
                                                          removeChest,
                                                          updateChestLabel,
                                                          updateChestIcon,
                                                          removeItemFromChest,
                                                          moveChest,
-                                                         setChests
                                                        }) => {
   const ref = useRef<HTMLDivElement>(null);
   const iconButtonRef = useRef<HTMLDivElement>(null);
@@ -77,51 +74,35 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
   const [{ isOver }, drop] = useDrop({
     accept: [ItemType.ITEM, ItemType.CHEST],
     hover(item: { type: string; index: number }, monitor) {
-      if (!ref.current) {
-        return;
-      }
+      if (!ref.current) return;
 
       if (item.type === ItemType.CHEST) {
         const dragIndex = item.index;
         const hoverIndex = index;
-
-        if (dragIndex === hoverIndex) {
-          return;
-        }
+        if (dragIndex === hoverIndex) return;
 
         const hoverBoundingRect = ref.current.getBoundingClientRect();
         const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
         const clientOffset = monitor.getClientOffset();
         const hoverClientY = clientOffset!.y - hoverBoundingRect.top;
 
-        if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
-          return;
-        }
-
-        if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) {
-          return;
-        }
+        if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
+        if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
 
         moveChest(dragIndex, hoverIndex);
         item.index = hoverIndex;
       }
     },
     drop(item: Item | { type: string; index: number }) {
-      if ('item' in item) {
-        onDrop(item, chest.id);
-      }
+      if ('item' in item) onDrop(item, chest.id);
     },
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
-    }),
+    collect: (monitor) => ({ isOver: monitor.isOver() }),
   });
 
   const [{ isDragging }, drag, preview] = useDrag({
     type: ItemType.CHEST,
     item: { type: ItemType.CHEST, index },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
+    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
     canDrag: () => !isEditing,
   });
 
@@ -145,9 +126,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
   const filteredIcons = availableIcons.filter(icon => icon.toLowerCase().includes(searchTerm.toLowerCase().replace(/ /g, '_')));
 
   useEffect(() => {
-    if (isEditing) {
-      setChestLabel(chest.label || "Barrel");
-    }
+    if (isEditing) setChestLabel(chest.label || "Barrel");
   }, [isEditing, chest.label]);
 
   const handleSave = () => {
@@ -161,7 +140,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
     toast.dismiss();
     toast.success(
         <div className="flex gap-2 items-center">
-          <FaRegCopy className="text-green-500 hover:text-green-700"/> Kommando kopieret!
+          <FaRegCopy className="text-green-500"/> Kommando kopieret!
         </div>,
         {
           icon: false,
@@ -171,8 +150,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
           closeOnClick: true,
           pauseOnHover: false,
           draggable: false,
-          progress: undefined,
-          theme: isDarkMode ? 'dark' : 'light',
+          theme: 'dark',
           transition: Zoom,
           closeButton: false,
         }
@@ -202,17 +180,13 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
       if (dropdownOpen) {
         calculateDropdownPosition();
         const iconButtonRect = iconButtonRef.current?.getBoundingClientRect();
-        const chestRect = ref.current?.getBoundingClientRect();
-        if (iconButtonRect && chestRect) {
-          const isIconVisible = (
+        if (iconButtonRect) {
+          const isIconVisible =
               iconButtonRect.top >= 0 &&
               iconButtonRect.left >= 0 &&
               iconButtonRect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-              iconButtonRect.right <= (window.innerWidth || document.documentElement.clientWidth)
-          );
-          if (!isIconVisible) {
-            setDropdownOpen(false);
-          }
+              iconButtonRect.right <= (window.innerWidth || document.documentElement.clientWidth);
+          if (!isIconVisible) setDropdownOpen(false);
         }
       }
     };
@@ -256,19 +230,16 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
   const handleCheckboxChange = () => {
     const newCheckedState = !isChecked;
     setIsChecked(newCheckedState);
-
-    // Update the checkbox state through localStorage
-    // The parent component will handle the state management in the tab system
     localStorage.setItem(`chest-checked-${chest.id}`, JSON.stringify(newCheckedState));
   };
 
   return (
       <div
           ref={ref}
-          className={`relative flex flex-col gap-2 border rounded ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-300 bg-white'} p-2 flex-1`}
+          className="relative flex flex-col gap-2 border rounded border-neutral-800 bg-neutral-900 p-2 flex-1"
           style={{ opacity: isDragging || isOver ? 0.5 : 1 }}
       >
-        <div className="absolute flex items-center gap-1 text-gray-400" style={{ top: '-2px', right: '3px', fontSize: 'small' }}>
+        <div className="absolute flex items-center gap-1 text-neutral-400" style={{ top: '-2px', right: '3px', fontSize: 'small' }}>
           #{chest.id}
         </div>
         <div className="flex justify-between items-center gap-2">
@@ -284,20 +255,20 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
             {dropdownOpen && (
                 <Portal style={{ position: 'absolute', top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 1000 }}>
                   <div
-                      className={`w-48 p-2 flex flex-col gap-2 ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-200 border-gray-200 text-black'} rounded shadow-lg`}
+                      className="w-48 p-2 flex flex-col gap-2 bg-neutral-950 border border-neutral-800 text-white rounded shadow-lg"
                       style={{ maxHeight: '300px'}}
                   >
-                    <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 1)' : 'rgba(255, 255, 255, 1)' }}>
+                    <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'rgba(10,10,10,1)' }}>
                       <input
                           type="text"
                           spellCheck="false"
                           placeholder="Søg..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className={`w-full p-2 rounded ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}
+                          className="w-full p-2 rounded bg-neutral-900 text-white"
                       />
                     </div>
-                    <div className={`${isDarkMode ? 'dark-theme' : 'light-theme'}`} style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0', overflow: 'auto' }}>
+                    <div className="dark-theme" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 0, overflow: 'auto' }}>
                       {filteredIcons.map((icon) => (
                           <IconComponent key={icon} icon={icon} />
                       ))}
@@ -309,7 +280,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
           <div className="flex-1 flex gap-2 items-center">
             {isEditing ? (
                 <input
-                    className={`border px-1 flex-1 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white'}`}
+                    className="border px-1 flex-1 bg-neutral-800 border-neutral-700 text-white"
                     spellCheck="false"
                     value={chestLabel}
                     onChange={(e) => setChestLabel(e.target.value)}
@@ -319,41 +290,35 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
             ) : (
                 <div className="gap-2 flex">
                   <span className="flex-1" onDoubleClick={() => setIsEditing(true)}>{chest.label || "Barrel"}</span>
-                  <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={handleCheckboxChange}
-                      className="mr-2"
-                  />
+                  <input type="checkbox" checked={isChecked} onChange={handleCheckboxChange} className="mr-2" />
                 </div>
             )}
             {isEditing &&
-                <button className="text-blue-500 hover:text-blue-700" onClick={handleSave}>
+                <button className="text-blue-400 hover:text-blue-300" onClick={handleSave}>
                   <FaSave />
                 </button>}
           </div>
           <div className="flex items-center gap-2">
             {!isEditing &&
-                <button className="text-blue-500 hover:text-blue-700" onClick={() => setIsEditing(true)}>
+                <button className="text-blue-400 hover:text-blue-300" onClick={() => setIsEditing(true)}>
                   <FaEdit />
                 </button>}
             {chest.items.length > 0 && (
-                <button className="text-green-500 hover:text-green-700" onClick={handleCopy}>
+                <button className="text-green-500 hover:text-green-600" onClick={handleCopy}>
                   <FaRegCopy />
                 </button>
             )}
-            <button className="text-red-500 hover:text-red-700" onClick={() => removeChest(chest.id)}>
+            <button className="text-red-500 hover:text-red-600" onClick={() => removeChest(chest.id)}>
               <FaTimes />
             </button>
           </div>
         </div>
         {chest.items.length > 0 ? (
-            <ul className={`chest-items ${isDarkMode ? 'dark-theme' : 'light-theme'}`}>
+            <ul className="chest-items dark-theme">
               {chest.items.map((item, itemIndex) => (
                   <ItemComponent
                       key={item.item}
                       item={item}
-                      isDarkMode={isDarkMode}
                       index={itemIndex}
                       lastIndex={chest.items.length - 1}
                       removeItem={() => removeItemFromChest(chest.id, item)}
@@ -361,7 +326,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
               ))}
             </ul>
         ) : (
-            <div className={`chest-placeholder ${isDarkMode ? 'dark' : 'light'}`}>
+            <div className="chest-placeholder dark">
               Træk ting her for at tilføje dem til kisten
             </div>
         )}

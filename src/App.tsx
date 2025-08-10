@@ -51,10 +51,6 @@ const App: React.FC = () => {
     const savedGridView = localStorage.getItem('isGridView');
     return savedGridView ? JSON.parse(savedGridView) : false;
   });
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const savedMode = localStorage.getItem('isDarkMode');
-    return savedMode ? JSON.parse(savedMode) : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  });
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [listHeight, setListHeight] = useState(window.innerHeight - 250);
@@ -135,22 +131,6 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const handler = (e: MediaQueryListEvent) => {
-      const isDark = e.matches;
-      setIsDarkMode(isDark);
-      localStorage.setItem('isDarkMode', JSON.stringify(isDark));
-    };
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', handler);
-    return () => {
-      window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', handler);
-    };
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('isDarkMode', JSON.stringify(isDarkMode));
-  }, [isDarkMode]);
-
-  useEffect(() => {
     if (tabs.length > 0 && profileName) {
       const profile: Profile = { name: profileName, tabs };
       localStorage.setItem('profile', JSON.stringify(profile));
@@ -184,14 +164,6 @@ const App: React.FC = () => {
   }, [activeTabId]);
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value);
-
-  const handleToggleMode = useCallback(() => {
-    setIsDarkMode(prev => {
-      const next = !prev;
-      localStorage.setItem('isDarkMode', JSON.stringify(next));
-      return next;
-    });
-  }, []);
 
   const handleImportProfile = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const fileReader = new FileReader();
@@ -282,8 +254,7 @@ const App: React.FC = () => {
         closeOnClick: true,
         pauseOnHover: false,
         draggable: false,
-        progress: undefined,
-        theme: isDarkMode ? 'dark' : 'light',
+        theme: 'dark',
         transition: Zoom,
         closeButton: false,
       });
@@ -417,15 +388,14 @@ const App: React.FC = () => {
     const chestIndex = chests.findIndex(chest => chest.id === chestId);
     const command = `/signedit 3 ${[...chests[chestIndex].items, item].map(i => i.variable).join(',')}`;
     if (command.length > 256) {
-      toast.error('Du kan ikke tilføje mere til kisten kommandoen vil overstige 256 tegn.', {
+      toast.error('Du kan ikke tilføje mere til kisten – kommandoen vil overstige 256 tegn.', {
         position: "top-center",
         autoClose: 3000,
         hideProgressBar: true,
         closeOnClick: true,
         pauseOnHover: false,
         draggable: false,
-        progress: undefined,
-        theme: isDarkMode ? 'dark' : 'light',
+        theme: 'dark',
         transition: Zoom,
         closeButton: false,
       });
@@ -442,7 +412,7 @@ const App: React.FC = () => {
       });
       updateChests(newChests);
     }
-  }, [chests, isDarkMode, tabs, updateChests]);
+  }, [chests, tabs, updateChests]);
 
   const handleUndo = useCallback(() => {
     if (undoStack.length > 0) {
@@ -473,7 +443,6 @@ const App: React.FC = () => {
         <div style={style} key={item.item}>
           <ItemComponent
               item={item}
-              isDarkMode={isDarkMode}
               index={index}
               lastIndex={itemsToShow.length - 1}
               chestIds={chestIds}
@@ -497,7 +466,7 @@ const App: React.FC = () => {
   };
 
   const onTabWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    // Convert vertical wheel to horizontal scroll inside the tab strip
+    // Konverter vertikalt scroll til horisontalt i tabbaren
     if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
       e.currentTarget.scrollLeft += e.deltaY;
       e.preventDefault();
@@ -533,23 +502,24 @@ const App: React.FC = () => {
 
   return (
       <DndProvider backend={HTML5Backend}>
-        <div className={`flex flex-col min-h-screen overflow-x-hidden ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'}`}>
+        <div className="flex flex-col min-h-screen overflow-x-hidden bg-neutral-950 text-white">
           <div className="flex flex-1 flex-col md:flex-row h-full min-h-0">
-            <aside className={`p-4 border-b md:border-r flex-shrink-0 gap-4 flex flex-col ${isDarkMode ? 'bg-gray-800 border-gray-700 dark-theme' : 'bg-white border-gray-200 light-theme'}`}>
-              <div className={`${isDarkMode ? 'logo-dark' : 'logo-light'}`} />
+            <aside className="p-4 border-b md:border-r flex-shrink-0 gap-4 flex flex-col bg-neutral-900 border-neutral-800 dark-theme">
+              <div className="logo-dark" />
               <div className="relative">
                 <input
                     type="text"
                     spellCheck="false"
                     value={searchTerm}
                     placeholder="Søg..."
-                    className={`border p-2 pr-10 w-full ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white'}`}
+                    className="border p-2 pr-10 w-full bg-neutral-800 border-neutral-700 text-white"
                     onChange={handleSearch}
                 />
                 {searchTerm && (
                     <button
-                        className="absolute right-0 top-0 mt-3 mr-3 text-gray-500 hover:text-gray-800"
+                        className="absolute right-0 top-0 mt-3 mr-3 text-neutral-400 hover:text-neutral-200"
                         onClick={handleClearSearch}
+                        aria-label="Ryd søgning"
                     >
                       <FaTimes />
                     </button>
@@ -563,30 +533,27 @@ const App: React.FC = () => {
                         type="checkbox"
                         checked={showAll}
                         onChange={() => setShowAll(!showAll)}
-                        className="form-checkbox h-4 w-4 text-blue-600 dark:text-blue-400"
+                        className="form-checkbox h-4 w-4"
                     />
                     <span>Vis alle</span>
                   </label>
                   <button
                       onClick={() => setIsGridView(!isGridView)}
-                      className={`p-2 rounded transition-colors ${
-                          isDarkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-black'
-                      }`}
+                      className="p-2 rounded bg-neutral-800 hover:bg-neutral-700 transition-colors"
                       title={isGridView ? 'Skift til liste visning' : 'Skift til gitter visning'}
                   >
                     {isGridView ? '☰' : '⊞'}
                   </button>
                 </div>
               </div>
-              <div ref={listContainerRef} className={`flex-1 overflow-auto ${isDarkMode ? 'dark-theme' : 'light-theme'}`}>
+              <div ref={listContainerRef} className="flex-1 overflow-auto dark-theme">
                 {isGridView ? (
-                    <div className={`h-full ${isDarkMode ? 'dark-theme' : 'light-theme'}`} style={{ height: listHeight }}>
+                    <div className="h-full" style={{ height: listHeight }}>
                       <div className="grid grid-cols-6 gap-2 overflow-y-auto">
                         {itemsToShow.map((item, index) => (
                             <ItemComponent
                                 key={item.item}
                                 item={item}
-                                isDarkMode={isDarkMode}
                                 index={index}
                                 lastIndex={itemsToShow.length - 1}
                                 chestIds={chestItemsMap.get(item.item)}
@@ -597,7 +564,7 @@ const App: React.FC = () => {
                     </div>
                 ) : (
                     <List
-                        className={`${isDarkMode ? 'dark-theme' : 'light-theme'}`}
+                        className="dark-theme"
                         height={listHeight}
                         itemCount={itemsToShow.length}
                         itemSize={50}
@@ -610,9 +577,9 @@ const App: React.FC = () => {
             </aside>
 
             <main className="flex-1 p-4 flex flex-col gap-4">
-              {/* HEADER – Fixed layout with CSS Grid */}
+              {/* HEADER */}
               <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4 h-8 w-full">
-                {/* Left: Profile name section */}
+                {/* Left: Profile name */}
                 <div className="flex items-center gap-2">
                   {isEditingProfileName ? (
                       <>
@@ -621,11 +588,11 @@ const App: React.FC = () => {
                             spellCheck="false"
                             value={profileName}
                             onChange={(e) => setProfileName(e.target.value)}
-                            className={`border p-2 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white'}`}
+                            className="border p-2 bg-neutral-800 border-neutral-700 text-white"
                             placeholder="Profilnavn"
                         />
                         <button
-                            className="text-blue-500 hover:text-blue-700"
+                            className="text-blue-400 hover:text-blue-300"
                             onClick={() => setIsEditingProfileName(false)}
                         >
                           Gem
@@ -635,8 +602,9 @@ const App: React.FC = () => {
                       <>
                         <span className="text-xl font-bold">{profileName}</span>
                         <button
-                            className="text-blue-500 hover:text-blue-700"
+                            className="text-blue-400 hover:text-blue-300"
                             onClick={() => setIsEditingProfileName(true)}
+                            aria-label="Rediger profilnavn"
                         >
                           <FaEdit/>
                         </button>
@@ -644,16 +612,13 @@ const App: React.FC = () => {
                   )}
                 </div>
 
-                {/* Middle: Tab bar - constrained by grid */}
+                {/* Middle: Tabs */}
                 <div className="min-w-0 overflow-hidden">
                   <div
                       ref={tabScrollRef}
                       onWheel={onTabWheel}
-                      className={`flex items-center gap-2 overflow-x-auto overflow-y-hidden ${isDarkMode ? 'dark-theme' : 'light-theme'}`}
-                      style={{
-                        maxWidth: '100%',
-                        width: '100%'
-                      }}
+                      className="flex items-center gap-2 overflow-x-auto overflow-y-hidden dark-theme"
+                      style={{ maxWidth: '100%', width: '100%' }}
                   >
                     {tabs.map((tab) => (
                         <div key={tab.id} className="flex items-center flex-shrink-0">
@@ -664,10 +629,8 @@ const App: React.FC = () => {
                                   value={tab.name}
                                   onChange={(e) => updateTabName(tab.id, e.target.value)}
                                   onBlur={() => setIsEditingTabName(null)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') setIsEditingTabName(null);
-                                  }}
-                                  className={`px-3 py-1 text-sm border rounded w-32 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') setIsEditingTabName(null); }}
+                                  className="px-3 py-1 text-sm border rounded w-32 bg-neutral-800 border-neutral-700 text-white"
                                   autoFocus
                               />
                           ) : (
@@ -676,26 +639,21 @@ const App: React.FC = () => {
                                   type="button"
                                   className={`flex-shrink-0 px-3 py-1 text-sm rounded border-b-2 transition-colors flex items-center gap-1 max-w-40 ${
                                       activeTabId === tab.id
-                                          ? (isDarkMode ? 'bg-gray-700 border-blue-400 text-white' : 'bg-white border-blue-500 text-black')
-                                          : (isDarkMode ? 'bg-gray-800 border-transparent text-gray-300 hover:text-white hover:bg-gray-700'
-                                              : 'bg-gray-100 border-transparent text-gray-600 hover:text-black hover:bg-gray-200')
+                                          ? 'bg-neutral-800 border-blue-400 text-white'
+                                          : 'bg-neutral-900 border-transparent text-neutral-300 hover:text-white hover:bg-neutral-800'
                                   }`}
                                   onClick={() => setActiveTabId(tab.id)}
                                   onDoubleClick={() => setIsEditingTabName(tab.id)}
                               >
                                 <span className="truncate block max-w-28">{tab.name}</span>
-                                {/* Remove button inside tab */}
                                 {tabs.length > 1 && (
                                     <span
-                                        className="text-red-500 hover:text-red-700 flex-shrink-0"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          removeTab(tab.id);
-                                        }}
+                                        className="text-red-500 hover:text-red-600 flex-shrink-0"
+                                        onClick={(e) => { e.stopPropagation(); removeTab(tab.id); }}
                                         title="Luk tab"
                                     >
-                                      <FaTimes size={10}/>
-                                    </span>
+                              <FaTimes size={10}/>
+                            </span>
                                 )}
                               </button>
                           )}
@@ -703,11 +661,7 @@ const App: React.FC = () => {
                     ))}
                     <button
                         type="button"
-                        className={`flex-shrink-0 px-2 py-1 text-sm rounded border-2 border-dashed transition-colors ${
-                            isDarkMode
-                                ? 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-white'
-                                : 'border-gray-300 text-gray-500 hover:border-gray-400 hover:text-black'
-                        }`}
+                        className="flex-shrink-0 px-2 py-1 text-sm rounded border-2 border-dashed border-neutral-700 text-neutral-400 hover:border-neutral-600 hover:text-white transition-colors"
                         onClick={addTab}
                         title="Tilføj nyt tab"
                     >
@@ -716,31 +670,20 @@ const App: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Right: Settings button */}
+                {/* Right: Settings */}
                 <div className="relative z-50">
                   <button
-                      className={`flex items-center space-x-2 p-2 rounded ${isDarkMode ? 'bg-gray-700 hover:bg-gray-800 text-white' : 'bg-gray-400 hover:bg-gray-500 text-black'}`}
+                      className="flex items-center space-x-2 p-2 rounded bg-neutral-800 hover:bg-neutral-900"
                       onClick={() => setDropdownOpen(!dropdownOpen)}
                   >
                     <FaCog/>
                     <FaCaretDown/>
                   </button>
                   {dropdownOpen && (
-                      <div
-                          className={`absolute right-0 mt-2 w-48 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-black'} rounded shadow-lg`}>
+                      <div className="absolute right-0 mt-2 w-48 bg-neutral-900 border border-neutral-800 text-white rounded shadow-lg">
                         <div className="p-2">
                           <button
-                              className={`w-full text-left px-2 py-2 text-sm flex items-center justify-between ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
-                              onClick={handleToggleMode}
-                          >
-                            Dark Mode
-                            <span
-                                className={`ml-2 px-2 py-1 rounded text-xs ${isDarkMode ? 'bg-green-600 text-white' : 'bg-gray-300 text-black'}`}>
-                          {isDarkMode ? 'ON' : 'OFF'}
-                        </span>
-                          </button>
-                          <button
-                              className={`w-full text-left px-2 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                              className="w-full text-left px-2 py-2 text-sm hover:bg-neutral-800"
                               onClick={() => document.getElementById('import-profile')?.click()}
                           >
                             Importer Profil
@@ -753,26 +696,25 @@ const App: React.FC = () => {
                               id="import-profile"
                           />
                           <button
-                              className={`w-full text-left px-2 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                              className="w-full text-left px-2 py-2 text-sm hover:bg-neutral-800"
                               onClick={handleExportProfile}
                           >
                             Eksporter Profil
                           </button>
                           <button
-                              className={`w-full text-left px-2 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                              className="w-full text-left px-2 py-2 text-sm hover:bg-neutral-800"
                               onClick={createNewProfile}
                           >
                             Ny Profil
                           </button>
-                          <div className="border-t border-dashed my-2"></div>
+                          <div className="border-t border-dashed my-2 border-neutral-700/50"></div>
                           <div className="flex gap-2 p-2">
                             <div className="group">
                               <div className="head-icon head-icon-1 cursor-pointer"
                                    onClick={() => window.open('https://github.com/RasmusKD')}/>
                               <div className="label-container">
                                 <div className="arrow-down"></div>
-                                <div
-                                    className={`py-2 rounded ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-200'}`}>
+                                <div className="py-2 rounded bg-neutral-950 text-white">
                                   <p className="font-bold">WhoToldYou</p>
                                   <p className="text-sm">Udvikling af siden</p>
                                 </div>
@@ -782,8 +724,7 @@ const App: React.FC = () => {
                               <div className="head-icon head-icon-2"/>
                               <div className="label-container">
                                 <div className="arrow-down"></div>
-                                <div
-                                    className={`py-2 rounded ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-200'}`}>
+                                <div className="py-2 rounded bg-neutral-950 text-white">
                                   <p className="font-bold">Iver</p>
                                   <p className="text-sm">Idé & Basis Design</p>
                                 </div>
@@ -796,14 +737,13 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              <div ref={gridContainerRef} className={`grid-cols-auto-fit ${isDarkMode ? 'dark-theme' : 'light-theme'}`}>
+              <div ref={gridContainerRef} className="grid-cols-auto-fit dark-theme">
                 {chests.map((chest, index) => (
                     <ChestComponent
                         key={chest.id}
                         chest={chest}
                         index={index}
                         onDrop={handleDrop}
-                        isDarkMode={isDarkMode}
                         removeChest={confirmDeleteChest}
                         updateChestLabel={updateChestLabel}
                         updateChestIcon={updateChestIcon}
@@ -814,18 +754,10 @@ const App: React.FC = () => {
                 ))}
 
                 {/* Add Chest */}
-                <div
-                    className={`flex items-center justify-center border-2 border-dashed rounded p-4 min-h-[200px] transition-colors ${
-                        isDarkMode ? 'border-gray-600 hover:border-gray-500 hover:bg-gray-800'
-                            : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-                    }`}
-                >
+                <div className="flex items-center justify-center border-2 border-dashed rounded p-4 min-h-[200px] border-neutral-700 hover:border-neutral-600 hover:bg-neutral-900 transition-colors">
                   <button
                       onClick={addChest}
-                      className={`flex flex-col items-center gap-3 p-6 rounded-lg transition-colors ${
-                          isDarkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700'
-                              : 'text-gray-500 hover:text-black hover:bg-gray-100'
-                      }`}
+                      className="flex flex-col items-center gap-3 p-6 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
                   >
                     <FaPlus size={24}/>
                     <span className="text-lg font-medium">Tilføj kiste</span>
@@ -851,7 +783,6 @@ const App: React.FC = () => {
 
           {modalVisible && (
               <ConfirmationModal
-                  isDarkMode={isDarkMode}
                   onConfirm={() => handleDeleteChest(chestToDelete!)}
                   onCancel={() => setModalVisible(false)}
                   message="Er du sikker på, at du vil slette denne kiste? Den er ikke tom."
@@ -860,7 +791,6 @@ const App: React.FC = () => {
           )}
           {newProfileModalVisible && (
               <ConfirmationModal
-                  isDarkMode={isDarkMode}
                   onConfirm={confirmNewProfile}
                   onCancel={cancelNewProfile}
                   message="Har du husket at eksportere den nuværende profil? Ændringer kan gå tabt, hvis du fortsætter uden at gemme."
@@ -869,7 +799,6 @@ const App: React.FC = () => {
           )}
           {importProfileModalVisible && (
               <ConfirmationModal
-                  isDarkMode={isDarkMode}
                   onConfirm={confirmImportProfile}
                   onCancel={cancelImportProfile}
                   message="Har du husket at eksportere den nuværende profil? Ændringer kan gå tabt, hvis du fortsætter uden at gemme."
@@ -878,7 +807,6 @@ const App: React.FC = () => {
           )}
           {deleteTabModalVisible && (
               <ConfirmationModal
-                  isDarkMode={isDarkMode}
                   onConfirm={confirmDeleteTab}
                   onCancel={cancelDeleteTab}
                   message="Er du sikker på, at du vil slette dette tab? Det indeholder kister med indhold."
