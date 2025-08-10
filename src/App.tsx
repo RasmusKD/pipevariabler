@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { FaCog, FaCaretDown, FaTimes, FaEdit, FaPlus } from 'react-icons/fa';
+import { FaCog, FaCaretDown, FaTimes, FaEdit, FaPlus, FaTh, FaBars } from 'react-icons/fa';
 import { FixedSizeList as List } from 'react-window';
 import './scss/main.scss';
 import itemsData from './data.json';
@@ -11,31 +11,10 @@ import { ToastContainer, toast, Zoom } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ConfirmationModal from './ConfirmationModal';
 
-interface Item {
-  item: string;
-  variable: string;
-  image: string;
-}
-
-interface Chest {
-  id: number;
-  label: string;
-  items: Item[];
-  icon: string;
-  checked: boolean;
-}
-
-interface Tab {
-  id: number;
-  name: string;
-  chests: Chest[];
-}
-
-interface Profile {
-  name: string;
-  tabs?: Tab[];
-  chests?: Chest[];
-}
+interface Item { item: string; variable: string; image: string; }
+interface Chest { id: number; label: string; items: Item[]; icon: string; checked: boolean; }
+interface Tab { id: number; name: string; chests: Chest[]; }
+interface Profile { name: string; tabs?: Tab[]; chests?: Chest[]; }
 
 const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,14 +22,10 @@ const App: React.FC = () => {
   const [profileName, setProfileName] = useState<string>('');
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<number>(1);
-  const [showAll, setShowAll] = useState<boolean>(() => {
-    const savedShowAll = localStorage.getItem('showAll');
-    return savedShowAll ? JSON.parse(savedShowAll) : true;
-  });
-  const [isGridView, setIsGridView] = useState<boolean>(() => {
-    const savedGridView = localStorage.getItem('isGridView');
-    return savedGridView ? JSON.parse(savedGridView) : false;
-  });
+
+  const [showAll, setShowAll] = useState<boolean>(() => JSON.parse(localStorage.getItem('showAll') || 'true'));
+  const [isGridView, setIsGridView] = useState<boolean>(() => JSON.parse(localStorage.getItem('isGridView') || 'false'));
+  const [chestGridView, setChestGridView] = useState<boolean>(() => JSON.parse(localStorage.getItem('chestGridView') || 'false'));
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [listHeight, setListHeight] = useState(window.innerHeight - 250);
@@ -68,8 +43,6 @@ const App: React.FC = () => {
 
   const listContainerRef = useRef<HTMLDivElement>(null);
   const gridContainerRef = useRef<HTMLDivElement>(null);
-
-  // Horisontal tab-scroll
   const tabScrollRef = useRef<HTMLDivElement>(null);
 
   const activeTab = useMemo(() => tabs.find(tab => tab.id === activeTabId), [tabs, activeTabId]);
@@ -77,15 +50,10 @@ const App: React.FC = () => {
 
   const getNextChestId = useCallback(() => {
     let maxId = 0;
-    tabs.forEach(tab => {
-      tab.chests.forEach(chest => {
-        if (chest.id > maxId) maxId = chest.id;
-      });
-    });
+    tabs.forEach(tab => tab.chests.forEach(chest => { if (chest.id > maxId) maxId = chest.id; }));
     return maxId + 1;
   }, [tabs]);
 
-  // Init profil og tabs
   useEffect(() => {
     const savedProfile = localStorage.getItem('profile');
     if (savedProfile) {
@@ -137,30 +105,20 @@ const App: React.FC = () => {
     }
   }, [tabs, profileName]);
 
-  useEffect(() => {
-    localStorage.setItem('showAll', JSON.stringify(showAll));
-  }, [showAll]);
+  useEffect(() => { localStorage.setItem('showAll', JSON.stringify(showAll)); }, [showAll]);
+  useEffect(() => { localStorage.setItem('isGridView', JSON.stringify(isGridView)); }, [isGridView]);
+  useEffect(() => { localStorage.setItem('chestGridView', JSON.stringify(chestGridView)); }, [chestGridView]);
 
-  useEffect(() => {
-    localStorage.setItem('isGridView', JSON.stringify(isGridView));
-  }, [isGridView]);
-
-  // Hold aktivt tab i view
   useEffect(() => {
     const el = document.getElementById(`tab-btn-${activeTabId}`);
     const scroller = tabScrollRef.current;
     if (!el || !scroller) return;
-
     const elLeft = (el as HTMLElement).offsetLeft;
     const elRight = elLeft + (el as HTMLElement).offsetWidth;
     const visibleLeft = scroller.scrollLeft;
     const visibleRight = visibleLeft + scroller.clientWidth;
-
-    if (elLeft < visibleLeft) {
-      scroller.scrollTo({ left: elLeft - 16, behavior: 'smooth' });
-    } else if (elRight > visibleRight) {
-      scroller.scrollTo({ left: elRight - scroller.clientWidth + 16, behavior: 'smooth' });
-    }
+    if (elLeft < visibleLeft) scroller.scrollTo({ left: elLeft - 16, behavior: 'smooth' });
+    else if (elRight > visibleRight) scroller.scrollTo({ left: elRight - scroller.clientWidth + 16, behavior: 'smooth' });
   }, [activeTabId]);
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value);
@@ -172,9 +130,7 @@ const App: React.FC = () => {
       setPendingProfile(profile);
       setImportProfileModalVisible(true);
     };
-    if (event.target.files && event.target.files.length > 0) {
-      fileReader.readAsText(event.target.files[0]);
-    }
+    if (event.target.files && event.target.files.length > 0) fileReader.readAsText(event.target.files[0]);
   }, []);
 
   const handleExportProfile = useCallback(() => {
@@ -214,59 +170,53 @@ const App: React.FC = () => {
   const cancelNewProfile = () => setNewProfileModalVisible(false);
 
   const confirmImportProfile = () => {
-    if (pendingProfile) {
-      tabs.forEach(tab => tab.chests.forEach(chest => localStorage.removeItem(`chest-checked-${chest.id}`)));
+    if (!pendingProfile) return;
+    tabs.forEach(tab => tab.chests.forEach(chest => localStorage.removeItem(`chest-checked-${chest.id}`)));
+    setProfileName(pendingProfile.name);
 
-      setProfileName(pendingProfile.name);
-
-      if (pendingProfile.tabs) {
-        let globalChestId = 1;
-        const processedTabs = pendingProfile.tabs.map(tab => ({
-          ...tab,
-          chests: tab.chests.map((chest: any) => ({
-            ...chest,
-            id: globalChestId++,
-            icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
-            checked: chest.checked || false,
-          }))
-        }));
-        setTabs(processedTabs);
-        setActiveTabId(processedTabs[0]?.id || 1);
-      } else if (pendingProfile.chests) {
-        const processedChests = pendingProfile.chests.map((chest: any, index: number) => ({
+    if (pendingProfile.tabs) {
+      let globalChestId = 1;
+      const processedTabs = pendingProfile.tabs.map(tab => ({
+        ...tab,
+        chests: tab.chests.map((chest: any) => ({
           ...chest,
-          id: index + 1,
+          id: globalChestId++,
           icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
           checked: chest.checked || false,
-        }));
-        const defaultTab: Tab = { id: 1, name: 'Tab 1', chests: processedChests };
-        setTabs([defaultTab]);
-        setActiveTabId(1);
-      }
-
-      setPendingProfile(null);
-      setImportProfileModalVisible(false);
-
-      toast.success('Profil importeret!', {
-        position: "top-center",
-        autoClose: 3000,
-        hideProgressBar: true,
-        closeOnClick: true,
-        pauseOnHover: false,
-        draggable: false,
-        theme: 'dark',
-        transition: Zoom,
-        closeButton: false,
-      });
+        }))
+      }));
+      setTabs(processedTabs);
+      setActiveTabId(processedTabs[0]?.id || 1);
+    } else if (pendingProfile.chests) {
+      const processedChests = pendingProfile.chests.map((chest: any, index: number) => ({
+        ...chest,
+        id: index + 1,
+        icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
+        checked: chest.checked || false,
+      }));
+      const defaultTab: Tab = { id: 1, name: 'Tab 1', chests: processedChests };
+      setTabs([defaultTab]);
+      setActiveTabId(1);
     }
-  };
 
-  const cancelImportProfile = () => {
     setPendingProfile(null);
     setImportProfileModalVisible(false);
+
+    toast.success('Profil importeret!', {
+      position: "top-center",
+      autoClose: 3000,
+      hideProgressBar: true,
+      closeOnClick: true,
+      pauseOnHover: false,
+      draggable: false,
+      theme: 'dark',
+      transition: Zoom,
+      closeButton: false,
+    });
   };
 
-  // Tab-funktioner
+  const cancelImportProfile = () => { setPendingProfile(null); setImportProfileModalVisible(false); };
+
   const addTab = useCallback(() => {
     const newTabId = Math.max(...tabs.map(tab => tab.id), 0) + 1;
     const nextChestId = getNextChestId();
@@ -300,10 +250,7 @@ const App: React.FC = () => {
       setTabToDelete(null);
     }
   };
-  const cancelDeleteTab = () => {
-    setTabToDelete(null);
-    setDeleteTabModalVisible(false);
-  };
+  const cancelDeleteTab = () => { setTabToDelete(null); setDeleteTabModalVisible(false); };
 
   const updateTabName = useCallback((tabId: number, name: string) => {
     setTabs(prev => prev.map(tab => (tab.id === tabId ? { ...tab, name } : tab)));
@@ -341,19 +288,19 @@ const App: React.FC = () => {
     setRedoStack([]);
     const newChestId = getNextChestId();
     const newChest: Chest = { id: newChestId, label: 'Barrel', items: [], icon: 'barrel', checked: false };
-    updateChests([...chests, newChest]);
+    updateChests([...(chests || []), newChest]);
   }, [chests, tabs, updateChests, getNextChestId]);
 
   const handleDeleteChest = useCallback((id: number) => {
     setUndoStack(prev => [...prev, tabs]);
     setRedoStack([]);
-    const newChests = chests.filter(chest => chest.id !== id);
+    const newChests = (chests || []).filter(chest => chest.id !== id);
     updateChests(newChests);
     setModalVisible(false);
   }, [chests, tabs, updateChests]);
 
   const confirmDeleteChest = useCallback((id: number) => {
-    const toRemove = chests.find(chest => chest.id === id);
+    const toRemove = (chests || []).find(chest => chest.id === id);
     if (toRemove && toRemove.items.length > 0) {
       setChestToDelete(id);
       setModalVisible(true);
@@ -363,19 +310,19 @@ const App: React.FC = () => {
   }, [chests, handleDeleteChest]);
 
   const updateChestLabel = useCallback((id: number, label: string) => {
-    const newChests = chests.map(chest => (chest.id === id ? { ...chest, label } : chest));
+    const newChests = (chests || []).map(chest => (chest.id === id ? { ...chest, label } : chest));
     updateChests(newChests);
   }, [chests, updateChests]);
 
   const updateChestIcon = useCallback((id: number, icon: string) => {
-    const newChests = chests.map(chest => (chest.id === id ? { ...chest, icon } : chest));
+    const newChests = (chests || []).map(chest => (chest.id === id ? { ...chest, icon } : chest));
     updateChests(newChests);
   }, [chests, updateChests]);
 
   const removeItemFromChest = useCallback((chestId: number, item: Item) => {
     setUndoStack(prev => [...prev, tabs]);
     setRedoStack([]);
-    const newChests = chests.map(chest => {
+    const newChests = (chests || []).map(chest => {
       if (chest.id === chestId) {
         return { ...chest, items: chest.items.filter(chestItem => chestItem.item !== item.item) };
       }
@@ -385,8 +332,8 @@ const App: React.FC = () => {
   }, [chests, tabs, updateChests]);
 
   const handleDrop = useCallback((item: Item, chestId: number) => {
-    const chestIndex = chests.findIndex(chest => chest.id === chestId);
-    const command = `/signedit 3 ${[...chests[chestIndex].items, item].map(i => i.variable).join(',')}`;
+    const chestIndex = (chests || []).findIndex(chest => chest.id === chestId);
+    const command = `/signedit 3 ${[...(chests?.[chestIndex].items || []), item].map(i => i.variable).join(',')}`;
     if (command.length > 256) {
       toast.error('Du kan ikke tilføje mere til kisten – kommandoen vil overstige 256 tegn.', {
         position: "top-center",
@@ -402,7 +349,7 @@ const App: React.FC = () => {
     } else {
       setUndoStack(prev => [...prev, tabs]);
       setRedoStack([]);
-      const newChests = chests.map(chest => {
+      const newChests = (chests || []).map(chest => {
         if (chest.id === chestId) {
           if (!chest.items.some(chestItem => chestItem.item === item.item)) {
             return { ...chest, items: [...chest.items, item] };
@@ -465,14 +412,6 @@ const App: React.FC = () => {
     }
   };
 
-  const onTabWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    // Konverter vertikalt scroll til horisontalt i tabbaren
-    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-      e.currentTarget.scrollLeft += e.deltaY;
-      e.preventDefault();
-    }
-  };
-
   useEffect(() => {
     updateHeights();
     window.addEventListener('resize', updateHeights);
@@ -494,7 +433,7 @@ const App: React.FC = () => {
   }, [handleUndo, handleRedo]);
 
   const moveChest = (dragIndex: number, hoverIndex: number) => {
-    const newChests = [...chests];
+    const newChests = [...(chests || [])];
     const [movedChest] = newChests.splice(dragIndex, 1);
     newChests.splice(hoverIndex, 0, movedChest);
     updateChests(newChests);
@@ -504,6 +443,7 @@ const App: React.FC = () => {
       <DndProvider backend={HTML5Backend}>
         <div className="flex flex-col min-h-screen overflow-x-hidden bg-neutral-950 text-white">
           <div className="flex flex-1 flex-col md:flex-row h-full min-h-0">
+            {/* SIDEBAR */}
             <aside className="p-4 border-b md:border-r flex-shrink-0 gap-4 flex flex-col bg-neutral-900 border-neutral-800 dark-theme">
               <div className="logo-dark" />
               <div className="relative">
@@ -525,6 +465,8 @@ const App: React.FC = () => {
                     </button>
                 )}
               </div>
+
+              {/* Item-liste header + toggles */}
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold">Item liste</h2>
                 <div className="flex items-center gap-3">
@@ -537,15 +479,19 @@ const App: React.FC = () => {
                     />
                     <span>Vis alle</span>
                   </label>
+
+                  {/* KVADRATISK item-liste grid toggle */}
                   <button
                       onClick={() => setIsGridView(!isGridView)}
-                      className="p-2 rounded bg-neutral-800 hover:bg-neutral-700 transition-colors"
-                      title={isGridView ? 'Skift til liste visning' : 'Skift til gitter visning'}
+                      className="inline-flex items-center justify-center rounded bg-neutral-800 hover:bg-neutral-700 transition-colors h-8 w-8 leading-none"
+                      title={isGridView ? 'Item-liste: Listevisning' : 'Item-liste: Gittervisning'}
+                      aria-pressed={isGridView}
                   >
-                    {isGridView ? '☰' : '⊞'}
+                    {isGridView ? <FaBars size={16}/> : <FaTh size={16}/> }
                   </button>
                 </div>
               </div>
+
               <div ref={listContainerRef} className="flex-1 overflow-auto dark-theme">
                 {isGridView ? (
                     <div className="h-full" style={{ height: listHeight }}>
@@ -557,29 +503,24 @@ const App: React.FC = () => {
                                 index={index}
                                 lastIndex={itemsToShow.length - 1}
                                 chestIds={chestItemsMap.get(item.item)}
-                                isGridView={true}
+                                isGridView
                             />
                         ))}
                       </div>
                     </div>
                 ) : (
-                    <List
-                        className="dark-theme"
-                        height={listHeight}
-                        itemCount={itemsToShow.length}
-                        itemSize={50}
-                        width="100%"
-                    >
+                    <List className="dark-theme" height={listHeight} itemCount={itemsToShow.length} itemSize={50} width="100%">
                       {renderRow}
                     </List>
                 )}
               </div>
             </aside>
 
-            <main className="flex-1 p-4 flex flex-col gap-4">
-              {/* HEADER */}
-              <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4 h-8 w-full">
-                {/* Left: Profile name */}
+            {/* MAIN */}
+            <main className="flex-1 p-4 flex flex-col gap-4 overflow-x-hidden">
+              {/* HEADER – Tabs, Chest Grid Toggle (kvadratisk), Settings */}
+              <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 h-8 w-full">
+                {/* Profilnavn */}
                 <div className="flex items-center gap-2">
                   {isEditingProfileName ? (
                       <>
@@ -591,32 +532,29 @@ const App: React.FC = () => {
                             className="border p-2 bg-neutral-800 border-neutral-700 text-white"
                             placeholder="Profilnavn"
                         />
-                        <button
-                            className="text-blue-400 hover:text-blue-300"
-                            onClick={() => setIsEditingProfileName(false)}
-                        >
-                          Gem
-                        </button>
+                        <button className="text-blue-400 hover:text-blue-300" onClick={() => setIsEditingProfileName(false)}>Gem</button>
                       </>
                   ) : (
                       <>
                         <span className="text-xl font-bold">{profileName}</span>
-                        <button
-                            className="text-blue-400 hover:text-blue-300"
-                            onClick={() => setIsEditingProfileName(true)}
-                            aria-label="Rediger profilnavn"
-                        >
+                        <button className="text-blue-400 hover:text-blue-300" onClick={() => setIsEditingProfileName(true)} aria-label="Rediger profilnavn">
                           <FaEdit/>
                         </button>
                       </>
                   )}
                 </div>
 
-                {/* Middle: Tabs */}
+                {/* Tabs */}
                 <div className="min-w-0 overflow-hidden">
                   <div
                       ref={tabScrollRef}
-                      onWheel={onTabWheel}
+                      onWheel={(e) => {
+                        const dx = e.deltaX || (e.shiftKey ? e.deltaY : 0);
+                        if (dx !== 0) {
+                          e.preventDefault();
+                          e.currentTarget.scrollLeft += dx;
+                        }
+                      }}
                       className="flex items-center gap-2 overflow-x-auto overflow-y-hidden dark-theme"
                       style={{ maxWidth: '100%', width: '100%' }}
                   >
@@ -670,7 +608,19 @@ const App: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Right: Settings */}
+                {/* KVADRATISK chest grid/list toggle */}
+                <div className="justify-self-end">
+                  <button
+                      onClick={() => setChestGridView(!chestGridView)}
+                      className="inline-flex items-center justify-center rounded bg-neutral-800 hover:bg-neutral-700 transition-colors h-8 w-8 leading-none"
+                      title={chestGridView ? 'Kister: Listevisning' : 'Kister: Gittervisning'}
+                      aria-pressed={chestGridView}
+                  >
+                    {chestGridView ? <FaBars size={16}/> : <FaTh size={16}/> }
+                  </button>
+                </div>
+
+                {/* Settings */}
                 <div className="relative z-50">
                   <button
                       className="flex items-center space-x-2 p-2 rounded bg-neutral-800 hover:bg-neutral-900"
@@ -707,37 +657,14 @@ const App: React.FC = () => {
                           >
                             Ny Profil
                           </button>
-                          <div className="border-t border-dashed my-2 border-neutral-700/50"></div>
-                          <div className="flex gap-2 p-2">
-                            <div className="group">
-                              <div className="head-icon head-icon-1 cursor-pointer"
-                                   onClick={() => window.open('https://github.com/RasmusKD')}/>
-                              <div className="label-container">
-                                <div className="arrow-down"></div>
-                                <div className="py-2 rounded bg-neutral-950 text-white">
-                                  <p className="font-bold">WhoToldYou</p>
-                                  <p className="text-sm">Udvikling af siden</p>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="group">
-                              <div className="head-icon head-icon-2"/>
-                              <div className="label-container">
-                                <div className="arrow-down"></div>
-                                <div className="py-2 rounded bg-neutral-950 text-white">
-                                  <p className="font-bold">Iver</p>
-                                  <p className="text-sm">Idé & Basis Design</p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
                         </div>
                       </div>
                   )}
                 </div>
               </div>
 
-              <div ref={gridContainerRef} className="grid-cols-auto-fit dark-theme">
+              {/* Kister */}
+              <div ref={gridContainerRef} className="grid-cols-auto-fit dark-theme overflow-x-hidden">
                 {chests.map((chest, index) => (
                     <ChestComponent
                         key={chest.id}
@@ -749,7 +676,7 @@ const App: React.FC = () => {
                         updateChestIcon={updateChestIcon}
                         removeItemFromChest={removeItemFromChest}
                         moveChest={moveChest}
-                        setChests={updateChests}
+                        gridView={chestGridView}
                     />
                 ))}
 
@@ -767,19 +694,7 @@ const App: React.FC = () => {
             </main>
           </div>
 
-          <ToastContainer
-              className="toast-container"
-              position="top-center"
-              autoClose={3000}
-              limit={1}
-              hideProgressBar={false}
-              newestOnTop
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss={false}
-              pauseOnHover={false}
-              theme="dark"
-          />
+          <ToastContainer className="toast-container" position="top-center" autoClose={3000} limit={1} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss={false} pauseOnHover={false} theme="dark"/>
 
           {modalVisible && (
               <ConfirmationModal
@@ -789,6 +704,7 @@ const App: React.FC = () => {
                   title="Bekræft Sletning"
               />
           )}
+
           {newProfileModalVisible && (
               <ConfirmationModal
                   onConfirm={confirmNewProfile}
@@ -797,6 +713,7 @@ const App: React.FC = () => {
                   title="Ny Profil"
               />
           )}
+
           {importProfileModalVisible && (
               <ConfirmationModal
                   onConfirm={confirmImportProfile}
@@ -805,6 +722,7 @@ const App: React.FC = () => {
                   title="Importer Profil"
               />
           )}
+
           {deleteTabModalVisible && (
               <ConfirmationModal
                   onConfirm={confirmDeleteTab}
