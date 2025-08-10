@@ -11,7 +11,7 @@ interface ItemComponentProps {
     index: number;
     lastIndex: number;      // modtages fra parent men vi destrukturerer den ikke -> ingen ESLint-warning
     chestIds?: number[];
-    removeItem?: () => void; // kun givet i kiste-grid => viser “X”
+    removeItem?: () => void; // hvis givet (kiste-grid) viser vi kryds
     isGridView?: boolean;
 }
 
@@ -53,7 +53,7 @@ const ItemComponent: React.FC<ItemComponentProps> = (props) => {
         }
     }, [dragPreviewImage, preview]);
 
-    // GRID VIEW (sidebarens item-grid OG kiste-grid)
+    // GRID VIEW (sidebarens item-grid og kiste-grid)
     if (isGridView) {
         const tooltipText = `${item.item.replace(/_/g, ' ')}${
             chestIds && chestIds.length > 0 ? ` (Chest IDs: ${chestIds.map(id => `#${id}`).join(', ')})` : ''
@@ -67,12 +67,12 @@ const ItemComponent: React.FC<ItemComponentProps> = (props) => {
                 style={{ opacity: isDragging ? 0.5 : 1 }}
                 title={tooltipText}
             >
-                {/* Neutral fjern-knap (kun i kiste-grid når removeItem findes) */}
+                {/* KRYDS — tilbage i den gamle placering (øverst-højre med let negativ offset) */}
                 {removeItem && (
                     <button
-                        className="absolute top-0.5 right-0.5 z-10 w-5 h-5 inline-flex items-center justify-center rounded-md
+                        className="absolute -top-1 -right-1 z-10 w-5 h-5 inline-flex items-center justify-center rounded-md
                        bg-neutral-900/90 text-neutral-300 border border-neutral-700 shadow-sm
-                       opacity-70 group-hover:opacity-100
+                       opacity-80 group-hover:opacity-100
                        hover:bg-neutral-800 hover:text-white
                        focus:outline-none focus:ring focus:ring-neutral-600/40"
                         onClick={(e) => { e.stopPropagation(); removeItem(); }}
@@ -98,14 +98,13 @@ const ItemComponent: React.FC<ItemComponentProps> = (props) => {
                     />
                 </div>
 
-                {/* Minimal rund tæller (kun i item-listens grid — derfor !removeItem).
-            Fylder ikke ekstra, ligger inde i hjørnet uden overflow og dækker minimalt. */}
+                {/* TAL — samme sted som før (øverst-højre med let negativ offset), men kun i item-listens grid */}
                 {chestIds && chestIds.length > 0 && !removeItem && (
-                    <div className="absolute top-0 right-0 pointer-events-none select-none">
+                    <div className="absolute -top-1 -right-1 pointer-events-none select-none">
             <span
                 className="inline-flex items-center justify-center rounded-full
                          bg-neutral-900/85 text-neutral-200 border border-neutral-700/70 shadow-sm
-                         text-[9px] leading-none w-4 h-4"
+                         text-[10px] leading-none w-4 h-4"
                 aria-label={`${chestIds.length} i kister`}
             >
               {displayCount}
