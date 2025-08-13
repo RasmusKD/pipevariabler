@@ -1446,11 +1446,6 @@
             "image": "slime_block.png"
         },
         {
-            "item": "grass_path",
-            "variable": "%v208%",
-            "image": "dirt_path.png"
-        },
-        {
             "item": "sunflower",
             "variable": "%v175%",
             "image": "sunflower.png"
