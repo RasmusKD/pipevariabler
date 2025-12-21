@@ -166,14 +166,16 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
 
   const IconChoice = ({ icon }: { icon: string }) => (
     <div
-      className="cursor-pointer p-1 hover:bg-neutral-800 rounded flex justify-center items-center"
+      className="cursor-pointer hover:bg-neutral-800 rounded flex justify-center items-center"
+      style={{ width: 40, height: 40, flexShrink: 0 }}
       onClick={(e) => {
         e.stopPropagation();
-        updateChestIcon(chest.id, icon);
+        // Remove .png from icon name when saving (chest.icon should not have extension)
+        updateChestIcon(chest.id, icon.replace('.png', ''));
         setDropdownOpen(false);
       }}
     >
-      <SpriteIcon icon={`${icon}.png`} size={32} className={pixelatedIcons.includes(icon) ? 'pixelated-icon' : ''} />
+      <SpriteIcon icon={icon} size={32} className={pixelatedIcons.includes(icon.replace('.png', '')) ? 'pixelated-icon' : ''} />
     </div>
   );
 
@@ -207,19 +209,17 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
           </div>
           {dropdownOpen && (
             <Portal style={{ position: 'absolute', top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 1000 }}>
-              <div className="w-56 p-2 flex flex-col gap-2 bg-neutral-950 border border-neutral-800 text-white rounded-xl shadow-xl" style={{ maxHeight: 300 }}>
-                <div className="sticky top-0 z-10 bg-neutral-950">
-                  <input
-                    type="text"
-                    spellCheck={false}
-                    placeholder="Søg ikon..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full p-2 rounded-lg bg-neutral-900 outline-none focus:ring-2 focus:ring-blue-500"
-                    onPointerDown={e => e.stopPropagation()}
-                  />
-                </div>
-                <div className="grid grid-cols-5 gap-1 overflow-auto pr-1">
+              <div className="w-64 p-1.5 bg-neutral-950 border border-neutral-800 text-white rounded-xl shadow-xl">
+                <input
+                  type="text"
+                  spellCheck={false}
+                  placeholder="Søg ikon..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full p-2 mb-1.5 rounded-lg bg-neutral-900 outline-none focus:ring-2 focus:ring-blue-500"
+                  onPointerDown={e => e.stopPropagation()}
+                />
+                <div className="grid grid-cols-6 gap-0.5 overflow-y-auto max-h-60 pr-1">
                   {Object.keys(require('./spriteMap.json'))
                     .filter((k) => k !== '_meta')
                     .filter((k) => !searchTerm || k.toLowerCase().includes(searchTerm.toLowerCase()))
