@@ -11,7 +11,11 @@ import {
   DragStartEvent,
   DragOverEvent,
   DragEndEvent,
+  pointerWithin,
+  useDroppable,
+  useDndContext,
 } from '@dnd-kit/core';
+import { snapCenterToCursor } from '@dnd-kit/modifiers';
 import {
   arrayMove,
   SortableContext,
@@ -28,13 +32,43 @@ import SpriteIcon from './SpriteIcon';
 import { ToastContainer, toast, Zoom } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ConfirmationModal from './ConfirmationModal';
-import { SortableItem } from './dnd/SortableItem';
-import { DraggableSource } from './dnd/DraggableSource';
 
-interface Item { uid: string; item: string; variable: string; image: string; }
-interface Chest { id: number; label: string; items: Item[]; icon: string; checked: boolean; }
-interface Tab { id: number; name: string; chests: Chest[]; }
-interface Profile { name: string; tabs?: Tab[]; chests?: Chest[]; }
+import { DraggableSource } from './dnd/DraggableSource';
+import { Item, Chest, Tab, Profile } from './types';
+import { canAddItemToChest, addItemToChest, cloneItemWithNewUid } from './chestUtils';
+
+// Drop zone for creating new chests - can drag item here to create chest with that item
+const AddChestDropZone: React.FC<{
+  onAddChest: () => void;
+}> = ({ onAddChest }) => {
+  const { active } = useDndContext();
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'add-chest-drop-zone',
+  });
+
+  const isDraggingItem = active && typeof active.id === 'string';
+  const showHighlight = isDraggingItem && isOver;
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex items-center justify-center border-2 border-dashed rounded p-4 min-h-[200px] transition-colors ${showHighlight
+        ? 'border-blue-500 bg-blue-500/10'
+        : 'border-neutral-700 hover:border-neutral-600 hover:bg-neutral-900'
+        }`}
+    >
+      <button
+        onClick={onAddChest}
+        className="flex flex-col items-center gap-3 p-6 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+      >
+        <FaPlus size={24} />
+        <span className="text-lg font-medium">
+          {showHighlight ? 'Slip for at oprette kiste' : 'Tilføj kiste'}
+        </span>
+      </button>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,6 +94,7 @@ const App: React.FC = () => {
   const [isEditingProfileName, setIsEditingProfileName] = useState(false);
   const [isEditingTabName, setIsEditingTabName] = useState<number | null>(null);
   const [pendingProfile, setPendingProfile] = useState<Profile | null>(null);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   const listContainerRef = useRef<HTMLDivElement>(null);
   const gridContainerRef = useRef<HTMLDivElement>(null);
@@ -74,9 +109,13 @@ const App: React.FC = () => {
     return maxId + 1;
   }, [tabs]);
 
-  /* Dnd Sensors */
+  /* Dnd Sensors - distance: 5 means you need to move 5px before drag starts, allowing clicks for selection */
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -385,9 +424,39 @@ const App: React.FC = () => {
 
   const handleClearSearch = () => setSearchTerm('');
 
+  // Handle item selection (Ctrl+click to toggle, click to select/keep selection for dragging)
+  const handleItemSelect = useCallback((uid: string, ctrlKey: boolean) => {
+    setSelectedItems(prev => {
+      const newSet = new Set(prev);
+      if (ctrlKey) {
+        // Ctrl+click: Toggle selection
+        if (newSet.has(uid)) {
+          newSet.delete(uid);
+        } else {
+          newSet.add(uid);
+        }
+      } else {
+        // Regular click:
+        // If this item is already selected, keep the selection (for dragging multiple)
+        // If not selected, clear and select only this item
+        if (!newSet.has(uid)) {
+          newSet.clear();
+          newSet.add(uid);
+        }
+        // If already selected, do nothing (keep the selection intact for drag)
+      }
+      return newSet;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedItems(new Set());
+  }, []);
+
   const renderRow = ({ index, style }: { index: number; style: React.CSSProperties }) => {
     const item = itemsToShow[index];
     const chestIds = chestItemsMap.get(item.item);
+    const isSelected = selectedItems.has(item.uid);
     return (
       <div style={style} key={item.uid}>
         <DraggableSource id={item.uid} className="h-full">
@@ -397,6 +466,8 @@ const App: React.FC = () => {
             lastIndex={itemsToShow.length - 1}
             chestIds={chestIds}
             isGridView={false}
+            isSelected={isSelected}
+            onSelect={handleItemSelect}
           />
         </DraggableSource>
       </div>
@@ -507,6 +578,46 @@ const App: React.FC = () => {
     // Is source item?
     const isSource = items.some(i => i.uid === activeIdStr);
 
+    // Get all items to add (if active is selected, add all selected; otherwise just the one)
+    const getItemsToAdd = (): Item[] => {
+      if (!isSource) return [];
+      if (selectedItems.has(activeIdStr) && selectedItems.size > 1) {
+        // Return all selected items, ordered by the items array order
+        return items.filter(i => selectedItems.has(i.uid));
+      }
+      // Just the dragged item
+      const singleItem = items.find(i => i.uid === activeIdStr);
+      return singleItem ? [singleItem] : [];
+    };
+
+    // Handle dropping on "Add Chest" drop zone
+    if (over.id === 'add-chest-drop-zone' && isSource) {
+      const itemsToAdd = getItemsToAdd();
+      if (itemsToAdd.length > 0) {
+        setUndoStack(prev => [...prev, tabs]);
+        setRedoStack([]);
+        const newChestId = getNextChestId();
+        // First item determines icon and name
+        const firstItem = itemsToAdd[0];
+        const itemName = firstItem.item.replace(/_/g, ' ');
+        const itemIcon = firstItem.image.replace('.png', '');
+        // Clone all items with new UIDs
+        const newItems = itemsToAdd.map(item => cloneItemWithNewUid(item));
+        const newChest: Chest = {
+          id: newChestId,
+          label: itemName.charAt(0).toUpperCase() + itemName.slice(1),
+          items: newItems,
+          icon: itemIcon,
+          checked: false
+        };
+        updateChests([...(chests || []), newChest]);
+        clearSelection();
+        return;
+      }
+    }
+
+
+
     // Find target chest
     let targetChestId: number | null = null;
     let targetIndex: number | null = null;
@@ -515,6 +626,11 @@ const App: React.FC = () => {
     if (typeof over.id === 'number') {
       targetChestId = over.id;
       // findchest
+      const targetChest = chests.find(c => c.id === targetChestId);
+      targetIndex = targetChest ? targetChest.items.length : 0;
+    } else if (typeof over.id === 'string' && over.id.startsWith('chest-drop-')) {
+      // Over a chest drop zone (e.g., "chest-drop-1")
+      targetChestId = parseInt(over.id.replace('chest-drop-', ''), 10);
       const targetChest = chests.find(c => c.id === targetChestId);
       targetIndex = targetChest ? targetChest.items.length : 0;
     } else {
@@ -534,22 +650,25 @@ const App: React.FC = () => {
       setRedoStack([]);
 
       if (isSource) {
-        // Create new item
-        const sourceItem = items.find(i => i.uid === activeIdStr);
-        if (sourceItem) {
-          const newItem: Item = { ...sourceItem, uid: Math.random().toString(36).substr(2, 9) };
+        // Add items from sidebar (possibly multiple if multi-selected)
+        const itemsToAdd = getItemsToAdd();
+        if (itemsToAdd.length > 0) {
           const newChests = chests.map(c => {
             if (c.id === targetChestId) {
-              // Insert at targetIndex
-              const newItems = [...c.items];
-              // If targetIndex is null (appended), or specific
-              if (targetIndex !== null) newItems.splice(targetIndex, 0, newItem);
-              else newItems.push(newItem);
-              return { ...c, items: newItems };
+              let updatedItems = [...c.items];
+              // Add each item that doesn't already exist in the chest
+              for (const item of itemsToAdd) {
+                const newItem = cloneItemWithNewUid(item);
+                if (canAddItemToChest({ ...c, items: updatedItems }, newItem)) {
+                  updatedItems.push(newItem);
+                }
+              }
+              return { ...c, items: updatedItems };
             }
             return c;
           });
           updateChests(newChests);
+          clearSelection();
         }
       } else {
         // Moving existing item
@@ -583,23 +702,21 @@ const App: React.FC = () => {
             updateChests(chests.map(c => c.id === sourceChestId ? { ...c, items: newItems } : c));
           } else {
             // Move to diff chest
-            // Add to target
-            // We need the item object.
             const item = chests.find(c => c.id === sourceChestId)?.items[sourceIndex!];
             if (item) {
+              // Use utility function for duplicate check
+              const targetChest = newChests.find(c => c.id === targetChestId);
+              if (targetChest && !canAddItemToChest(targetChest, item)) {
+                // Already has this item, just remove from source (don't add to target)
+                updateChests(newChests);
+                return;
+              }
+
               const finalChests = newChests.map(c => {
                 if (c.id === targetChestId) {
-                  const items = [...c.items];
-                  // Adjust index if we removed from same list? Handled by "same chest" block above.
-                  // Here distinct chests.
-                  // If dragging over an item, insert before.
-                  // If dragging over chest, append?
-                  if (typeof over.id === 'string' && targetIndex !== null) {
-                    items.splice(targetIndex, 0, item);
-                  } else {
-                    items.push(item);
-                  }
-                  return { ...c, items };
+                  const newItems = addItemToChest(c, item, targetIndex);
+                  if (newItems === null) return c;
+                  return { ...c, items: newItems };
                 }
                 return c;
               });
@@ -614,10 +731,11 @@ const App: React.FC = () => {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={rectIntersection}
+      collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      autoScroll={false}
     >
       <div className="flex flex-col min-h-screen overflow-x-hidden bg-neutral-950 text-white">
         <div className="flex flex-1 flex-col md:flex-row h-full min-h-0">
@@ -675,14 +793,17 @@ const App: React.FC = () => {
                 <div className="h-full" style={{ height: listHeight }}>
                   <div className="grid grid-cols-6 gap-2">
                     {itemsToShow.map((item, index) => (
-                      <ItemComponent
-                        key={item.item}
-                        item={item}
-                        index={index}
-                        lastIndex={itemsToShow.length - 1}
-                        chestIds={chestItemsMap.get(item.item)}
-                        isGridView
-                      />
+                      <DraggableSource key={item.uid} id={item.uid}>
+                        <ItemComponent
+                          item={item}
+                          index={index}
+                          lastIndex={itemsToShow.length - 1}
+                          chestIds={chestItemsMap.get(item.item)}
+                          isGridView
+                          isSelected={selectedItems.has(item.uid)}
+                          onSelect={handleItemSelect}
+                        />
+                      </DraggableSource>
                     ))}
                   </div>
                 </div>
@@ -844,30 +965,21 @@ const App: React.FC = () => {
             <div ref={gridContainerRef} className="grid-cols-auto-fit dark-theme overflow-x-hidden">
               <SortableContext items={chests.map(c => c.id)} strategy={rectSortingStrategy}>
                 {chests.map((chest, index) => (
-                  <SortableItem key={chest.id} id={chest.id} className="h-full">
-                    <ChestComponent
-                      chest={chest}
-                      index={index}
-                      removeChest={confirmDeleteChest}
-                      updateChestLabel={updateChestLabel}
-                      updateChestIcon={updateChestIcon}
-                      removeItemFromChest={removeItemFromChest}
-                      gridView={chestGridView}
-                    />
-                  </SortableItem>
+                  <ChestComponent
+                    key={chest.id}
+                    chest={chest}
+                    index={index}
+                    removeChest={confirmDeleteChest}
+                    updateChestLabel={updateChestLabel}
+                    updateChestIcon={updateChestIcon}
+                    removeItemFromChest={removeItemFromChest}
+                    gridView={chestGridView}
+                  />
                 ))}
               </SortableContext>
 
-              {/* Add Chest */}
-              <div className="flex items-center justify-center border-2 border-dashed rounded p-4 min-h-[200px] border-neutral-700 hover:border-neutral-600 hover:bg-neutral-900 transition-colors">
-                <button
-                  onClick={addChest}
-                  className="flex flex-col items-center gap-3 p-6 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
-                >
-                  <FaPlus size={24} />
-                  <span className="text-lg font-medium">Tilføj kiste</span>
-                </button>
-              </div>
+              {/* Add Chest Drop Zone */}
+              <AddChestDropZone onAddChest={addChest} />
             </div>
           </main>
         </div>
@@ -910,7 +1022,7 @@ const App: React.FC = () => {
           />
         )}
       </div>
-      <DragOverlay>
+      <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
         {activeId ? (
           activeItem && 'items' in activeItem ? (
             // Chest Overlay
@@ -927,10 +1039,17 @@ const App: React.FC = () => {
             </div>
           ) : (
             // Item Overlay
-            // Item Overlay
-            <div className="pointer-events-none">
+            <div className="pointer-events-none inline-block relative">
               {activeItem && (
-                <SpriteIcon icon={(activeItem as Item).image} size={48} className="drop-shadow-xl" />
+                <>
+                  <SpriteIcon icon={(activeItem as Item).image} size={48} className="drop-shadow-xl" />
+                  {/* Show badge if multiple items selected */}
+                  {selectedItems.size > 1 && selectedItems.has((activeItem as Item).uid) && (
+                    <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg">
+                      {selectedItems.size}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )

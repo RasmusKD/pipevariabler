@@ -17,9 +17,27 @@ interface ItemComponentProps {
     chestIds?: number[];
     removeItem?: () => void;
     isGridView?: boolean;
+    isSelected?: boolean;
+    onSelect?: (uid: string, ctrlKey: boolean) => void;
 }
 
-const ItemComponent: React.FC<ItemComponentProps> = ({ item, index, chestIds, removeItem, isGridView = false }) => {
+const ItemComponent: React.FC<ItemComponentProps> = ({
+    item,
+    index,
+    chestIds,
+    removeItem,
+    isGridView = false,
+    isSelected = false,
+    onSelect
+}) => {
+
+    const handleClick = (e: React.MouseEvent) => {
+        if (onSelect) {
+            e.preventDefault();
+            e.stopPropagation();
+            onSelect(item.uid, e.ctrlKey || e.metaKey);
+        }
+    };
 
     const renderIcon = (size: number) => (
         <SpriteIcon
@@ -29,6 +47,9 @@ const ItemComponent: React.FC<ItemComponentProps> = ({ item, index, chestIds, re
         />
     );
 
+    // Selection highlight classes
+    const selectedClass = isSelected ? 'ring-2 ring-blue-500 bg-blue-500/20' : '';
+
     // GRID VIEW
     if (isGridView) {
         const tooltipText = `${item.item.replace(/_/g, ' ')}${chestIds && chestIds.length > 0 ? ` (Chest IDs: ${chestIds.map(id => `#${id}`).join(', ')})` : ''}`;
@@ -36,8 +57,9 @@ const ItemComponent: React.FC<ItemComponentProps> = ({ item, index, chestIds, re
 
         return (
             <div
-                className="group relative cursor-pointer p-1 rounded border bg-neutral-800 border-neutral-700 hover:bg-neutral-700 transition-colors h-full"
+                className={`group relative cursor-pointer p-1 rounded border bg-neutral-800 border-neutral-700 hover:bg-neutral-700 transition-colors h-full ${selectedClass}`}
                 title={tooltipText}
+                onClick={handleClick}
             >
                 {removeItem && (
                     <button
@@ -74,7 +96,8 @@ const ItemComponent: React.FC<ItemComponentProps> = ({ item, index, chestIds, re
     // LIST VIEW
     return (
         <li
-            className={`relative w-full cursor-pointer p-2 flex items-center gap-4 border-b hover:bg-neutral-700 border-neutral-700 ${index === 0 ? 'border-t' : ''}`}
+            className={`relative w-full cursor-pointer p-2 flex items-center gap-4 border-b hover:bg-neutral-700 border-neutral-700 ${index === 0 ? 'border-t' : ''} ${selectedClass}`}
+            onClick={handleClick}
         >
             <div className="item-icons flex items-center justify-center">
                 {renderIcon(32)}
@@ -102,3 +125,4 @@ const ItemComponent: React.FC<ItemComponentProps> = ({ item, index, chestIds, re
 };
 
 export default ItemComponent;
+

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
-import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { useDndContext, useDroppable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 import ItemComponent from './ItemComponent';
 import { FaEdit, FaSave, FaTimes, FaRegCopy, FaCheckSquare, FaRegSquare } from 'react-icons/fa';
 import { toast, Zoom } from 'react-toastify';
@@ -23,6 +24,46 @@ interface ChestComponentProps {
   gridView: boolean;
 }
 
+// Drop zone component for items inside a chest (no visual highlight - outer chest handles that)
+const ItemsDropZone: React.FC<{
+  chestId: number;
+  children: React.ReactNode;
+}> = ({ chestId, children }) => {
+  const { active } = useDndContext();
+  const { setNodeRef } = useDroppable({
+    id: `chest-drop-${chestId}`,
+    data: { chestId },
+  });
+
+  // Check if dragging from sidebar (string IDs)
+  const isDraggingFromSidebar = active && typeof active.id === 'string';
+
+  // Prevent scroll during drag
+  const handleScroll = (e: React.UIEvent) => {
+    if (isDraggingFromSidebar) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="mt-3 p-2 rounded-lg max-h-60 bg-neutral-900/50"
+      style={{
+        overflowY: isDraggingFromSidebar ? 'hidden' : 'auto',
+        pointerEvents: 'auto'
+      }}
+      onScroll={handleScroll}
+    >
+      {/* Disable pointer events on items during sidebar drag so drop zone gets events */}
+      <div style={{ pointerEvents: isDraggingFromSidebar ? 'none' : 'auto' }}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
 const CMD_PREFIX = '/signedit 3 ' as const;
 const CMD_LIMIT = 256;
 
@@ -36,11 +77,37 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
   gridView,
 }) => {
   const iconButtonRef = useRef<HTMLDivElement>(null);
+  const { over, active } = useDndContext();
 
-  // Make chest droppable for items (if empty or dragging over container)
-  const { setNodeRef, isOver } = useDroppable({
-    id: chest.id,
-  });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: chest.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0 : 1,
+  };
+
+
+  // Highlight if dragging an item over this chest or the drop zone or any item inside
+  const isDraggingItem = active && typeof active.id === 'string';
+  const isOverChestDirectly = over?.id === chest.id;
+  const isOverDropZone = over?.id === `chest-drop-${chest.id}`;
+
+  // Check if hovering over an item that belongs to this chest
+  const overIdStr = over?.id ? String(over.id) : '';
+  const isOverItemInThisChest = chest.items.some(item =>
+    (item.uid && item.uid === overIdStr) || item.item === overIdStr
+  );
+
+  const isOver = !!(isDraggingItem && (isOverChestDirectly || isOverDropZone || isOverItemInThisChest));
+
 
   const [isChecked, setIsChecked] = useState<boolean>(chest.checked);
   const [isEditing, setIsEditing] = useState(false);
@@ -75,9 +142,6 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
     const newState = !isChecked;
     setIsChecked(newState);
     localStorage.setItem(`chest-checked-${chest.id}`, JSON.stringify(newState));
-    // We should probably update the parent state too, but local state is fine for visual if parent doesn't strictly control it
-    // Actually, App.tsx initializes from prop, but we might want to trigger an update.
-    // The props interface doesn't have toggleChecked. For now keep local + localStorage.
   };
 
   const toggleDropdown = (e: React.MouseEvent) => {
@@ -104,7 +168,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
     <div
       className="cursor-pointer p-1 hover:bg-neutral-800 rounded flex justify-center items-center"
       onClick={(e) => {
-        e.stopPropagation(); // Stop propagation to prevent drag
+        e.stopPropagation();
         updateChestIcon(chest.id, icon);
         setDropdownOpen(false);
       }}
@@ -127,10 +191,15 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
   return (
     <div
       ref={setNodeRef}
-      className={`relative flex flex-col h-full border rounded-2xl bg-neutral-900/80 border-neutral-800 p-3 shadow-sm hover:shadow-md transition ${isOver ? 'ring-1 ring-blue-500' : ''}`}
+      style={style}
+      className={`relative flex flex-col h-full border rounded-2xl bg-neutral-900/80 border-neutral-800 p-3 shadow-sm hover:shadow-md transition ${isOver ? 'ring-2 ring-inset ring-blue-500 border-transparent' : ''}`}
     >
       {/* Header */}
-      <div className="flex items-center gap-3 cursor-grab active:cursor-grabbing border-b border-neutral-800/50 pb-2 mb-2">
+      <div
+        className="flex items-center gap-3 cursor-grab active:cursor-grabbing border-b border-neutral-800/50"
+        {...attributes}
+        {...listeners}
+      >
         {/* Icon button */}
         <div className="relative" ref={iconButtonRef}>
           <div onClick={toggleDropdown} style={{ cursor: 'pointer' }} onPointerDown={e => e.stopPropagation()}>
@@ -153,6 +222,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
                 <div className="grid grid-cols-5 gap-1 overflow-auto pr-1">
                   {Object.keys(require('./spriteMap.json'))
                     .filter((k) => k !== '_meta')
+                    .filter((k) => !searchTerm || k.toLowerCase().includes(searchTerm.toLowerCase()))
                     .map((icon) => (
                       <IconChoice key={icon} icon={icon} />
                     ))}
@@ -242,45 +312,46 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
         </div>
       </div>
 
-      {/* Items List */}
-      {/* We need SortableContext for items */}
-      <SortableContext items={chest.items.map(i => i.uid || i.item)} strategy={rectSortingStrategy}>
-        {chest.items.length > 0 ? (
-          gridView ? (
-            <div className="mt-3 grid grid-cols-8 gap-1 p-2 bg-neutral-900/50 rounded-lg max-h-48 overflow-y-auto">
-              {chest.items.map((item, itemIndex) => (
-                <SortableItem key={item.uid || `${item.item}-${itemIndex}`} id={item.uid || item.item} className="aspect-square">
-                  <ItemComponent
-                    item={item}
-                    index={itemIndex}
-                    lastIndex={chest.items.length - 1}
-                    removeItem={() => removeItemFromChest(chest.id, item)}
-                    isGridView={gridView}
-                  />
-                </SortableItem>
-              ))}
-            </div>
+      {/* Items Drop Zone */}
+      <ItemsDropZone chestId={chest.id}>
+        <SortableContext items={chest.items.map(i => i.uid || i.item)} strategy={rectSortingStrategy}>
+          {chest.items.length > 0 ? (
+            gridView ? (
+              <div className="grid grid-cols-6 gap-2">
+                {chest.items.map((item, itemIndex) => (
+                  <SortableItem key={item.uid || `${item.item}-${itemIndex}`} id={item.uid || item.item}>
+                    <ItemComponent
+                      item={item}
+                      index={itemIndex}
+                      lastIndex={chest.items.length - 1}
+                      removeItem={() => removeItemFromChest(chest.id, item)}
+                      isGridView={gridView}
+                    />
+                  </SortableItem>
+                ))}
+              </div>
+            ) : (
+              <ul className="chest-items dark-theme">
+                {chest.items.map((item, i) => (
+                  <SortableItem key={item.uid || `${item.item}-${i}`} id={item.uid || item.item} className="mb-1">
+                    <ItemComponent
+                      item={item}
+                      index={i}
+                      lastIndex={chest.items.length - 1}
+                      removeItem={() => removeItemFromChest(chest.id, item)}
+                      isGridView={gridView}
+                    />
+                  </SortableItem>
+                ))}
+              </ul>
+            )
           ) : (
-            <ul className="mt-2 chest-items dark-theme max-h-60 overflow-y-auto">
-              {chest.items.map((item, i) => (
-                <SortableItem key={item.uid || `${item.item}-${i}`} id={item.uid || item.item} className="mb-1">
-                  <ItemComponent
-                    item={item}
-                    index={i}
-                    lastIndex={chest.items.length - 1}
-                    removeItem={() => removeItemFromChest(chest.id, item)}
-                    isGridView={gridView}
-                  />
-                </SortableItem>
-              ))}
-            </ul>
-          )
-        ) : (
-          <div className="mt-3 chest-placeholder dark rounded-lg border border-dashed border-neutral-800 bg-neutral-900/60 text-neutral-400">
-            Træk ting her for at tilføje dem til kisten
-          </div>
-        )}
-      </SortableContext>
+            <div className="py-4 text-center text-neutral-500 text-sm">
+              Træk ting her
+            </div>
+          )}
+        </SortableContext>
+      </ItemsDropZone>
     </div>
   );
 };

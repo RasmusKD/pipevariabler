@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useDndContext } from '@dnd-kit/core';
 
 interface SortableItemProps {
     id: string | number;
@@ -11,6 +12,7 @@ interface SortableItemProps {
 }
 
 export const SortableItem: React.FC<SortableItemProps> = ({ id, children, disabled, className, style }) => {
+    const { active } = useDndContext();
     const {
         attributes,
         listeners,
@@ -20,10 +22,12 @@ export const SortableItem: React.FC<SortableItemProps> = ({ id, children, disabl
         isDragging
     } = useSortable({ id, disabled });
 
+    // Only hide if this specific sortable item is actually being dragged (not just matching ID from source)
+    // The `isDragging` from useSortable is true only when THIS sortable node is the active drag source
     const combinedStyle = {
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0 : 1,
+        opacity: isDragging ? 0.4 : 1,
         ...style,
     };
 
