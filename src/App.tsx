@@ -52,20 +52,18 @@ const AddChestDropZone: React.FC<{
   return (
     <div
       ref={setNodeRef}
-      className={`flex items-center justify-center border-2 border-dashed rounded p-4 min-h-[200px] transition-colors ${showHighlight
+      onClick={onAddChest}
+      className={`flex items-center justify-center border-2 border-dashed rounded p-4 min-h-[200px] transition-colors cursor-pointer ${showHighlight
         ? 'border-blue-500 bg-blue-500/10'
         : 'border-neutral-700 hover:border-neutral-600 hover:bg-neutral-900'
         }`}
     >
-      <button
-        onClick={onAddChest}
-        className="flex flex-col items-center gap-3 p-6 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
-      >
+      <div className="flex flex-col items-center gap-3 p-6 text-neutral-400">
         <FaPlus size={24} />
         <span className="text-lg font-medium">
           {showHighlight ? 'Slip for at oprette kiste' : 'Tilføj kiste'}
         </span>
-      </button>
+      </div>
     </div>
   );
 };

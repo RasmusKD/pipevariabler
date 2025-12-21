@@ -49,7 +49,7 @@ const ItemsDropZone: React.FC<{
   return (
     <div
       ref={setNodeRef}
-      className="mt-3 p-2 rounded-lg max-h-60 bg-neutral-900/50"
+      className="mt-3 p-2 rounded-lg flex-1 flex flex-col bg-neutral-900/50 border-2 border-dashed border-neutral-700"
       style={{
         overflowY: isDraggingFromSidebar ? 'hidden' : 'auto',
         pointerEvents: 'auto'
@@ -57,7 +57,7 @@ const ItemsDropZone: React.FC<{
       onScroll={handleScroll}
     >
       {/* Disable pointer events on items during sidebar drag so drop zone gets events */}
-      <div style={{ pointerEvents: isDraggingFromSidebar ? 'none' : 'auto' }}>
+      <div className="flex-1 flex flex-col" style={{ pointerEvents: isDraggingFromSidebar ? 'none' : 'auto' }}>
         {children}
       </div>
     </div>
@@ -267,7 +267,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
         {!isEditing && (
           <div className="flex items-center gap-2">
             {/* Done toggle */}
-            <button onClick={(e) => { e.stopPropagation(); handleDoneToggle(); }} onPointerDown={e => e.stopPropagation()} className={`w-5 h-5 ${isChecked ? 'text-green-400' : 'text-neutral-400'}`} title={isChecked ? 'Markér som færdig' : 'Markér som ufærdig'}>
+            <button onClick={(e) => { e.stopPropagation(); handleDoneToggle(); }} onPointerDown={e => e.stopPropagation()} className={`p-1.5 -m-1.5 transition-colors ${isChecked ? 'text-green-400 hover:text-green-300' : 'text-neutral-400 hover:text-neutral-200'}`} title={isChecked ? 'Markér som færdig' : 'Markér som ufærdig'}>
               {isChecked ? <FaCheckSquare /> : <FaRegSquare />}
             </button>
 
@@ -346,7 +346,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
               </ul>
             )
           ) : (
-            <div className="py-4 text-center text-neutral-500 text-sm">
+            <div className="h-full flex items-center justify-center text-neutral-500 text-base font-medium">
               Træk ting her
             </div>
           )}
