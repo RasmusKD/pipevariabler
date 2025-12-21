@@ -24,6 +24,7 @@ interface ItemComponentProps {
 const ItemComponent: React.FC<ItemComponentProps> = ({
     item,
     index,
+    lastIndex,
     chestIds,
     removeItem,
     isGridView = false,
@@ -96,7 +97,7 @@ const ItemComponent: React.FC<ItemComponentProps> = ({
     // LIST VIEW
     return (
         <li
-            className={`relative w-full cursor-pointer p-2 flex items-center gap-4 border-b hover:bg-neutral-700 border-neutral-700 ${index === 0 ? 'border-t' : ''} ${selectedClass}`}
+            className={`relative w-full cursor-pointer p-2 flex items-center gap-4 hover:bg-neutral-700 border-neutral-700 ${index !== lastIndex ? 'border-b' : ''} ${selectedClass}`}
             onClick={handleClick}
         >
             <div className="item-icons flex items-center justify-center">

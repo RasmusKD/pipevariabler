@@ -746,12 +746,12 @@ const App: React.FC = () => {
                 spellCheck="false"
                 value={searchTerm}
                 placeholder="Søg..."
-                className="border p-2 pr-10 w-full bg-neutral-800 border-neutral-700 text-white"
+                className="border p-2 pr-10 w-full bg-neutral-800 border-neutral-700 text-white rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 onChange={handleSearch}
               />
               {searchTerm && (
                 <button
-                  className="absolute right-0 top-0 mt-3 mr-3 text-neutral-400 hover:text-neutral-200"
+                  className="absolute right-0 top-0 mt-3 mr-3 text-neutral-400 hover:text-neutral-200 transition-colors"
                   onClick={handleClearSearch}
                   aria-label="Ryd søgning"
                 >
@@ -764,24 +764,26 @@ const App: React.FC = () => {
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Item liste</h2>
               <div className="flex items-center gap-3">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={showAll}
-                    onChange={() => setShowAll(!showAll)}
-                    className="form-checkbox h-4 w-4"
-                  />
+                <button
+                  onClick={() => setShowAll(!showAll)}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm transition-colors ${showAll
+                    ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                    : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white'
+                    }`}
+                  title={showAll ? 'Vis kun items i kister' : 'Vis alle items'}
+                >
                   <span>Vis alle</span>
-                </label>
+                </button>
 
                 {/* KVADRATISK item-liste grid toggle */}
                 <button
                   onClick={() => setIsGridView(!isGridView)}
-                  className="inline-flex items-center justify-center rounded bg-neutral-800 hover:bg-neutral-700 transition-colors h-8 w-8 leading-none"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 transition-colors text-sm text-neutral-300 hover:text-white"
                   title={isGridView ? 'Item-liste: Listevisning' : 'Item-liste: Gittervisning'}
                   aria-pressed={isGridView}
                 >
-                  {isGridView ? <FaBars size={16} /> : <FaTh size={16} />}
+                  {isGridView ? <FaBars size={14} /> : <FaTh size={14} />}
+                  <span>{isGridView ? 'Liste' : 'Gitter'}</span>
                 </button>
               </div>
             </div>
@@ -826,15 +828,15 @@ const App: React.FC = () => {
                       spellCheck="false"
                       value={profileName}
                       onChange={(e) => setProfileName(e.target.value)}
-                      className="border p-2 bg-neutral-800 border-neutral-700 text-white"
+                      className="border p-2 rounded bg-neutral-800 border-neutral-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Profilnavn"
                     />
-                    <button className="text-blue-400 hover:text-blue-300" onClick={() => setIsEditingProfileName(false)}>Gem</button>
+                    <button className="text-blue-400 hover:text-blue-300 transition-colors" onClick={() => setIsEditingProfileName(false)}>Gem</button>
                   </>
                 ) : (
                   <>
                     <span className="text-xl font-bold">{profileName}</span>
-                    <button className="text-blue-400 hover:text-blue-300" onClick={() => setIsEditingProfileName(true)} aria-label="Rediger profilnavn">
+                    <button className="text-blue-400 hover:text-blue-300 transition-colors" onClick={() => setIsEditingProfileName(true)} aria-label="Rediger profilnavn">
                       <FaEdit />
                     </button>
                   </>
@@ -865,7 +867,7 @@ const App: React.FC = () => {
                           onChange={(e) => updateTabName(tab.id, e.target.value)}
                           onBlur={() => setIsEditingTabName(null)}
                           onKeyDown={(e) => { if (e.key === 'Enter') setIsEditingTabName(null); }}
-                          className="px-3 py-1 text-sm border rounded w-32 bg-neutral-800 border-neutral-700 text-white"
+                          className="px-3 py-1 text-sm border rounded w-32 bg-neutral-800 border-neutral-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           autoFocus
                         />
                       ) : (
@@ -882,7 +884,7 @@ const App: React.FC = () => {
                           <span className="truncate block max-w-28">{tab.name}</span>
                           {tabs.length > 1 && (
                             <span
-                              className="text-red-500 hover:text-red-600 flex-shrink-0"
+                              className="text-red-500 hover:text-red-400 transition-colors flex-shrink-0"
                               onClick={(e) => { e.stopPropagation(); removeTab(tab.id); }}
                               title="Luk tab"
                             >
@@ -908,18 +910,19 @@ const App: React.FC = () => {
               <div className="justify-self-end">
                 <button
                   onClick={() => setChestGridView(!chestGridView)}
-                  className="inline-flex items-center justify-center rounded bg-neutral-800 hover:bg-neutral-700 transition-colors h-8 w-8 leading-none"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 transition-colors text-sm text-neutral-300 hover:text-white"
                   title={chestGridView ? 'Kister: Listevisning' : 'Kister: Gittervisning'}
                   aria-pressed={chestGridView}
                 >
-                  {chestGridView ? <FaBars size={16} /> : <FaTh size={16} />}
+                  {chestGridView ? <FaBars size={14} /> : <FaTh size={14} />}
+                  <span>{chestGridView ? 'Liste' : 'Gitter'}</span>
                 </button>
               </div>
 
               {/* Settings */}
               <div className="relative z-50">
                 <button
-                  className="flex items-center space-x-2 p-2 rounded bg-neutral-800 hover:bg-neutral-900"
+                  className="flex items-center space-x-2 p-2 rounded bg-neutral-800 hover:bg-neutral-700 transition-colors"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                 >
                   <FaCog />
@@ -929,7 +932,7 @@ const App: React.FC = () => {
                   <div className="absolute right-0 mt-2 w-48 bg-neutral-900 border border-neutral-800 text-white rounded shadow-lg">
                     <div className="p-2">
                       <button
-                        className="w-full text-left px-2 py-2 text-sm hover:bg-neutral-800"
+                        className="w-full text-left px-2 py-2 text-sm rounded hover:bg-neutral-800 transition-colors"
                         onClick={() => document.getElementById('import-profile')?.click()}
                       >
                         Importer Profil
@@ -942,13 +945,13 @@ const App: React.FC = () => {
                         id="import-profile"
                       />
                       <button
-                        className="w-full text-left px-2 py-2 text-sm hover:bg-neutral-800"
+                        className="w-full text-left px-2 py-2 text-sm rounded hover:bg-neutral-800 transition-colors"
                         onClick={handleExportProfile}
                       >
                         Eksporter Profil
                       </button>
                       <button
-                        className="w-full text-left px-2 py-2 text-sm hover:bg-neutral-800"
+                        className="w-full text-left px-2 py-2 text-sm rounded hover:bg-neutral-800 transition-colors"
                         onClick={createNewProfile}
                       >
                         Ny Profil

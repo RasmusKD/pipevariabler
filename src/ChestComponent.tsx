@@ -245,7 +245,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }}
                 autoFocus
               />
-              <button className="text-blue-400 hover:text-blue-300" onClick={(e) => { e.stopPropagation(); handleSave(); }} onPointerDown={e => e.stopPropagation()} aria-label="Gem navn">
+              <button className="text-blue-400 hover:text-blue-300 transition-colors" onClick={(e) => { e.stopPropagation(); handleSave(); }} onPointerDown={e => e.stopPropagation()} aria-label="Gem navn">
                 <FaSave />
               </button>
             </div>
@@ -256,7 +256,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
                 onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
                 onPointerDown={(e) => e.stopPropagation()}
               >{chest.label || 'Barrel'}</span>
-              <button className="text-blue-400 hover:text-blue-300" onClick={(e) => { e.stopPropagation(); setIsEditing(true); }} onPointerDown={e => e.stopPropagation()} aria-label="Rediger navn">
+              <button className="text-blue-400 hover:text-blue-300 transition-colors" onClick={(e) => { e.stopPropagation(); setIsEditing(true); }} onPointerDown={e => e.stopPropagation()} aria-label="Rediger navn">
                 <FaEdit />
               </button>
             </>
@@ -281,7 +281,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
                   toast.success('Kommando kopieret!', { icon: false, position: 'top-center', autoClose: 2000, hideProgressBar: true, closeOnClick: true, pauseOnHover: false, draggable: false, theme: 'dark', transition: Zoom, closeButton: false })
                 }}
                 onPointerDown={e => e.stopPropagation()}
-                className="text-green-500 hover:text-green-400"
+                className="text-green-500 hover:text-green-400 transition-colors"
                 title="Kopiér kommando"
               >
                 <FaRegCopy />
@@ -289,7 +289,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
             )}
 
             {/* Delete chest */}
-            <button onClick={(e) => { e.stopPropagation(); removeChest(chest.id); }} onPointerDown={e => e.stopPropagation()} className="text-red-500 hover:text-red-400" title="Slet kiste">
+            <button onClick={(e) => { e.stopPropagation(); removeChest(chest.id); }} onPointerDown={e => e.stopPropagation()} className="text-red-500 hover:text-red-400 transition-colors" title="Slet kiste">
               <FaTimes />
             </button>
           </div>
