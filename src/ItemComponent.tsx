@@ -3,17 +3,21 @@ import { useDrag } from 'react-dnd';
 import { ItemType } from './ItemType';
 import { FaTimes } from 'react-icons/fa';
 import { pixelatedIcons, useCompassImage, useClockImage, useDragPreviewImage } from './utils';
+import SpriteIcon from './SpriteIcon';
 
 interface Item { item: string; variable: string; image: string; }
 
 interface ItemComponentProps {
     item: Item;
     index: number;
-    lastIndex: number;      // modtages fra parent men vi destrukturerer den ikke -> ingen ESLint-warning
+    lastIndex: number;
     chestIds?: number[];
-    removeItem?: () => void; // hvis givet (kiste-grid) viser vi kryds
+    removeItem?: () => void;
     isGridView?: boolean;
 }
+
+// Icons that need animation (not in sprite sheet)
+const ANIMATED_ICONS = ['compass', 'recovery_compass', 'clock'];
 
 const ItemComponent: React.FC<ItemComponentProps> = (props) => {
     const { item, index, chestIds, removeItem, isGridView = false } = props;
@@ -24,20 +28,21 @@ const ItemComponent: React.FC<ItemComponentProps> = (props) => {
     const compassRef = useRef<HTMLDivElement>(null);
     const dragPreviewRef = useRef<HTMLImageElement>(new Image());
 
+    const isAnimated = ANIMATED_ICONS.includes(item.item);
+
     useCompassImage(item.item, setCompassImage, compassRef);
     useClockImage(item.item, setClockImage);
     useDragPreviewImage(item.item, compassImage, clockImage, setDragPreviewImage);
 
     useEffect(() => {
         const img = dragPreviewRef.current;
-        img.src = `${process.env.PUBLIC_URL}/assets/images/icons/${
-            item.item === 'compass' || item.item === 'recovery_compass'
-                ? compassImage
-                : item.item === 'clock'
-                    ? clockImage
-                    : item.image
-        }`;
-    }, [compassImage, clockImage, item]);
+        if (isAnimated) {
+            img.src = `${process.env.PUBLIC_URL}/assets/images/icons/${item.item === 'compass' || item.item === 'recovery_compass'
+                    ? compassImage
+                    : clockImage
+                }`;
+        }
+    }, [compassImage, clockImage, item, isAnimated]);
 
     const [{ isDragging }, drag, preview] = useDrag({
         type: ItemType.ITEM,
@@ -53,11 +58,35 @@ const ItemComponent: React.FC<ItemComponentProps> = (props) => {
         }
     }, [dragPreviewImage, preview]);
 
-    // GRID VIEW (sidebarens item-grid og kiste-grid)
+    // Render icon - use SpriteIcon for regular items, img for animated
+    const renderIcon = (size: number) => {
+        if (isAnimated) {
+            const imgSrc = item.item === 'compass' || item.item === 'recovery_compass'
+                ? compassImage
+                : clockImage;
+            return (
+                <img
+                    src={`${process.env.PUBLIC_URL}/assets/images/icons/${imgSrc}`}
+                    alt={item.item}
+                    className={`w-full h-full ${pixelatedIcons.includes(item.item) ? 'pixelated-icon' : ''}`}
+                    loading="eager"
+                    decoding="async"
+                />
+            );
+        }
+        return (
+            <SpriteIcon
+                icon={item.image}
+                size={size}
+                className={pixelatedIcons.includes(item.item) ? 'pixelated-icon' : ''}
+            />
+        );
+    };
+
+    // GRID VIEW
     if (isGridView) {
-        const tooltipText = `${item.item.replace(/_/g, ' ')}${
-            chestIds && chestIds.length > 0 ? ` (Chest IDs: ${chestIds.map(id => `#${id}`).join(', ')})` : ''
-        }`;
+        const tooltipText = `${item.item.replace(/_/g, ' ')}${chestIds && chestIds.length > 0 ? ` (Chest IDs: ${chestIds.map(id => `#${id}`).join(', ')})` : ''
+            }`;
         const displayCount = chestIds && chestIds.length > 9 ? '9+' : (chestIds ? String(chestIds.length) : '0');
 
         return (
@@ -67,7 +96,6 @@ const ItemComponent: React.FC<ItemComponentProps> = (props) => {
                 style={{ opacity: isDragging ? 0.5 : 1 }}
                 title={tooltipText}
             >
-                {/* KRYDS — tilbage i den gamle placering (øverst-højre med let negativ offset) */}
                 {removeItem && (
                     <button
                         className="absolute -top-1 -right-1 z-10 w-5 h-5 inline-flex items-center justify-center rounded-md
@@ -79,36 +107,24 @@ const ItemComponent: React.FC<ItemComponentProps> = (props) => {
                         aria-label="Fjern fra kiste"
                         title="Fjern"
                     >
-                        <FaTimes size={10}/>
+                        <FaTimes size={10} />
                     </button>
                 )}
 
-                <div ref={compassRef} className="w-8 h-8 mx-auto">
-                    <img
-                        src={`${process.env.PUBLIC_URL}/assets/images/icons/${
-                            item.item === 'compass' || item.item === 'recovery_compass'
-                                ? compassImage
-                                : item.item === 'clock'
-                                    ? clockImage
-                                    : item.image
-                        }`}
-                        alt={item.item}
-                        className={`w-full h-full ${pixelatedIcons.includes(item.item) ? 'pixelated-icon' : ''}`}
-                        loading="lazy"
-                    />
+                <div ref={compassRef} className="w-8 h-8 mx-auto flex items-center justify-center">
+                    {renderIcon(32)}
                 </div>
 
-                {/* TAL — samme sted som før (øverst-højre med let negativ offset), men kun i item-listens grid */}
                 {chestIds && chestIds.length > 0 && !removeItem && (
                     <div className="absolute -top-1 -right-1 pointer-events-none select-none">
-            <span
-                className="inline-flex items-center justify-center rounded-full
+                        <span
+                            className="inline-flex items-center justify-center rounded-full
                          bg-neutral-900/85 text-neutral-200 border border-neutral-700/70 shadow-sm
                          text-[10px] leading-none w-4 h-4"
-                aria-label={`${chestIds.length} i kister`}
-            >
-              {displayCount}
-            </span>
+                            aria-label={`${chestIds.length} i kister`}
+                        >
+                            {displayCount}
+                        </span>
                     </div>
                 )}
             </div>
@@ -122,27 +138,16 @@ const ItemComponent: React.FC<ItemComponentProps> = (props) => {
             className={`relative w-full cursor-pointer p-2 flex items-center gap-4 border-b hover:bg-neutral-700 border-neutral-700 ${index === 0 ? 'border-t' : ''}`}
             style={{ opacity: isDragging ? 0.5 : 1 }}
         >
-            <div ref={compassRef} className="item-icons">
-                <img
-                    src={`${process.env.PUBLIC_URL}/assets/images/icons/${
-                        item.item === 'compass' || item.item === 'recovery_compass'
-                            ? compassImage
-                            : item.item === 'clock'
-                                ? clockImage
-                                : item.image
-                    }`}
-                    alt={item.item}
-                    className={`w-full h-full ${pixelatedIcons.includes(item.item) ? 'pixelated-icon' : ''}`}
-                    loading="lazy"
-                />
+            <div ref={compassRef} className="item-icons flex items-center justify-center">
+                {renderIcon(32)}
             </div>
             <div className="flex-1 line-clamp-1">{item.item.replace(/_/g, ' ')}</div>
 
             {chestIds && chestIds.length > 0 && (
                 <span className="absolute flex items-center text-neutral-400 top-1 right-2 text-xs">
-          <img src={`${process.env.PUBLIC_URL}/assets/images/icons/barrel.png`} alt="chest icon" className="inline-block w-4 h-4 mr-1" />
+                    <SpriteIcon icon="barrel.png" size={16} className="mr-1" />
                     {chestIds.map((id) => `#${id}`).join(', ')}
-        </span>
+                </span>
             )}
 
             {removeItem && (
@@ -160,3 +165,4 @@ const ItemComponent: React.FC<ItemComponentProps> = (props) => {
 };
 
 export default ItemComponent;
+

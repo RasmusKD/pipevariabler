@@ -261,8 +261,8 @@ const App: React.FC = () => {
   }, [activeTabId]);
 
   const filteredItems = useMemo(
-      () => items.filter(item => item.item.toLowerCase().includes(searchTerm.toLowerCase().replace(/ /g, '_'))),
-      [items, searchTerm]
+    () => items.filter(item => item.item.toLowerCase().includes(searchTerm.toLowerCase().replace(/ /g, '_'))),
+    [items, searchTerm]
   );
 
   const chestItemsMap = useMemo(() => {
@@ -279,8 +279,8 @@ const App: React.FC = () => {
   }, [tabs]);
 
   const itemsToShow = useMemo(
-      () => (showAll ? filteredItems : filteredItems.filter(item => !chestItemsMap.has(item.item))),
-      [filteredItems, showAll, chestItemsMap]
+    () => (showAll ? filteredItems : filteredItems.filter(item => !chestItemsMap.has(item.item))),
+    [filteredItems, showAll, chestItemsMap]
   );
 
   const addChest = useCallback(() => {
@@ -387,15 +387,15 @@ const App: React.FC = () => {
     const item = itemsToShow[index];
     const chestIds = chestItemsMap.get(item.item);
     return (
-        <div style={style} key={item.item}>
-          <ItemComponent
-              item={item}
-              index={index}
-              lastIndex={itemsToShow.length - 1}
-              chestIds={chestIds}
-              isGridView={false}
-          />
-        </div>
+      <div style={style} key={item.item}>
+        <ItemComponent
+          item={item}
+          index={index}
+          lastIndex={itemsToShow.length - 1}
+          chestIds={chestIds}
+          isGridView={false}
+        />
+      </div>
     );
   };
 
@@ -440,299 +440,298 @@ const App: React.FC = () => {
   };
 
   return (
-      <DndProvider backend={HTML5Backend}>
-        <div className="flex flex-col min-h-screen overflow-x-hidden bg-neutral-950 text-white">
-          <div className="flex flex-1 flex-col md:flex-row h-full min-h-0">
-            {/* SIDEBAR */}
-            <aside className="p-4 border-b md:border-r flex-shrink-0 gap-4 flex flex-col bg-neutral-900 border-neutral-800 dark-theme">
-              <div className="logo-dark" />
-              <div className="relative">
-                <input
-                    type="text"
-                    spellCheck="false"
-                    value={searchTerm}
-                    placeholder="Søg..."
-                    className="border p-2 pr-10 w-full bg-neutral-800 border-neutral-700 text-white"
-                    onChange={handleSearch}
-                />
-                {searchTerm && (
-                    <button
-                        className="absolute right-0 top-0 mt-3 mr-3 text-neutral-400 hover:text-neutral-200"
-                        onClick={handleClearSearch}
-                        aria-label="Ryd søgning"
-                    >
-                      <FaTimes />
-                    </button>
-                )}
+    <DndProvider backend={HTML5Backend}>
+      <div className="flex flex-col min-h-screen overflow-x-hidden bg-neutral-950 text-white">
+        <div className="flex flex-1 flex-col md:flex-row h-full min-h-0">
+          {/* SIDEBAR */}
+          <aside className="p-4 border-b md:border-r flex-shrink-0 gap-4 flex flex-col bg-neutral-900 border-neutral-800 dark-theme">
+            <div className="logo-dark" />
+            <div className="relative">
+              <input
+                type="text"
+                spellCheck="false"
+                value={searchTerm}
+                placeholder="Søg..."
+                className="border p-2 pr-10 w-full bg-neutral-800 border-neutral-700 text-white"
+                onChange={handleSearch}
+              />
+              {searchTerm && (
+                <button
+                  className="absolute right-0 top-0 mt-3 mr-3 text-neutral-400 hover:text-neutral-200"
+                  onClick={handleClearSearch}
+                  aria-label="Ryd søgning"
+                >
+                  <FaTimes />
+                </button>
+              )}
+            </div>
+
+            {/* Item-liste header + toggles */}
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold">Item liste</h2>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={showAll}
+                    onChange={() => setShowAll(!showAll)}
+                    className="form-checkbox h-4 w-4"
+                  />
+                  <span>Vis alle</span>
+                </label>
+
+                {/* KVADRATISK item-liste grid toggle */}
+                <button
+                  onClick={() => setIsGridView(!isGridView)}
+                  className="inline-flex items-center justify-center rounded bg-neutral-800 hover:bg-neutral-700 transition-colors h-8 w-8 leading-none"
+                  title={isGridView ? 'Item-liste: Listevisning' : 'Item-liste: Gittervisning'}
+                  aria-pressed={isGridView}
+                >
+                  {isGridView ? <FaBars size={16} /> : <FaTh size={16} />}
+                </button>
               </div>
+            </div>
 
-              {/* Item-liste header + toggles */}
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold">Item liste</h2>
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center space-x-2">
-                    <input
-                        type="checkbox"
-                        checked={showAll}
-                        onChange={() => setShowAll(!showAll)}
-                        className="form-checkbox h-4 w-4"
-                    />
-                    <span>Vis alle</span>
-                  </label>
-
-                  {/* KVADRATISK item-liste grid toggle */}
-                  <button
-                      onClick={() => setIsGridView(!isGridView)}
-                      className="inline-flex items-center justify-center rounded bg-neutral-800 hover:bg-neutral-700 transition-colors h-8 w-8 leading-none"
-                      title={isGridView ? 'Item-liste: Listevisning' : 'Item-liste: Gittervisning'}
-                      aria-pressed={isGridView}
-                  >
-                    {isGridView ? <FaBars size={16}/> : <FaTh size={16}/> }
-                  </button>
-                </div>
-              </div>
-
-              <div ref={listContainerRef} className="flex-1 overflow-auto dark-theme overflow-x-hidden">
-                {isGridView ? (
-                    <div className="h-full" style={{ height: listHeight }}>
-                      <div className="grid grid-cols-6 gap-2">
-                        {itemsToShow.map((item, index) => (
-                            <ItemComponent
-                                key={item.item}
-                                item={item}
-                                index={index}
-                                lastIndex={itemsToShow.length - 1}
-                                chestIds={chestItemsMap.get(item.item)}
-                                isGridView
-                            />
-                        ))}
-                      </div>
-                    </div>
-                ) : (
-                    <List className="dark-theme" height={listHeight} itemCount={itemsToShow.length} itemSize={50} width="100%">
-                      {renderRow}
-                    </List>
-                )}
-              </div>
-            </aside>
-
-            {/* MAIN */}
-            <main className="flex-1 p-4 flex flex-col gap-4 overflow-x-hidden">
-              {/* HEADER – Tabs, Chest Grid Toggle (kvadratisk), Settings */}
-              <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 h-8 w-full">
-                {/* Profilnavn */}
-                <div className="flex items-center gap-2">
-                  {isEditingProfileName ? (
-                      <>
-                        <input
-                            type="text"
-                            spellCheck="false"
-                            value={profileName}
-                            onChange={(e) => setProfileName(e.target.value)}
-                            className="border p-2 bg-neutral-800 border-neutral-700 text-white"
-                            placeholder="Profilnavn"
-                        />
-                        <button className="text-blue-400 hover:text-blue-300" onClick={() => setIsEditingProfileName(false)}>Gem</button>
-                      </>
-                  ) : (
-                      <>
-                        <span className="text-xl font-bold">{profileName}</span>
-                        <button className="text-blue-400 hover:text-blue-300" onClick={() => setIsEditingProfileName(true)} aria-label="Rediger profilnavn">
-                          <FaEdit/>
-                        </button>
-                      </>
-                  )}
-                </div>
-
-                {/* Tabs */}
-                <div className="min-w-0 overflow-hidden">
-                  <div
-                      ref={tabScrollRef}
-                      onWheel={(e) => {
-                        const dx = e.deltaX || (e.shiftKey ? e.deltaY : 0);
-                        if (dx !== 0) {
-                          e.preventDefault();
-                          e.currentTarget.scrollLeft += dx;
-                        }
-                      }}
-                      className="flex items-center gap-2 overflow-x-auto overflow-y-hidden dark-theme"
-                      style={{ maxWidth: '100%', width: '100%' }}
-                  >
-                    {tabs.map((tab) => (
-                        <div key={tab.id} className="flex items-center flex-shrink-0">
-                          {isEditingTabName === tab.id ? (
-                              <input
-                                  type="text"
-                                  spellCheck="false"
-                                  value={tab.name}
-                                  onChange={(e) => updateTabName(tab.id, e.target.value)}
-                                  onBlur={() => setIsEditingTabName(null)}
-                                  onKeyDown={(e) => { if (e.key === 'Enter') setIsEditingTabName(null); }}
-                                  className="px-3 py-1 text-sm border rounded w-32 bg-neutral-800 border-neutral-700 text-white"
-                                  autoFocus
-                              />
-                          ) : (
-                              <button
-                                  id={`tab-btn-${tab.id}`}
-                                  type="button"
-                                  className={`flex-shrink-0 px-3 py-1 text-sm rounded border-b-2 transition-colors flex items-center gap-1 max-w-40 ${
-                                      activeTabId === tab.id
-                                          ? 'bg-neutral-800 border-blue-400 text-white'
-                                          : 'bg-neutral-900 border-transparent text-neutral-300 hover:text-white hover:bg-neutral-800'
-                                  }`}
-                                  onClick={() => setActiveTabId(tab.id)}
-                                  onDoubleClick={() => setIsEditingTabName(tab.id)}
-                              >
-                                <span className="truncate block max-w-28">{tab.name}</span>
-                                {tabs.length > 1 && (
-                                    <span
-                                        className="text-red-500 hover:text-red-600 flex-shrink-0"
-                                        onClick={(e) => { e.stopPropagation(); removeTab(tab.id); }}
-                                        title="Luk tab"
-                                    >
-                              <FaTimes size={10}/>
-                            </span>
-                                )}
-                              </button>
-                          )}
-                        </div>
+            <div ref={listContainerRef} className="flex-1 overflow-auto dark-theme overflow-x-hidden">
+              {isGridView ? (
+                <div className="h-full" style={{ height: listHeight }}>
+                  <div className="grid grid-cols-6 gap-2">
+                    {itemsToShow.map((item, index) => (
+                      <ItemComponent
+                        key={item.item}
+                        item={item}
+                        index={index}
+                        lastIndex={itemsToShow.length - 1}
+                        chestIds={chestItemsMap.get(item.item)}
+                        isGridView
+                      />
                     ))}
-                    <button
-                        type="button"
-                        className="flex-shrink-0 px-2 py-1 text-sm rounded border-2 border-dashed border-neutral-700 text-neutral-400 hover:border-neutral-600 hover:text-white transition-colors"
-                        onClick={addTab}
-                        title="Tilføj nyt tab"
-                    >
-                      <FaPlus size={12}/>
-                    </button>
                   </div>
                 </div>
+              ) : (
+                <List className="dark-theme" height={listHeight} itemCount={itemsToShow.length} itemSize={50} width="100%">
+                  {renderRow}
+                </List>
+              )}
+            </div>
+          </aside>
 
-                {/* KVADRATISK chest grid/list toggle */}
-                <div className="justify-self-end">
-                  <button
-                      onClick={() => setChestGridView(!chestGridView)}
-                      className="inline-flex items-center justify-center rounded bg-neutral-800 hover:bg-neutral-700 transition-colors h-8 w-8 leading-none"
-                      title={chestGridView ? 'Kister: Listevisning' : 'Kister: Gittervisning'}
-                      aria-pressed={chestGridView}
-                  >
-                    {chestGridView ? <FaBars size={16}/> : <FaTh size={16}/> }
-                  </button>
-                </div>
-
-                {/* Settings */}
-                <div className="relative z-50">
-                  <button
-                      className="flex items-center space-x-2 p-2 rounded bg-neutral-800 hover:bg-neutral-900"
-                      onClick={() => setDropdownOpen(!dropdownOpen)}
-                  >
-                    <FaCog/>
-                    <FaCaretDown/>
-                  </button>
-                  {dropdownOpen && (
-                      <div className="absolute right-0 mt-2 w-48 bg-neutral-900 border border-neutral-800 text-white rounded shadow-lg">
-                        <div className="p-2">
-                          <button
-                              className="w-full text-left px-2 py-2 text-sm hover:bg-neutral-800"
-                              onClick={() => document.getElementById('import-profile')?.click()}
-                          >
-                            Importer Profil
-                          </button>
-                          <input
-                              type="file"
-                              onChange={handleImportProfile}
-                              className="hidden"
-                              accept="application/json"
-                              id="import-profile"
-                          />
-                          <button
-                              className="w-full text-left px-2 py-2 text-sm hover:bg-neutral-800"
-                              onClick={handleExportProfile}
-                          >
-                            Eksporter Profil
-                          </button>
-                          <button
-                              className="w-full text-left px-2 py-2 text-sm hover:bg-neutral-800"
-                              onClick={createNewProfile}
-                          >
-                            Ny Profil
-                          </button>
-                        </div>
-                      </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Kister */}
-              <div ref={gridContainerRef} className="grid-cols-auto-fit dark-theme overflow-x-hidden">
-                {chests.map((chest, index) => (
-                    <ChestComponent
-                        key={chest.id}
-                        chest={chest}
-                        index={index}
-                        onDrop={handleDrop}
-                        removeChest={confirmDeleteChest}
-                        updateChestLabel={updateChestLabel}
-                        updateChestIcon={updateChestIcon}
-                        removeItemFromChest={removeItemFromChest}
-                        moveChest={moveChest}
-                        gridView={chestGridView}
+          {/* MAIN */}
+          <main className="flex-1 p-4 flex flex-col gap-4 overflow-x-hidden">
+            {/* HEADER – Tabs, Chest Grid Toggle (kvadratisk), Settings */}
+            <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 h-8 w-full">
+              {/* Profilnavn */}
+              <div className="flex items-center gap-2">
+                {isEditingProfileName ? (
+                  <>
+                    <input
+                      type="text"
+                      spellCheck="false"
+                      value={profileName}
+                      onChange={(e) => setProfileName(e.target.value)}
+                      className="border p-2 bg-neutral-800 border-neutral-700 text-white"
+                      placeholder="Profilnavn"
                     />
-                ))}
+                    <button className="text-blue-400 hover:text-blue-300" onClick={() => setIsEditingProfileName(false)}>Gem</button>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-xl font-bold">{profileName}</span>
+                    <button className="text-blue-400 hover:text-blue-300" onClick={() => setIsEditingProfileName(true)} aria-label="Rediger profilnavn">
+                      <FaEdit />
+                    </button>
+                  </>
+                )}
+              </div>
 
-                {/* Add Chest */}
-                <div className="flex items-center justify-center border-2 border-dashed rounded p-4 min-h-[200px] border-neutral-700 hover:border-neutral-600 hover:bg-neutral-900 transition-colors">
+              {/* Tabs */}
+              <div className="min-w-0 overflow-hidden">
+                <div
+                  ref={tabScrollRef}
+                  onWheel={(e) => {
+                    const dx = e.deltaX || (e.shiftKey ? e.deltaY : 0);
+                    if (dx !== 0) {
+                      e.preventDefault();
+                      e.currentTarget.scrollLeft += dx;
+                    }
+                  }}
+                  className="flex items-center gap-2 overflow-x-auto overflow-y-hidden dark-theme"
+                  style={{ maxWidth: '100%', width: '100%' }}
+                >
+                  {tabs.map((tab) => (
+                    <div key={tab.id} className="flex items-center flex-shrink-0">
+                      {isEditingTabName === tab.id ? (
+                        <input
+                          type="text"
+                          spellCheck="false"
+                          value={tab.name}
+                          onChange={(e) => updateTabName(tab.id, e.target.value)}
+                          onBlur={() => setIsEditingTabName(null)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') setIsEditingTabName(null); }}
+                          className="px-3 py-1 text-sm border rounded w-32 bg-neutral-800 border-neutral-700 text-white"
+                          autoFocus
+                        />
+                      ) : (
+                        <button
+                          id={`tab-btn-${tab.id}`}
+                          type="button"
+                          className={`flex-shrink-0 px-3 py-1 text-sm rounded border-b-2 transition-colors flex items-center gap-1 max-w-40 ${activeTabId === tab.id
+                            ? 'bg-neutral-800 border-blue-400 text-white'
+                            : 'bg-neutral-900 border-transparent text-neutral-300 hover:text-white hover:bg-neutral-800'
+                            }`}
+                          onClick={() => setActiveTabId(tab.id)}
+                          onDoubleClick={() => setIsEditingTabName(tab.id)}
+                        >
+                          <span className="truncate block max-w-28">{tab.name}</span>
+                          {tabs.length > 1 && (
+                            <span
+                              className="text-red-500 hover:text-red-600 flex-shrink-0"
+                              onClick={(e) => { e.stopPropagation(); removeTab(tab.id); }}
+                              title="Luk tab"
+                            >
+                              <FaTimes size={10} />
+                            </span>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  ))}
                   <button
-                      onClick={addChest}
-                      className="flex flex-col items-center gap-3 p-6 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+                    type="button"
+                    className="flex-shrink-0 px-2 py-1 text-sm rounded border-2 border-dashed border-neutral-700 text-neutral-400 hover:border-neutral-600 hover:text-white transition-colors"
+                    onClick={addTab}
+                    title="Tilføj nyt tab"
                   >
-                    <FaPlus size={24}/>
-                    <span className="text-lg font-medium">Tilføj kiste</span>
+                    <FaPlus size={12} />
                   </button>
                 </div>
               </div>
-            </main>
-          </div>
 
-          <ToastContainer className="toast-container" position="top-center" autoClose={3000} limit={1} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss={false} pauseOnHover={false} theme="dark"/>
+              {/* KVADRATISK chest grid/list toggle */}
+              <div className="justify-self-end">
+                <button
+                  onClick={() => setChestGridView(!chestGridView)}
+                  className="inline-flex items-center justify-center rounded bg-neutral-800 hover:bg-neutral-700 transition-colors h-8 w-8 leading-none"
+                  title={chestGridView ? 'Kister: Listevisning' : 'Kister: Gittervisning'}
+                  aria-pressed={chestGridView}
+                >
+                  {chestGridView ? <FaBars size={16} /> : <FaTh size={16} />}
+                </button>
+              </div>
 
-          {modalVisible && (
-              <ConfirmationModal
-                  onConfirm={() => handleDeleteChest(chestToDelete!)}
-                  onCancel={() => setModalVisible(false)}
-                  message="Er du sikker på, at du vil slette denne kiste? Den er ikke tom."
-                  title="Bekræft Sletning"
-              />
-          )}
+              {/* Settings */}
+              <div className="relative z-50">
+                <button
+                  className="flex items-center space-x-2 p-2 rounded bg-neutral-800 hover:bg-neutral-900"
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                >
+                  <FaCog />
+                  <FaCaretDown />
+                </button>
+                {dropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-neutral-900 border border-neutral-800 text-white rounded shadow-lg">
+                    <div className="p-2">
+                      <button
+                        className="w-full text-left px-2 py-2 text-sm hover:bg-neutral-800"
+                        onClick={() => document.getElementById('import-profile')?.click()}
+                      >
+                        Importer Profil
+                      </button>
+                      <input
+                        type="file"
+                        onChange={handleImportProfile}
+                        className="hidden"
+                        accept="application/json"
+                        id="import-profile"
+                      />
+                      <button
+                        className="w-full text-left px-2 py-2 text-sm hover:bg-neutral-800"
+                        onClick={handleExportProfile}
+                      >
+                        Eksporter Profil
+                      </button>
+                      <button
+                        className="w-full text-left px-2 py-2 text-sm hover:bg-neutral-800"
+                        onClick={createNewProfile}
+                      >
+                        Ny Profil
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
 
-          {newProfileModalVisible && (
-              <ConfirmationModal
-                  onConfirm={confirmNewProfile}
-                  onCancel={cancelNewProfile}
-                  message="Har du husket at eksportere den nuværende profil? Ændringer kan gå tabt, hvis du fortsætter uden at gemme."
-                  title="Ny Profil"
-              />
-          )}
+            {/* Kister */}
+            <div ref={gridContainerRef} className="grid-cols-auto-fit dark-theme overflow-x-hidden">
+              {chests.map((chest, index) => (
+                <ChestComponent
+                  key={chest.id}
+                  chest={chest}
+                  index={index}
+                  onDrop={handleDrop}
+                  removeChest={confirmDeleteChest}
+                  updateChestLabel={updateChestLabel}
+                  updateChestIcon={updateChestIcon}
+                  removeItemFromChest={removeItemFromChest}
+                  moveChest={moveChest}
+                  gridView={chestGridView}
+                />
+              ))}
 
-          {importProfileModalVisible && (
-              <ConfirmationModal
-                  onConfirm={confirmImportProfile}
-                  onCancel={cancelImportProfile}
-                  message="Har du husket at eksportere den nuværende profil? Ændringer kan gå tabt, hvis du fortsætter uden at gemme."
-                  title="Importer Profil"
-              />
-          )}
-
-          {deleteTabModalVisible && (
-              <ConfirmationModal
-                  onConfirm={confirmDeleteTab}
-                  onCancel={cancelDeleteTab}
-                  message="Er du sikker på, at du vil slette dette tab? Det indeholder kister med indhold."
-                  title="Bekræft Tab Sletning"
-              />
-          )}
+              {/* Add Chest */}
+              <div className="flex items-center justify-center border-2 border-dashed rounded p-4 min-h-[200px] border-neutral-700 hover:border-neutral-600 hover:bg-neutral-900 transition-colors">
+                <button
+                  onClick={addChest}
+                  className="flex flex-col items-center gap-3 p-6 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+                >
+                  <FaPlus size={24} />
+                  <span className="text-lg font-medium">Tilføj kiste</span>
+                </button>
+              </div>
+            </div>
+          </main>
         </div>
-      </DndProvider>
+
+        <ToastContainer className="toast-container" position="top-center" autoClose={3000} limit={1} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss={false} pauseOnHover={false} theme="dark" />
+
+        {modalVisible && (
+          <ConfirmationModal
+            onConfirm={() => handleDeleteChest(chestToDelete!)}
+            onCancel={() => setModalVisible(false)}
+            message="Er du sikker på, at du vil slette denne kiste? Den er ikke tom."
+            title="Bekræft Sletning"
+          />
+        )}
+
+        {newProfileModalVisible && (
+          <ConfirmationModal
+            onConfirm={confirmNewProfile}
+            onCancel={cancelNewProfile}
+            message="Har du husket at eksportere den nuværende profil? Ændringer kan gå tabt, hvis du fortsætter uden at gemme."
+            title="Ny Profil"
+          />
+        )}
+
+        {importProfileModalVisible && (
+          <ConfirmationModal
+            onConfirm={confirmImportProfile}
+            onCancel={cancelImportProfile}
+            message="Har du husket at eksportere den nuværende profil? Ændringer kan gå tabt, hvis du fortsætter uden at gemme."
+            title="Importer Profil"
+          />
+        )}
+
+        {deleteTabModalVisible && (
+          <ConfirmationModal
+            onConfirm={confirmDeleteTab}
+            onCancel={cancelDeleteTab}
+            message="Er du sikker på, at du vil slette dette tab? Det indeholder kister med indhold."
+            title="Bekræft Tab Sletning"
+          />
+        )}
+      </div>
+    </DndProvider>
   );
 };
 
