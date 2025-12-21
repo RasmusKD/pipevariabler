@@ -44,17 +44,23 @@ const SpriteIcon: React.FC<SpriteIconProps> = memo(({
 
     // Fallback for missing icons
     if (!coords) {
-        console.warn(`SpriteIcon: Icon "${icon}" not found in sprite map`);
         return (
-            <div
+            <img
+                src={`${process.env.PUBLIC_URL}/assets/images/icons/${icon}`}
+                alt={alt || icon.replace('.png', '').replace(/_/g, ' ')}
                 className={className}
+                onClick={onClick}
                 style={{
                     width: size,
                     height: size,
-                    backgroundColor: '#333',
-                    display: 'inline-block'
+                    objectFit: 'contain',
+                    imageRendering: 'pixelated'
                 }}
-                title={alt || icon}
+                onError={(e) => {
+                    // Start of fallback error handling
+                    e.currentTarget.style.display = 'none';
+                    // Optional: Render a placeholder or keep it hidden
+                }}
             />
         );
     }

@@ -1,17 +1,37 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+import {
+  DndContext,
+  rectIntersection,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  defaultDropAnimationSideEffects,
+  DragStartEvent,
+  DragOverEvent,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
 import { FaCog, FaCaretDown, FaTimes, FaEdit, FaPlus, FaTh, FaBars } from 'react-icons/fa';
 import { FixedSizeList as List } from 'react-window';
 import './scss/main.scss';
 import itemsData from './data.json';
 import ItemComponent from './ItemComponent';
 import ChestComponent from './ChestComponent';
+import SpriteIcon from './SpriteIcon';
 import { ToastContainer, toast, Zoom } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ConfirmationModal from './ConfirmationModal';
+import { SortableItem } from './dnd/SortableItem';
+import { DraggableSource } from './dnd/DraggableSource';
 
-interface Item { item: string; variable: string; image: string; }
+interface Item { uid: string; item: string; variable: string; image: string; }
 interface Chest { id: number; label: string; items: Item[]; icon: string; checked: boolean; }
 interface Tab { id: number; name: string; chests: Chest[]; }
 interface Profile { name: string; tabs?: Tab[]; chests?: Chest[]; }
@@ -54,6 +74,14 @@ const App: React.FC = () => {
     return maxId + 1;
   }, [tabs]);
 
+  /* Dnd Sensors */
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   useEffect(() => {
     const savedProfile = localStorage.getItem('profile');
     if (savedProfile) {
@@ -69,6 +97,7 @@ const App: React.FC = () => {
             id: globalChestId++,
             icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
             checked: chest.checked || false,
+            items: (chest.items || []).map((i: any) => ({ ...i, uid: i.uid || Math.random().toString(36).substr(2, 9) }))
           }))
         }));
         setTabs(processedTabs);
@@ -79,6 +108,7 @@ const App: React.FC = () => {
           id: index + 1,
           icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
           checked: chest.checked || false,
+          items: (chest.items || []).map((i: any) => ({ ...i, uid: i.uid || Math.random().toString(36).substr(2, 9) }))
         }));
         const defaultTab: Tab = { id: 1, name: 'Tab 1', chests: processedChests };
         setTabs([defaultTab]);
@@ -95,7 +125,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const sortedItems = itemsData.items.sort((a, b) => a.item.localeCompare(b.item));
-    setItems(sortedItems);
+    setItems(sortedItems.map(i => ({ ...i, uid: i.item })));
   }, []);
 
   useEffect(() => {
@@ -331,35 +361,7 @@ const App: React.FC = () => {
     updateChests(newChests);
   }, [chests, tabs, updateChests]);
 
-  const handleDrop = useCallback((item: Item, chestId: number) => {
-    const chestIndex = (chests || []).findIndex(chest => chest.id === chestId);
-    const command = `/signedit 3 ${[...(chests?.[chestIndex].items || []), item].map(i => i.variable).join(',')}`;
-    if (command.length > 256) {
-      toast.error('Du kan ikke tilføje mere til kisten – kommandoen vil overstige 256 tegn.', {
-        position: "top-center",
-        autoClose: 3000,
-        hideProgressBar: true,
-        closeOnClick: true,
-        pauseOnHover: false,
-        draggable: false,
-        theme: 'dark',
-        transition: Zoom,
-        closeButton: false,
-      });
-    } else {
-      setUndoStack(prev => [...prev, tabs]);
-      setRedoStack([]);
-      const newChests = (chests || []).map(chest => {
-        if (chest.id === chestId) {
-          if (!chest.items.some(chestItem => chestItem.item === item.item)) {
-            return { ...chest, items: [...chest.items, item] };
-          }
-        }
-        return chest;
-      });
-      updateChests(newChests);
-    }
-  }, [chests, tabs, updateChests]);
+
 
   const handleUndo = useCallback(() => {
     if (undoStack.length > 0) {
@@ -387,14 +389,16 @@ const App: React.FC = () => {
     const item = itemsToShow[index];
     const chestIds = chestItemsMap.get(item.item);
     return (
-      <div style={style} key={item.item}>
-        <ItemComponent
-          item={item}
-          index={index}
-          lastIndex={itemsToShow.length - 1}
-          chestIds={chestIds}
-          isGridView={false}
-        />
+      <div style={style} key={item.uid}>
+        <DraggableSource id={item.uid} className="h-full">
+          <ItemComponent
+            item={item}
+            index={index}
+            lastIndex={itemsToShow.length - 1}
+            chestIds={chestIds}
+            isGridView={false}
+          />
+        </DraggableSource>
       </div>
     );
   };
@@ -432,15 +436,189 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleUndo, handleRedo]);
 
-  const moveChest = (dragIndex: number, hoverIndex: number) => {
-    const newChests = [...(chests || [])];
-    const [movedChest] = newChests.splice(dragIndex, 1);
-    newChests.splice(hoverIndex, 0, movedChest);
-    updateChests(newChests);
+  const [activeId, setActiveId] = useState<string | number | null>(null);
+  const [activeItem, setActiveItem] = useState<Item | Chest | null>(null);
+
+  const findItem = (id: string | number) => {
+    // Check source items
+    const sourceItem = items.find(i => i.uid === id);
+    if (sourceItem) return sourceItem;
+    // Check chest items
+    for (const chest of chests) {
+      const chestItem = chest.items.find(i => i.uid === id);
+      if (chestItem) return chestItem;
+    }
+    // Check chests
+    const chest = chests.find(c => c.id === id);
+    if (chest) return chest;
+    return null;
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id);
+    setActiveItem(findItem(event.active.id) as any);
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    // If dragging a chest, do nothing (handled in End)
+    if (typeof active.id === 'number') return;
+
+    // Handle Item Dragging
+    const activeId = active.id as string;
+    const overId = over.id as string | number;
+
+    // Source Item -> Chest
+    // Handled in DragEnd (addition)
+
+    // Chest Item -> Chest Item (Sorting same container)
+    // Chest Item -> Chest Item (Different container)
+    // Chest Item -> Chest (Empty container)
+
+    // We need to implement complex transfer logic if we want "snappy" move between lists.
+    // For now, let's keep it simple: DragEnd updates state.
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    setActiveItem(null);
+
+    if (!over) return;
+
+    // Chest Sorting
+    if (typeof active.id === 'number' && typeof over.id === 'number') {
+      if (active.id !== over.id) {
+        const oldIndex = chests.findIndex(c => c.id === active.id);
+        const newIndex = chests.findIndex(c => c.id === over.id);
+        setUndoStack(prev => [...prev, tabs]);
+        setRedoStack([]);
+        updateChests(arrayMove(chests, oldIndex, newIndex));
+      }
+      return;
+    }
+
+    // Item Dropping/Sorting logic
+    const activeIdStr = String(active.id);
+    const overIdStr = String(over.id);
+
+    // Is source item?
+    const isSource = items.some(i => i.uid === activeIdStr);
+
+    // Find target chest
+    let targetChestId: number | null = null;
+    let targetIndex: number | null = null;
+
+    // If over a chest directly
+    if (typeof over.id === 'number') {
+      targetChestId = over.id;
+      // findchest
+      const targetChest = chests.find(c => c.id === targetChestId);
+      targetIndex = targetChest ? targetChest.items.length : 0;
+    } else {
+      // Over another item? Find which chest specific item belongs to
+      for (const chest of chests) {
+        const idx = chest.items.findIndex(i => i.uid === overIdStr);
+        if (idx !== -1) {
+          targetChestId = chest.id;
+          targetIndex = idx;
+          break;
+        }
+      }
+    }
+
+    if (targetChestId !== null) {
+      setUndoStack(prev => [...prev, tabs]);
+      setRedoStack([]);
+
+      if (isSource) {
+        // Create new item
+        const sourceItem = items.find(i => i.uid === activeIdStr);
+        if (sourceItem) {
+          const newItem: Item = { ...sourceItem, uid: Math.random().toString(36).substr(2, 9) };
+          const newChests = chests.map(c => {
+            if (c.id === targetChestId) {
+              // Insert at targetIndex
+              const newItems = [...c.items];
+              // If targetIndex is null (appended), or specific
+              if (targetIndex !== null) newItems.splice(targetIndex, 0, newItem);
+              else newItems.push(newItem);
+              return { ...c, items: newItems };
+            }
+            return c;
+          });
+          updateChests(newChests);
+        }
+      } else {
+        // Moving existing item
+        // Find source chest
+        let sourceChestId: number | null = null;
+        let sourceIndex: number | null = null;
+        for (const chest of chests) {
+          const idx = chest.items.findIndex(i => i.uid === activeIdStr);
+          if (idx !== -1) {
+            sourceChestId = chest.id;
+            sourceIndex = idx;
+            break;
+          }
+        }
+
+        if (sourceChestId !== null && sourceIndex !== null) {
+          const newChests = chests.map(c => {
+            // Remove from source
+            if (c.id === sourceChestId) {
+              return { ...c, items: c.items.filter(i => i.uid !== activeIdStr) };
+            }
+            return c;
+          });
+
+          // Add to user target (could be same chest!)
+          // Wait, if same chest, arrayMove is better
+          if (sourceChestId === targetChestId && typeof targetIndex === 'number') {
+            // Sort
+            const chest = chests.find(c => c.id === sourceChestId)!;
+            const newItems = arrayMove(chest.items, sourceIndex, targetIndex);
+            updateChests(chests.map(c => c.id === sourceChestId ? { ...c, items: newItems } : c));
+          } else {
+            // Move to diff chest
+            // Add to target
+            // We need the item object.
+            const item = chests.find(c => c.id === sourceChestId)?.items[sourceIndex!];
+            if (item) {
+              const finalChests = newChests.map(c => {
+                if (c.id === targetChestId) {
+                  const items = [...c.items];
+                  // Adjust index if we removed from same list? Handled by "same chest" block above.
+                  // Here distinct chests.
+                  // If dragging over an item, insert before.
+                  // If dragging over chest, append?
+                  if (typeof over.id === 'string' && targetIndex !== null) {
+                    items.splice(targetIndex, 0, item);
+                  } else {
+                    items.push(item);
+                  }
+                  return { ...c, items };
+                }
+                return c;
+              });
+              updateChests(finalChests);
+            }
+          }
+        }
+      }
+    }
   };
 
   return (
-    <DndProvider backend={HTML5Backend}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={rectIntersection}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
       <div className="flex flex-col min-h-screen overflow-x-hidden bg-neutral-950 text-white">
         <div className="flex flex-1 flex-col md:flex-row h-full min-h-0">
           {/* SIDEBAR */}
@@ -664,20 +842,21 @@ const App: React.FC = () => {
 
             {/* Kister */}
             <div ref={gridContainerRef} className="grid-cols-auto-fit dark-theme overflow-x-hidden">
-              {chests.map((chest, index) => (
-                <ChestComponent
-                  key={chest.id}
-                  chest={chest}
-                  index={index}
-                  onDrop={handleDrop}
-                  removeChest={confirmDeleteChest}
-                  updateChestLabel={updateChestLabel}
-                  updateChestIcon={updateChestIcon}
-                  removeItemFromChest={removeItemFromChest}
-                  moveChest={moveChest}
-                  gridView={chestGridView}
-                />
-              ))}
+              <SortableContext items={chests.map(c => c.id)} strategy={rectSortingStrategy}>
+                {chests.map((chest, index) => (
+                  <SortableItem key={chest.id} id={chest.id} className="h-full">
+                    <ChestComponent
+                      chest={chest}
+                      index={index}
+                      removeChest={confirmDeleteChest}
+                      updateChestLabel={updateChestLabel}
+                      updateChestIcon={updateChestIcon}
+                      removeItemFromChest={removeItemFromChest}
+                      gridView={chestGridView}
+                    />
+                  </SortableItem>
+                ))}
+              </SortableContext>
 
               {/* Add Chest */}
               <div className="flex items-center justify-center border-2 border-dashed rounded p-4 min-h-[200px] border-neutral-700 hover:border-neutral-600 hover:bg-neutral-900 transition-colors">
@@ -731,7 +910,33 @@ const App: React.FC = () => {
           />
         )}
       </div>
-    </DndProvider>
+      <DragOverlay>
+        {activeId ? (
+          activeItem && 'items' in activeItem ? (
+            // Chest Overlay
+            <div className="opacity-90 min-w-[350px] text-white dark-theme" style={{ height: '400px' }}>
+              <ChestComponent
+                chest={activeItem as Chest}
+                index={0}
+                removeChest={() => { }}
+                updateChestLabel={() => { }}
+                updateChestIcon={() => { }}
+                removeItemFromChest={() => { }}
+                gridView={chestGridView}
+              />
+            </div>
+          ) : (
+            // Item Overlay
+            // Item Overlay
+            <div className="pointer-events-none">
+              {activeItem && (
+                <SpriteIcon icon={(activeItem as Item).image} size={48} className="drop-shadow-xl" />
+              )}
+            </div>
+          )
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 };
 

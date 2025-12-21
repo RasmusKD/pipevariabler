@@ -8,15 +8,18 @@
 }
 
 .logo {
+
   &-dark,
   &-light {
     height: 80px;
     width: 336px;
     align-self: center;
   }
+
   &-dark {
     background: url('../assets/images/logo/logo-dark.png');
   }
+
   &-light {
     background: url('../assets/images/logo/logo-light.png');
   }
@@ -65,6 +68,7 @@
   &.light {
     border: 2px dashed #ccc;
   }
+
   &.dark {
     border: 2px dashed #555;
   }
@@ -118,24 +122,27 @@
     text-align: center;
     z-index: 10;
   }
+}
 
-  .head-icon {
-    width: 1rem;
-    height: 1rem;
+/* Custom dark scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
 
-    &-1 {
-      background: url('../../public/assets/images/icons/whotoldyou.png');
-      background-size: contain;
+::-webkit-scrollbar-track {
+  background: #171717;
+  /* neutral-900 */
+  border-radius: 3px;
+}
 
-      &:hover {
-        background: url('../../public/assets/images/icons/whotoldyou2.png');
-        background-size: contain;
-      }
-    }
+::-webkit-scrollbar-thumb {
+  background: #404040;
+  /* neutral-700 */
+  border-radius: 3px;
+}
 
-    &-2 {
-      background: url('../../public/assets/images/icons/iver.png');
-      background-size: contain;
-    }
-  }
+::-webkit-scrollbar-thumb:hover {
+  background: #525252;
+  /* neutral-600 */
 }
