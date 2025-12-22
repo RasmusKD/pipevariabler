@@ -4,9 +4,8 @@ import { useDndContext, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import ItemComponent from './ItemComponent';
 import { FaEdit, FaSave, FaTimes, FaRegCopy, FaCheckSquare, FaRegSquare, FaCheck } from 'react-icons/fa';
-import Portal from './Portal';
-import { pixelatedIcons } from './utils';
-import SpriteIcon from './SpriteIcon';
+import { CMD_PREFIX, CMD_LIMIT, buildCommand } from './chestUtils';
+import ChestIconPicker from './components/ChestIconPicker';
 import { DraggableItem } from './dnd/Draggable';
 import { Item, Chest } from './types';
 
@@ -62,8 +61,6 @@ const ItemsDropZone: React.FC<{
   );
 });
 
-const CMD_PREFIX = '/signedit 3 ' as const;
-const CMD_LIMIT = 256;
 
 const ChestComponent: React.FC<ChestComponentProps> = memo(({
   chest,
@@ -77,7 +74,6 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
   selectedItems,
   onItemSelect,
 }) => {
-  const iconButtonRef = useRef<HTMLDivElement>(null);
   const { over, active } = useDndContext();
 
   const {
@@ -120,13 +116,6 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
   const itemsContainerRef = useRef<HTMLDivElement>(null);
   const prevItemsCountRef = useRef(chest.items.length);
 
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; positionAbove: boolean }>({
-    top: 0,
-    left: 0,
-    positionAbove: false,
-  });
-  const [searchTerm, setSearchTerm] = useState('');
   const [copied, setCopied] = useState(false);
 
   // Sync checked state with props
@@ -172,45 +161,6 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
     localStorage.setItem(`chest-checked-${chest.id}`, JSON.stringify(newState));
   };
 
-  const toggleDropdown = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (dropdownOpen) {
-      setDropdownOpen(false);
-      return;
-    }
-    if (iconButtonRef.current) {
-      const rect = iconButtonRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
-      const positionAbove = spaceBelow < 320 && spaceAbove > 320;
-      setDropdownPosition({
-        top: positionAbove ? rect.top - 310 + window.scrollY : rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-        positionAbove,
-      });
-      setDropdownOpen(true);
-    }
-  };
-
-  const IconChoice = ({ icon }: { icon: string }) => (
-    <div
-      className="cursor-pointer hover:bg-neutral-800 rounded flex justify-center items-center"
-      style={{ width: 40, height: 40, flexShrink: 0 }}
-      onClick={(e) => {
-        e.stopPropagation();
-        // Remove .png from icon name when saving (chest.icon should not have extension)
-        updateChestIcon(chest.id, icon.replace('.png', ''));
-        setDropdownOpen(false);
-      }}
-    >
-      <SpriteIcon icon={icon} size={32} className={pixelatedIcons.includes(icon.replace('.png', '')) ? 'pixelated-icon' : ''} />
-    </div>
-  );
-
-  const buildCommand = (items: Item[]) => {
-    if (items.length === 0) return '';
-    return `${CMD_PREFIX}${items.map((i) => i.variable).join(',')}`;
-  };
 
   const command = useMemo(() => buildCommand(chest.items), [chest.items]);
   const cmdLength = command.length;
@@ -232,34 +182,12 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
         {...listeners}
       >
         {/* Icon button */}
-        <div className="relative" ref={iconButtonRef}>
-          <div onClick={toggleDropdown} style={{ cursor: 'pointer' }} onPointerDown={e => e.stopPropagation()}>
-            <SpriteIcon icon={`${chest.icon}.png`} size={32} className={pixelatedIcons.includes(chest.icon) ? 'pixelated-icon' : ''} />
-          </div>
-          {dropdownOpen && (
-            <Portal style={{ position: 'absolute', top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 1000 }}>
-              <div className="w-64 p-1.5 bg-neutral-950 border border-neutral-800 text-white rounded-xl shadow-xl">
-                <input
-                  type="text"
-                  spellCheck={false}
-                  placeholder="Søg ikon..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full p-2 mb-1.5 rounded-lg bg-neutral-900 outline-none focus:ring-2 focus:ring-blue-500"
-                  onPointerDown={e => e.stopPropagation()}
-                />
-                <div className="grid grid-cols-6 gap-0.5 overflow-y-auto max-h-60 pr-1">
-                  {Object.keys(require('./spriteMap.json'))
-                    .filter((k) => k !== '_meta')
-                    .filter((k) => !searchTerm || k.toLowerCase().includes(searchTerm.toLowerCase()))
-                    .map((icon) => (
-                      <IconChoice key={icon} icon={icon} />
-                    ))}
-                </div>
-              </div>
-            </Portal>
-          )}
-        </div>
+
+        <ChestIconPicker
+          chestId={chest.id}
+          currentIcon={chest.icon}
+          updateChestIcon={updateChestIcon}
+        />
         {/* Title Area */}
         <div className="group flex-1 min-w-0 text-left flex items-center gap-2">
           {isEditing ? (

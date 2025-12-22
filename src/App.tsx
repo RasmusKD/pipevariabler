@@ -1,18 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragOverlay,
-  DragStartEvent,
-  DragOverEvent,
-  DragEndEvent,
-  pointerWithin,
-  useDroppable,
-  useDndContext,
-} from '@dnd-kit/core';
+import { DndContext, DragOverlay, pointerWithin } from '@dnd-kit/core';
 import { snapCenterToCursor } from '@dnd-kit/modifiers';
 import {
   arrayMove,
@@ -30,84 +17,17 @@ import SpriteIcon from './SpriteIcon';
 
 import ConfirmationModal from './ConfirmationModal';
 import SettingsDropdown from './components/SettingsDropdown';
+import DroppableTab from './components/DroppableTab';
+import AddChestDropZone from './components/AddChestDropZone';
+import { useProfileManager } from './hooks/useProfileManager';
+import { useDragController } from './hooks/useDragController';
 
 import { DraggableSource } from './dnd/Draggable';
 import { Item, Chest, Tab, Profile } from './types';
-import { canAddItemToChest, cloneItemWithNewUid } from './chestUtils';
+import { canAddItemToChest, cloneItemWithNewUid, gatherSelectedItems, findItem } from './chestUtils';
 
 
-// Drop zone for creating new chests - can drag item here to create chest with that item
-const AddChestDropZone: React.FC<{
-  onAddChest: () => void;
-}> = ({ onAddChest }) => {
-  const { active } = useDndContext();
-  const { setNodeRef, isOver } = useDroppable({
-    id: 'add-chest-drop-zone',
-  });
 
-  const isDraggingItem = active && typeof active.id === 'string';
-  const showItemHighlight = isDraggingItem && isOver;
-
-  return (
-    <div
-      ref={setNodeRef}
-      onClick={onAddChest}
-      className={`flex items-center justify-center border-2 border-dashed rounded p-4 min-h-[200px] transition-colors cursor-pointer ${showItemHighlight
-        ? 'border-blue-500 bg-blue-500/10'
-        : 'border-neutral-700 hover:border-neutral-600 hover:bg-neutral-900'
-        }`}
-    >
-      <div className="flex flex-col items-center gap-3 p-6 text-neutral-400">
-        <FaPlus size={24} />
-        <span className="text-lg font-medium">
-          {showItemHighlight
-            ? 'Slip for at oprette kiste'
-            : 'Tilføj kiste'}
-        </span>
-      </div>
-    </div>
-  );
-};
-
-// Droppable tab wrapper - switches to tab when dragging over it
-const DroppableTab: React.FC<{
-  tabId: number;
-  isActive: boolean;
-  isEditing: boolean;
-  onSwitchTab: (tabId: number) => void;
-  children: (showHighlight: boolean) => React.ReactNode;
-}> = ({ tabId, isActive, isEditing, onSwitchTab, children }) => {
-  const { active } = useDndContext();
-  const { setNodeRef, isOver } = useDroppable({
-    id: `tab-drop-${tabId}`,
-    data: { tabId },
-  });
-
-  const hoverTimeout = React.useRef<NodeJS.Timeout | null>(null);
-
-  // Switch tab after hovering for 500ms
-  React.useEffect(() => {
-    if (isOver && active && !isActive && !isEditing) {
-      hoverTimeout.current = setTimeout(() => {
-        onSwitchTab(tabId);
-      }, 500);
-    }
-    return () => {
-      if (hoverTimeout.current) {
-        clearTimeout(hoverTimeout.current);
-        hoverTimeout.current = null;
-      }
-    };
-  }, [isOver, active, isActive, isEditing, tabId, onSwitchTab]);
-
-  const showHighlight = isOver && !!active && !isEditing;
-
-  return (
-    <div ref={setNodeRef}>
-      {children(showHighlight)}
-    </div>
-  );
-};
 
 const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -125,15 +45,42 @@ const App: React.FC = () => {
   const [undoStack, setUndoStack] = useState<Tab[][]>([]);
   const [redoStack, setRedoStack] = useState<Tab[][]>([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [newProfileModalVisible, setNewProfileModalVisible] = useState(false);
-  const [importProfileModalVisible, setImportProfileModalVisible] = useState(false);
-  const [deleteTabModalVisible, setDeleteTabModalVisible] = useState(false);
-  const [chestToDelete, setChestToDelete] = useState<number | null>(null);
-  const [tabToDelete, setTabToDelete] = useState<number | null>(null);
   const [isEditingProfileName, setIsEditingProfileName] = useState(false);
   const [isEditingTabName, setIsEditingTabName] = useState<number | null>(null);
-  const [pendingProfile, setPendingProfile] = useState<Profile | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [chestToDelete, setChestToDelete] = useState<number | null>(null);
+
+  const {
+    pendingProfile,
+    importProfileModalVisible,
+    newProfileModalVisible,
+    deleteTabModalVisible,
+    tabToDelete,
+    handleImportProfile,
+    handleExportProfile,
+    confirmNewProfile,
+    createNewProfile,
+    cancelNewProfile,
+    confirmImportProfile,
+    cancelImportProfile,
+    addTab,
+    removeTab,
+    confirmDeleteTab,
+    cancelDeleteTab,
+    updateTabName,
+    getNextChestId
+  } = useProfileManager({
+    tabs,
+    setTabs,
+    profileName,
+    setProfileName,
+    activeTabId,
+    setActiveTabId,
+    setShowAll,
+    setProfileVersion,
+    setUndoStack,
+    setRedoStack
+  });
 
   const listContainerRef = useRef<HTMLDivElement>(null);
   const gridContainerRef = useRef<HTMLDivElement>(null);
@@ -152,23 +99,9 @@ const App: React.FC = () => {
     return offset;
   }, [tabs, activeTabId]);
 
-  const getNextChestId = useCallback(() => {
-    let maxId = 0;
-    tabs.forEach(tab => tab.chests.forEach(chest => { if (chest.id > maxId) maxId = chest.id; }));
-    return maxId + 1;
-  }, [tabs]);
 
-  /* Dnd Sensors - distance: 3 means you need to move 3px before drag starts, allowing clicks for selection */
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 3,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+
+  /* Dnd Sensors moved to hook */
 
   useEffect(() => {
     const savedProfile = localStorage.getItem('profile');
@@ -241,145 +174,7 @@ const App: React.FC = () => {
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value);
 
-  const handleImportProfile = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const fileReader = new FileReader();
-    fileReader.onload = () => {
-      try {
-        const profile = JSON.parse(fileReader.result as string);
-        setPendingProfile(profile);
-        setImportProfileModalVisible(true);
-      } catch (e) {
-        console.error('Error parsing import file:', e);
-        alert('Fejl ved læsning af fil: ' + e);
-      }
-    };
-    if (event.target.files && event.target.files.length > 0) {
-      fileReader.readAsText(event.target.files[0]);
-    }
-  }, []);
 
-  const handleExportProfile = useCallback(() => {
-    const profile: Profile = { name: profileName, tabs };
-    const blob = new Blob([JSON.stringify(profile, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${profileName}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [profileName, tabs]);
-
-  const confirmNewProfile = () => {
-    const defaultChest: Chest = { id: 1, label: 'Min første kiste', items: [], icon: 'barrel', checked: false };
-    const defaultTab: Tab = { id: 1, name: 'Tab 1', chests: [defaultChest] };
-    setTabs([defaultTab]);
-    setActiveTabId(1);
-    setProfileName('Ny Profil');
-    setShowAll(true);
-    setNewProfileModalVisible(false);
-    setProfileVersion(v => v + 1);
-  };
-
-  const createNewProfile = useCallback(() => {
-    if (tabs.some(tab => tab.chests.length > 0)) {
-      setNewProfileModalVisible(true);
-    } else {
-      const defaultChest: Chest = { id: 1, label: 'Min første kiste', items: [], icon: 'barrel', checked: false };
-      const defaultTab: Tab = { id: 1, name: 'Tab 1', chests: [defaultChest] };
-      setTabs([defaultTab]);
-      setActiveTabId(1);
-      setProfileName('Ny Profil');
-      setShowAll(true);
-      setProfileVersion(v => v + 1);
-    }
-  }, [tabs]);
-
-  const cancelNewProfile = () => setNewProfileModalVisible(false);
-
-  const confirmImportProfile = () => {
-    if (!pendingProfile) return;
-    tabs.forEach(tab => tab.chests.forEach(chest => localStorage.removeItem(`chest-checked-${chest.id}`)));
-    setProfileName(pendingProfile.name || 'Imported Profile');
-
-    if (pendingProfile.tabs && Array.isArray(pendingProfile.tabs)) {
-      let globalChestId = 1;
-      const processedTabs = pendingProfile.tabs.map((tab: any) => ({
-        ...tab,
-        chests: (tab.chests || []).map((chest: any) => ({
-          ...chest,
-          id: globalChestId++,
-          icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
-          checked: chest.checked || false,
-          items: chest.items || [],
-        }))
-      }));
-      setTabs(processedTabs);
-      setActiveTabId(processedTabs[0]?.id || 1);
-    } else if (pendingProfile.chests && Array.isArray(pendingProfile.chests)) {
-      const processedChests = pendingProfile.chests.map((chest: any, index: number) => ({
-        ...chest,
-        id: index + 1,
-        icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
-        checked: chest.checked || false,
-        items: chest.items || [],
-      }));
-      const defaultTab: Tab = { id: 1, name: 'Tab 1', chests: processedChests };
-      setTabs([defaultTab]);
-      setActiveTabId(1);
-    } else {
-      // Fallback: create empty profile if no valid data
-      const defaultChest: Chest = { id: 1, label: 'Min første kiste', items: [], icon: 'barrel', checked: false };
-      const defaultTab: Tab = { id: 1, name: 'Tab 1', chests: [defaultChest] };
-      setTabs([defaultTab]);
-      setActiveTabId(1);
-    }
-
-    setPendingProfile(null);
-    setImportProfileModalVisible(false);
-    setProfileVersion(v => v + 1);
-    // Profile imported successfully
-  };
-
-  const cancelImportProfile = () => { setPendingProfile(null); setImportProfileModalVisible(false); };
-
-  const addTab = useCallback(() => {
-    const newTabId = Math.max(...tabs.map(tab => tab.id), 0) + 1;
-    const nextChestId = getNextChestId();
-    const defaultChest: Chest = { id: nextChestId, label: 'Min første kiste', items: [], icon: 'barrel', checked: false };
-    const newTab: Tab = { id: newTabId, name: `Tab ${newTabId}`, chests: [defaultChest] };
-    setTabs(prev => [...prev, newTab]);
-    setActiveTabId(newTabId);
-  }, [tabs, getNextChestId]);
-
-  const handleDeleteTab = useCallback((tabId: number) => {
-    const newTabs = tabs.filter(tab => tab.id !== tabId);
-    setTabs(newTabs);
-    if (activeTabId === tabId) setActiveTabId(newTabs[0]?.id || 1);
-    setDeleteTabModalVisible(false);
-  }, [tabs, activeTabId]);
-
-  const removeTab = useCallback((tabId: number) => {
-    if (tabs.length === 1) return;
-    const tabToRemove = tabs.find(tab => tab.id === tabId);
-    if (tabToRemove && tabToRemove.chests.some(chest => chest.items.length > 0)) {
-      setTabToDelete(tabId);
-      setDeleteTabModalVisible(true);
-    } else {
-      handleDeleteTab(tabId);
-    }
-  }, [tabs, handleDeleteTab]);
-
-  const confirmDeleteTab = () => {
-    if (tabToDelete !== null) {
-      handleDeleteTab(tabToDelete);
-      setTabToDelete(null);
-    }
-  };
-  const cancelDeleteTab = () => { setTabToDelete(null); setDeleteTabModalVisible(false); };
-
-  const updateTabName = useCallback((tabId: number, name: string) => {
-    setTabs(prev => prev.map(tab => (tab.id === tabId ? { ...tab, name } : tab)));
-  }, []);
 
   const updateChests = useCallback((newChests: Chest[]) => {
     setTabs(prev => prev.map(tab => (tab.id === activeTabId ? { ...tab, chests: newChests } : tab)));
@@ -405,6 +200,31 @@ const App: React.FC = () => {
     });
     return map;
   }, [tabs]);
+
+  const {
+    sensors,
+    activeId,
+    activeItem,
+    handleDragStart,
+    handleDragOver,
+    handleDragEnd,
+    handleItemSelect,
+    dropAnimation
+  } = useDragController({
+    items,
+    setItems,
+    tabs,
+    setTabs,
+    activeTab,
+    activeTabId,
+    setActiveTabId,
+    updateChests,
+    selectedItems,
+    setSelectedItems,
+    setUndoStack,
+    setRedoStack,
+    getNextChestId
+  });
 
   const itemsToShow = useMemo(
     () => (showAll ? filteredItems : filteredItems.filter(item => !chestItemsMap.has(item.item))),
@@ -483,34 +303,7 @@ const App: React.FC = () => {
 
   const handleClearSearch = () => setSearchTerm('');
 
-  // Handle item selection (Ctrl+click to toggle, click to select/keep selection for dragging)
-  const handleItemSelect = useCallback((uid: string, ctrlKey: boolean) => {
-    setSelectedItems(prev => {
-      const newSet = new Set(prev);
-      if (ctrlKey) {
-        // Ctrl+click: Toggle selection
-        if (newSet.has(uid)) {
-          newSet.delete(uid);
-        } else {
-          newSet.add(uid);
-        }
-      } else {
-        // Regular click:
-        // If this item is already selected, keep the selection (for dragging multiple)
-        // If not selected, clear and select only this item
-        if (!newSet.has(uid)) {
-          newSet.clear();
-          newSet.add(uid);
-        }
-        // If already selected, do nothing (keep the selection intact for drag)
-      }
-      return newSet;
-    });
-  }, []);
 
-  const clearSelection = useCallback(() => {
-    setSelectedItems(new Set());
-  }, []);
 
   // Navigate to a chest when clicking its ID in the sidebar
   const handleChestClick = useCallback((chestId: number) => {
@@ -594,8 +387,7 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleUndo, handleRedo]);
 
-  const [activeId, setActiveId] = useState<string | number | null>(null);
-  const [activeItem, setActiveItem] = useState<Item | Chest | null>(null);
+
 
   // Detect if we're dragging a chest from another tab into this one
   const incomingChest = useMemo(() => {
@@ -618,347 +410,12 @@ const App: React.FC = () => {
     return [...chests, incomingChest];
   }, [chests, incomingChest]);
 
-  const findItem = (id: string | number) => {
-    // Check source items
-    const sourceItem = items.find(i => i.uid === id);
-    if (sourceItem) return sourceItem;
-    // Check chest items
-    for (const chest of chests) {
-      const chestItem = chest.items.find(i => i.uid === id);
-      if (chestItem) return chestItem;
-    }
-    // Check chests
-    const chest = chests.find(c => c.id === id);
-    if (chest) return chest;
-    return null;
-  };
+
 
   // Helper to gather selected items from both sidebar and chests
-  const gatherSelectedItems = (activeIdStr: string): {
-    sidebarItems: Item[];
-    chestItems: { item: Item; sourceChestId: number }[];
-  } => {
-    const hasMultipleSelected = selectedItems.has(activeIdStr) && selectedItems.size > 1;
-    const sidebarItems: Item[] = [];
-    const chestItems: { item: Item; sourceChestId: number }[] = [];
-
-    if (hasMultipleSelected) {
-      for (const uid of Array.from(selectedItems)) {
-        const sidebarItem = items.find(i => i.uid === uid);
-        if (sidebarItem) {
-          sidebarItems.push(sidebarItem);
-          continue;
-        }
-        for (const chest of chests) {
-          const chestItem = chest.items.find(i => i.uid === uid);
-          if (chestItem) {
-            chestItems.push({ item: chestItem, sourceChestId: chest.id });
-            break;
-          }
-        }
-      }
-    } else {
-      const sidebarItem = items.find(i => i.uid === activeIdStr);
-      if (sidebarItem) {
-        sidebarItems.push(sidebarItem);
-      } else {
-        for (const chest of chests) {
-          const chestItem = chest.items.find(i => i.uid === activeIdStr);
-          if (chestItem) {
-            chestItems.push({ item: chestItem, sourceChestId: chest.id });
-            break;
-          }
-        }
-      }
-    }
-    return { sidebarItems, chestItems };
-  };
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id);
-    setActiveItem(findItem(event.active.id) as any);
-  };
-
-  // Enable scroll wheel during drag (and prevent browser zoom with Ctrl+wheel)
-  useEffect(() => {
-    if (!activeId) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      // Prevent browser zoom during drag
-      if (e.ctrlKey) {
-        e.preventDefault();
-      }
-      // Find the main scrollable container and scroll it
-      const mainContent = document.querySelector('.grid-cols-auto-fit');
-      if (mainContent) {
-        mainContent.scrollTop += e.deltaY;
-      }
-    };
-
-    window.addEventListener('wheel', handleWheel, { passive: false });
-    return () => window.removeEventListener('wheel', handleWheel);
-  }, [activeId]);
-
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-
-    // If dragging a chest, do nothing (handled in End)
-    if (typeof active.id === 'number') return;
-
-    // Handle Item Dragging
-    // activeId and overId available if needed for future logic
-
-    // Source Item -> Chest
-    // Handled in DragEnd (addition)
-
-    // Chest Item -> Chest Item (Sorting same container)
-    // Chest Item -> Chest Item (Different container)
-    // Chest Item -> Chest (Empty container)
-
-    // We need to implement complex transfer logic if we want "snappy" move between lists.
-    // For now, let's keep it simple: DragEnd updates state.
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-    setActiveItem(null);
-
-    if (!over) return;
-
-    // Chest Sorting/Moving
-    if (typeof active.id === 'number') {
-      const activeChestId = active.id;
-
-      // Find source tab and chest
-      let sourceTabId: number | null = null;
-      let sourceChest: Chest | null = null;
-      for (const tab of tabs) {
-        const chest = tab.chests.find(c => c.id === activeChestId);
-        if (chest) {
-          sourceTabId = tab.id;
-          sourceChest = chest;
-          break;
-        }
-      }
-
-      if (!sourceChest || sourceTabId === null) return;
-
-      // Determine target
-      let targetTabId = activeTabId; // Default to active tab
-      let targetChestId: number | null = null;
-
-      // Dropped on another chest
-      if (typeof over.id === 'number') {
-        targetChestId = over.id;
-      }
-      // Dropped on a tab drop zone - move to that tab's end
-      else if (typeof over.id === 'string' && over.id.startsWith('tab-drop-')) {
-        targetTabId = parseInt(over.id.replace('tab-drop-', ''), 10);
-      }
-
-      // Same tab, same position - nothing to do
-      if (sourceTabId === targetTabId && targetChestId === activeChestId) return;
-
-      setUndoStack(prev => [...prev, tabs]);
-      setRedoStack([]);
-
-      // Same tab - just reorder
-      if (sourceTabId === targetTabId && targetChestId !== null) {
-        const oldIndex = chests.findIndex(c => c.id === activeChestId);
-        const newIndex = chests.findIndex(c => c.id === targetChestId);
-        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-          updateChests(arrayMove(chests, oldIndex, newIndex));
-        }
-      } else {
-        // Cross-tab move
-        const newTabs = tabs.map(tab => {
-          // Remove from source tab
-          if (tab.id === sourceTabId) {
-            return { ...tab, chests: tab.chests.filter(c => c.id !== activeChestId) };
-          }
-          // Add to target tab
-          if (tab.id === targetTabId) {
-            if (targetChestId !== null) {
-              // Insert at specific position
-              const targetIndex = tab.chests.findIndex(c => c.id === targetChestId);
-              const newChests = [...tab.chests];
-              newChests.splice(targetIndex, 0, sourceChest!);
-              return { ...tab, chests: newChests };
-            } else {
-              // Add to end
-              return { ...tab, chests: [...tab.chests, sourceChest!] };
-            }
-          }
-          return tab;
-        });
-        setTabs(newTabs);
-      }
-      return;
-    }
-
-    // Item Dropping/Sorting logic
-    const activeIdStr = String(active.id);
-    const overIdStr = String(over.id);
-
-    // Handle dropping on "Add Chest" drop zone (unified: sidebar + chest items)
-    if (over.id === 'add-chest-drop-zone') {
-      const { sidebarItems, chestItems } = gatherSelectedItems(activeIdStr);
-
-      if (sidebarItems.length > 0 || chestItems.length > 0) {
-        setUndoStack(prev => [...prev, tabs]);
-        setRedoStack([]);
-        const newChestId = getNextChestId();
-
-        // Use the dragged item for naming (not first selected)
-        const draggedSidebarItem = sidebarItems.find(i => i.uid === activeIdStr);
-        const draggedChestItem = chestItems.find(({ item }) => item.uid === activeIdStr);
-        const firstItem = draggedSidebarItem || draggedChestItem?.item ||
-          (sidebarItems.length > 0 ? sidebarItems[0] : chestItems[0].item);
-        const itemName = firstItem.item.replace(/_/g, ' ');
-        const itemIcon = firstItem.image.replace('.png', '');
-
-        // Clone sidebar items, keep chest items as-is - deduplicate by variable
-        const seenVariables = new Set<string>();
-        const newChestItems: Item[] = [];
-
-        // Add sidebar items first (cloned), skip duplicates
-        for (const item of sidebarItems) {
-          if (!seenVariables.has(item.variable)) {
-            seenVariables.add(item.variable);
-            newChestItems.push(cloneItemWithNewUid(item));
-          }
-        }
-        // Add chest items, skip duplicates
-        for (const { item } of chestItems) {
-          if (!seenVariables.has(item.variable)) {
-            seenVariables.add(item.variable);
-            newChestItems.push(item);
-          }
-        }
-
-        const newChest: Chest = {
-          id: newChestId,
-          label: itemName.charAt(0).toUpperCase() + itemName.slice(1),
-          items: newChestItems,
-          icon: itemIcon,
-          checked: false
-        };
-
-        // Remove moved chest items from source chests
-        const sourceUids = new Set(chestItems.map(({ item }) => item.uid));
-        const newChests = chests.map(c => {
-          const hasItemsToRemove = c.items.some(i => sourceUids.has(i.uid));
-          if (hasItemsToRemove) {
-            return { ...c, items: c.items.filter(i => !sourceUids.has(i.uid)) };
-          }
-          return c;
-        });
-
-        updateChests([...newChests, newChest]);
-        clearSelection();
-        return;
-      }
-    }
 
 
 
-    // Find target chest
-    let targetChestId: number | null = null;
-    let targetIndex: number | null = null;
-
-    // If over a chest directly
-    if (typeof over.id === 'number') {
-      targetChestId = over.id;
-      // findchest
-      const targetChest = chests.find(c => c.id === targetChestId);
-      targetIndex = targetChest ? targetChest.items.length : 0;
-    } else if (typeof over.id === 'string' && over.id.startsWith('chest-drop-')) {
-      // Over a chest drop zone (e.g., "chest-drop-1")
-      targetChestId = parseInt(over.id.replace('chest-drop-', ''), 10);
-      const targetChest = chests.find(c => c.id === targetChestId);
-      targetIndex = targetChest ? targetChest.items.length : 0;
-    } else {
-      // Over another item? Find which chest specific item belongs to
-      for (const chest of chests) {
-        const idx = chest.items.findIndex(i => i.uid === overIdStr);
-        if (idx !== -1) {
-          targetChestId = chest.id;
-          targetIndex = idx;
-          break;
-        }
-      }
-    }
-
-    if (targetChestId !== null) {
-      setUndoStack(prev => [...prev, tabs]);
-      setRedoStack([]);
-
-      // Unified handling: gather all items to process (from sidebar AND chests)
-      const { sidebarItems, chestItems } = gatherSelectedItems(activeIdStr);
-
-      // Handle single chest item reorder (same chest)
-      if (chestItems.length === 1 && sidebarItems.length === 0 &&
-        chestItems[0].sourceChestId === targetChestId && typeof targetIndex === 'number') {
-        const sourceInfo = chestItems[0];
-        const chest = chests.find(c => c.id === sourceInfo.sourceChestId)!;
-        const sourceIndex = chest.items.findIndex(i => i.uid === sourceInfo.item.uid);
-        const newItems = arrayMove(chest.items, sourceIndex, targetIndex);
-        updateChests(chests.map(c => c.id === sourceInfo.sourceChestId ? { ...c, items: newItems } : c));
-        clearSelection();
-        return;
-      }
-
-      // Process all items - clone sidebar items, move chest items
-      const sourceUidsToRemove = new Set(chestItems.map(({ item }) => item.uid));
-
-      const newTabs = tabs.map(tab => ({
-        ...tab,
-        chests: tab.chests.map(chest => {
-          // Remove moved items from source chests
-          const hasItemsToRemove = chest.items.some(i => sourceUidsToRemove.has(i.uid));
-          if (hasItemsToRemove && chest.id !== targetChestId) {
-            return { ...chest, items: chest.items.filter(i => !sourceUidsToRemove.has(i.uid)) };
-          }
-
-          // Add items to target chest
-          if (chest.id === targetChestId) {
-            let newItems = hasItemsToRemove
-              ? chest.items.filter(i => !sourceUidsToRemove.has(i.uid))
-              : [...chest.items];
-
-            // Add cloned sidebar items
-            for (const item of sidebarItems) {
-              const clonedItem = cloneItemWithNewUid(item);
-              if (canAddItemToChest({ ...chest, items: newItems }, clonedItem)) {
-                newItems.push(clonedItem);
-              }
-            }
-
-            // Add moved chest items (that can be added)
-            for (const { item } of chestItems) {
-              if (canAddItemToChest({ ...chest, items: newItems }, item)) {
-                if (typeof targetIndex === 'number') {
-                  newItems.splice(targetIndex, 0, item);
-                  targetIndex++;
-                } else {
-                  newItems.push(item);
-                }
-              }
-            }
-
-            return { ...chest, items: newItems };
-          }
-
-          return chest;
-        })
-      }));
-
-      setTabs(newTabs);
-      clearSelection();
-    }
-  };
 
   return (
     <DndContext
@@ -1274,11 +731,11 @@ const App: React.FC = () => {
         )}
       </div>
       {/* Only center items on cursor, not chests */}
-      <DragOverlay modifiers={activeItem && !('items' in activeItem) ? [snapCenterToCursor] : []} dropAnimation={null}>
+      <DragOverlay modifiers={activeItem && !('items' in activeItem) ? [snapCenterToCursor] : []} dropAnimation={dropAnimation}>
         {activeId ? (
           activeItem && 'items' in activeItem ? (
             // Chest Overlay - use global position with fixed height matching grid
-            <div className="opacity-90 min-w-[350px] text-white dark-theme" style={{ height: '280px' }}>
+            <div className="opacity-90 min-w-[350px] text-white dark-theme pointer-events-none" style={{ height: '280px' }}>
               <ChestComponent
                 chest={activeItem as Chest}
                 index={globalChestOffset + chests.findIndex(c => c.id === (activeItem as Chest).id)}
