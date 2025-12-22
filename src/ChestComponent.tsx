@@ -3,9 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { useDndContext, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import ItemComponent from './ItemComponent';
-import { FaEdit, FaSave, FaTimes, FaRegCopy, FaCheckSquare, FaRegSquare } from 'react-icons/fa';
-import { toast, Zoom } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { FaEdit, FaSave, FaTimes, FaRegCopy, FaCheckSquare, FaRegSquare, FaCheck } from 'react-icons/fa';
 import Portal from './Portal';
 import { pixelatedIcons } from './utils';
 import SpriteIcon from './SpriteIcon';
@@ -29,7 +27,8 @@ interface ChestComponentProps {
 const ItemsDropZone: React.FC<{
   chestId: number;
   children: React.ReactNode;
-}> = memo(({ chestId, children }) => {
+  containerRef?: React.RefObject<HTMLDivElement>;
+}> = memo(({ chestId, children, containerRef }) => {
   const { active } = useDndContext();
   const { setNodeRef } = useDroppable({
     id: `chest-drop-${chestId}`,
@@ -39,9 +38,17 @@ const ItemsDropZone: React.FC<{
   // Disable hover effects on items when dragging
   const isDragging = !!active;
 
+  // Combine refs
+  const handleRef = (node: HTMLDivElement | null) => {
+    setNodeRef(node);
+    if (containerRef && 'current' in containerRef) {
+      (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    }
+  };
+
   return (
     <div
-      ref={setNodeRef}
+      ref={handleRef}
       className="mt-3 p-2 w-full flex-1 rounded-lg bg-neutral-900/50 border-2 border-dashed border-neutral-700"
       style={{
         overflowY: 'auto',
@@ -109,6 +116,10 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
   const [isEditing, setIsEditing] = useState(false);
   const [chestLabel, setChestLabel] = useState(chest.label || 'Barrel');
 
+  // Ref for scrolling to new items
+  const itemsContainerRef = useRef<HTMLDivElement>(null);
+  const prevItemsCountRef = useRef(chest.items.length);
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; positionAbove: boolean }>({
     top: 0,
@@ -116,11 +127,32 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
     positionAbove: false,
   });
   const [searchTerm, setSearchTerm] = useState('');
+  const [copied, setCopied] = useState(false);
 
   // Sync checked state with props
   useEffect(() => {
     setIsChecked(chest.checked);
   }, [chest.checked]);
+
+  // Scroll to bottom when new items are added (not on initial mount)
+  const hasMountedRef = useRef(false);
+  useEffect(() => {
+    // Skip first render (initial mount or import)
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      prevItemsCountRef.current = chest.items.length;
+      return;
+    }
+
+    // Only scroll if items were added (not removed or same)
+    if (chest.items.length > prevItemsCountRef.current && itemsContainerRef.current) {
+      itemsContainerRef.current.scrollTo({
+        top: itemsContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+    prevItemsCountRef.current = chest.items.length;
+  }, [chest.items.length]);
 
   // Sync title when chest changes
   useEffect(() => {
@@ -262,9 +294,9 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
 
         {/* Right actions */}
         {!isEditing && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-base">
             {/* Done toggle */}
-            <button onClick={(e) => { e.stopPropagation(); handleDoneToggle(); }} onPointerDown={e => e.stopPropagation()} className={`p-1.5 -m-1.5 transition-colors ${isChecked ? 'text-green-400 hover:text-green-300' : 'text-neutral-400 hover:text-neutral-200'}`} title={isChecked ? 'Markér som færdig' : 'Markér som ufærdig'}>
+            <button onClick={(e) => { e.stopPropagation(); handleDoneToggle(); }} onPointerDown={e => e.stopPropagation()} className={`transition-colors ${isChecked ? 'text-green-400 hover:text-green-300' : 'text-neutral-400 hover:text-neutral-200'}`} title={isChecked ? 'Markér som færdig' : 'Markér som ufærdig'}>
               {isChecked ? <FaCheckSquare /> : <FaRegSquare />}
             </button>
 
@@ -274,14 +306,14 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
                 onClick={(e) => {
                   e.stopPropagation();
                   navigator.clipboard.writeText(command);
-                  toast.dismiss();
-                  toast.success('Kommando kopieret!', { icon: false, position: 'top-center', autoClose: 2000, hideProgressBar: true, closeOnClick: true, pauseOnHover: false, draggable: false, theme: 'dark', transition: Zoom, closeButton: false })
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
                 }}
                 onPointerDown={e => e.stopPropagation()}
-                className="text-green-500 hover:text-green-400 transition-colors"
+                className={`transition-colors ${copied ? 'text-green-400' : 'text-green-500 hover:text-green-400'}`}
                 title="Kopiér kommando"
               >
-                <FaRegCopy />
+                {copied ? <FaCheck /> : <FaRegCopy />}
               </button>
             )}
 
@@ -310,7 +342,7 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
       </div>
 
       {/* Items Drop Zone */}
-      <ItemsDropZone chestId={chest.id}>
+      <ItemsDropZone chestId={chest.id} containerRef={itemsContainerRef}>
         {chest.items.length > 0 ? (
           gridView ? (
             <div className="grid grid-cols-6 gap-2">

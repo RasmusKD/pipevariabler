@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   DndContext,
-  rectIntersection,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   DragOverlay,
-  defaultDropAnimationSideEffects,
   DragStartEvent,
   DragOverEvent,
   DragEndEvent,
@@ -22,20 +20,20 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
-import { FaCog, FaCaretDown, FaTimes, FaEdit, FaPlus, FaTh, FaBars, FaSearch } from 'react-icons/fa';
+import { FaTimes, FaEdit, FaPlus, FaTh, FaBars, FaSearch } from 'react-icons/fa';
 import { FixedSizeList as List } from 'react-window';
 import './scss/main.scss';
 import itemsData from './data.json';
 import ItemComponent from './ItemComponent';
 import ChestComponent from './ChestComponent';
 import SpriteIcon from './SpriteIcon';
-import { ToastContainer, toast, Zoom } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+
 import ConfirmationModal from './ConfirmationModal';
+import SettingsDropdown from './components/SettingsDropdown';
 
 import { DraggableSource } from './dnd/Draggable';
 import { Item, Chest, Tab, Profile } from './types';
-import { canAddItemToChest, addItemToChest, cloneItemWithNewUid } from './chestUtils';
+import { canAddItemToChest, cloneItemWithNewUid } from './chestUtils';
 
 
 // Drop zone for creating new chests - can drag item here to create chest with that item
@@ -115,6 +113,7 @@ const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [items, setItems] = useState<Item[]>([]);
   const [profileName, setProfileName] = useState<string>('');
+  const [profileVersion, setProfileVersion] = useState(0);
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<number>(1);
 
@@ -122,7 +121,6 @@ const App: React.FC = () => {
   const [isGridView, setIsGridView] = useState<boolean>(() => JSON.parse(localStorage.getItem('isGridView') || 'false'));
   const [chestGridView, setChestGridView] = useState<boolean>(() => JSON.parse(localStorage.getItem('chestGridView') || 'true'));
 
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [listHeight, setListHeight] = useState(window.innerHeight - 250);
   const [undoStack, setUndoStack] = useState<Tab[][]>([]);
   const [redoStack, setRedoStack] = useState<Tab[][]>([]);
@@ -246,11 +244,18 @@ const App: React.FC = () => {
   const handleImportProfile = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const fileReader = new FileReader();
     fileReader.onload = () => {
-      const profile = JSON.parse(fileReader.result as string);
-      setPendingProfile(profile);
-      setImportProfileModalVisible(true);
+      try {
+        const profile = JSON.parse(fileReader.result as string);
+        setPendingProfile(profile);
+        setImportProfileModalVisible(true);
+      } catch (e) {
+        console.error('Error parsing import file:', e);
+        alert('Fejl ved læsning af fil: ' + e);
+      }
     };
-    if (event.target.files && event.target.files.length > 0) fileReader.readAsText(event.target.files[0]);
+    if (event.target.files && event.target.files.length > 0) {
+      fileReader.readAsText(event.target.files[0]);
+    }
   }, []);
 
   const handleExportProfile = useCallback(() => {
@@ -272,6 +277,7 @@ const App: React.FC = () => {
     setProfileName('Ny Profil');
     setShowAll(true);
     setNewProfileModalVisible(false);
+    setProfileVersion(v => v + 1);
   };
 
   const createNewProfile = useCallback(() => {
@@ -284,6 +290,7 @@ const App: React.FC = () => {
       setActiveTabId(1);
       setProfileName('Ny Profil');
       setShowAll(true);
+      setProfileVersion(v => v + 1);
     }
   }, [tabs]);
 
@@ -292,47 +299,45 @@ const App: React.FC = () => {
   const confirmImportProfile = () => {
     if (!pendingProfile) return;
     tabs.forEach(tab => tab.chests.forEach(chest => localStorage.removeItem(`chest-checked-${chest.id}`)));
-    setProfileName(pendingProfile.name);
+    setProfileName(pendingProfile.name || 'Imported Profile');
 
-    if (pendingProfile.tabs) {
+    if (pendingProfile.tabs && Array.isArray(pendingProfile.tabs)) {
       let globalChestId = 1;
-      const processedTabs = pendingProfile.tabs.map(tab => ({
+      const processedTabs = pendingProfile.tabs.map((tab: any) => ({
         ...tab,
-        chests: tab.chests.map((chest: any) => ({
+        chests: (tab.chests || []).map((chest: any) => ({
           ...chest,
           id: globalChestId++,
           icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
           checked: chest.checked || false,
+          items: chest.items || [],
         }))
       }));
       setTabs(processedTabs);
       setActiveTabId(processedTabs[0]?.id || 1);
-    } else if (pendingProfile.chests) {
+    } else if (pendingProfile.chests && Array.isArray(pendingProfile.chests)) {
       const processedChests = pendingProfile.chests.map((chest: any, index: number) => ({
         ...chest,
         id: index + 1,
         icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
         checked: chest.checked || false,
+        items: chest.items || [],
       }));
       const defaultTab: Tab = { id: 1, name: 'Tab 1', chests: processedChests };
+      setTabs([defaultTab]);
+      setActiveTabId(1);
+    } else {
+      // Fallback: create empty profile if no valid data
+      const defaultChest: Chest = { id: 1, label: 'Min første kiste', items: [], icon: 'barrel', checked: false };
+      const defaultTab: Tab = { id: 1, name: 'Tab 1', chests: [defaultChest] };
       setTabs([defaultTab]);
       setActiveTabId(1);
     }
 
     setPendingProfile(null);
     setImportProfileModalVisible(false);
-
-    toast.success('Profil importeret!', {
-      position: "top-center",
-      autoClose: 3000,
-      hideProgressBar: true,
-      closeOnClick: true,
-      pauseOnHover: false,
-      draggable: false,
-      theme: 'dark',
-      transition: Zoom,
-      closeButton: false,
-    });
+    setProfileVersion(v => v + 1);
+    // Profile imported successfully
   };
 
   const cancelImportProfile = () => { setPendingProfile(null); setImportProfileModalVisible(false); };
@@ -702,8 +707,7 @@ const App: React.FC = () => {
     if (typeof active.id === 'number') return;
 
     // Handle Item Dragging
-    const activeId = active.id as string;
-    const overId = over.id as string | number;
+    // activeId and overId available if needed for future logic
 
     // Source Item -> Chest
     // Handled in DragEnd (addition)
@@ -797,21 +801,6 @@ const App: React.FC = () => {
     // Item Dropping/Sorting logic
     const activeIdStr = String(active.id);
     const overIdStr = String(over.id);
-
-    // Is source item?
-    const isSource = items.some(i => i.uid === activeIdStr);
-
-    // Get all items to add (if active is selected, add all selected; otherwise just the one)
-    const getItemsToAdd = (): Item[] => {
-      if (!isSource) return [];
-      if (selectedItems.has(activeIdStr) && selectedItems.size > 1) {
-        // Return all selected items, ordered by the items array order
-        return items.filter(i => selectedItems.has(i.uid));
-      }
-      // Just the dragged item
-      const singleItem = items.find(i => i.uid === activeIdStr);
-      return singleItem ? [singleItem] : [];
-    };
 
     // Handle dropping on "Add Chest" drop zone (unified: sidebar + chest items)
     if (over.id === 'add-chest-drop-zone') {
@@ -922,7 +911,6 @@ const App: React.FC = () => {
       }
 
       // Process all items - clone sidebar items, move chest items
-      const targetChest = chests.find(c => c.id === targetChestId);
       const sourceUidsToRemove = new Set(chestItems.map(({ item }) => item.uid));
 
       const newTabs = tabs.map(tab => ({
@@ -1198,46 +1186,15 @@ const App: React.FC = () => {
               </div>
 
               {/* Settings */}
-              <div className="relative z-50">
-                <button
-                  className="flex items-center space-x-2 p-2 rounded bg-neutral-800 hover:bg-neutral-700 transition-colors"
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                >
-                  <FaCog />
-                  <FaCaretDown />
-                </button>
-                {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-neutral-900 border border-neutral-800 text-white rounded shadow-lg">
-                    <div className="p-2">
-                      <button
-                        className="w-full text-left px-2 py-2 text-sm rounded hover:bg-neutral-800 transition-colors"
-                        onClick={() => document.getElementById('import-profile')?.click()}
-                      >
-                        Importer Profil
-                      </button>
-                      <input
-                        type="file"
-                        onChange={handleImportProfile}
-                        className="hidden"
-                        accept="application/json"
-                        id="import-profile"
-                      />
-                      <button
-                        className="w-full text-left px-2 py-2 text-sm rounded hover:bg-neutral-800 transition-colors"
-                        onClick={handleExportProfile}
-                      >
-                        Eksporter Profil
-                      </button>
-                      <button
-                        className="w-full text-left px-2 py-2 text-sm rounded hover:bg-neutral-800 transition-colors"
-                        onClick={createNewProfile}
-                      >
-                        Ny Profil
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <SettingsDropdown
+                onImport={handleImportProfile}
+                onExport={handleExportProfile}
+                onNewProfile={createNewProfile}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                undoDisabled={undoStack.length === 0}
+                redoDisabled={redoStack.length === 0}
+              />
             </div>
 
             {/* Kister */}
@@ -1245,7 +1202,7 @@ const App: React.FC = () => {
               <SortableContext items={displayChests.map(c => c.id)} strategy={rectSortingStrategy}>
                 {displayChests.map((chest, index) => (
                   <ChestComponent
-                    key={chest.id}
+                    key={`${chest.id}-${profileVersion}`}
                     chest={chest}
                     index={globalChestOffset + index}
                     removeChest={confirmDeleteChest}
@@ -1266,7 +1223,7 @@ const App: React.FC = () => {
           </main>
         </div>
 
-        <ToastContainer className="toast-container" position="top-center" autoClose={3000} limit={1} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss={false} pauseOnHover={false} theme="dark" />
+
 
         {modalVisible && (
           <ConfirmationModal
@@ -1274,6 +1231,9 @@ const App: React.FC = () => {
             onCancel={() => setModalVisible(false)}
             message="Er du sikker på, at du vil slette denne kiste? Den er ikke tom."
             title="Bekræft Sletning"
+            variant="danger"
+            confirmText="Slet"
+            cancelText="Annuller"
           />
         )}
 
@@ -1283,6 +1243,9 @@ const App: React.FC = () => {
             onCancel={cancelNewProfile}
             message="Har du husket at eksportere den nuværende profil? Ændringer kan gå tabt, hvis du fortsætter uden at gemme."
             title="Ny Profil"
+            variant="warning"
+            confirmText="Fortsæt"
+            cancelText="Annuller"
           />
         )}
 
@@ -1292,6 +1255,9 @@ const App: React.FC = () => {
             onCancel={cancelImportProfile}
             message="Har du husket at eksportere den nuværende profil? Ændringer kan gå tabt, hvis du fortsætter uden at gemme."
             title="Importer Profil"
+            variant="warning"
+            confirmText="Importer"
+            cancelText="Annuller"
           />
         )}
 
@@ -1301,6 +1267,9 @@ const App: React.FC = () => {
             onCancel={cancelDeleteTab}
             message="Er du sikker på, at du vil slette dette tab? Det indeholder kister med indhold."
             title="Bekræft Tab Sletning"
+            variant="danger"
+            confirmText="Slet"
+            cancelText="Annuller"
           />
         )}
       </div>

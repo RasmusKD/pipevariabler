@@ -1,28 +1,74 @@
 import React from 'react';
+import { FaTimes } from 'react-icons/fa';
+
+type ModalVariant = 'danger' | 'warning' | 'info' | 'confirm';
 
 interface ConfirmationModalProps {
   onConfirm: () => void;
   onCancel: () => void;
   title: string;
   message: string;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: ModalVariant;
 }
 
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ onConfirm, onCancel, title, message }) => {
+const variantStyles = {
+  danger: 'bg-red-600 hover:bg-red-700',
+  warning: 'bg-amber-600 hover:bg-amber-700',
+  info: 'bg-blue-600 hover:bg-blue-700',
+  confirm: 'bg-green-600 hover:bg-green-700',
+};
+
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
+  onConfirm,
+  onCancel,
+  title,
+  message,
+  confirmText = 'Ja',
+  cancelText = 'Nej',
+  variant = 'confirm',
+}) => {
   return (
-      <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-        <div className="flex flex-col gap-4 p-6 rounded-lg shadow-lg max-w-lg w-full text-center bg-neutral-800 text-white">
-          <h2 className="text-lg font-bold">{title}</h2>
-          <p className="mb-2 text-neutral-200">{message}</p>
-          <div className="flex justify-around">
-            <button onClick={onConfirm} className="bg-green-600 hover:bg-green-700 text-white py-2 px-9 rounded">
-              Ja
-            </button>
-            <button onClick={onCancel} className="bg-red-600 hover:bg-red-700 text-white py-2 px-8 rounded">
-              Nej
-            </button>
-          </div>
+    <div
+      className="fixed inset-0 flex items-center justify-center bg-black/60 z-50"
+      onClick={onCancel}
+    >
+      <div
+        className="relative flex flex-col gap-4 p-6 rounded-xl shadow-xl max-w-md w-full mx-4 bg-neutral-900 border border-neutral-700 text-white"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <button
+            onClick={onCancel}
+            className="text-neutral-400 hover:text-white transition-colors p-1"
+          >
+            <FaTimes />
+          </button>
+        </div>
+
+        {/* Message */}
+        <p className="text-neutral-300 text-sm">{message}</p>
+
+        {/* Buttons */}
+        <div className="flex gap-3 justify-end mt-2">
+          <button
+            onClick={onCancel}
+            className="py-2 px-4 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-white text-sm font-medium transition-colors"
+          >
+            {cancelText}
+          </button>
+          <button
+            onClick={onConfirm}
+            className={`py-2 px-4 rounded-lg text-white text-sm font-medium transition-colors ${variantStyles[variant]}`}
+          >
+            {confirmText}
+          </button>
         </div>
       </div>
+    </div>
   );
 };
 
