@@ -2,13 +2,7 @@ import React from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { pixelatedIcons } from './utils';
 import SpriteIcon from './SpriteIcon';
-
-interface Item {
-    item: string;
-    variable: string;
-    image: string;
-    uid: string;
-}
+import { Item } from './types';
 
 interface ItemComponentProps {
     item: Item;
@@ -19,6 +13,7 @@ interface ItemComponentProps {
     isGridView?: boolean;
     isSelected?: boolean;
     onSelect?: (uid: string, ctrlKey: boolean) => void;
+    onChestClick?: (chestId: number) => void;
 }
 
 const ItemComponent: React.FC<ItemComponentProps> = React.memo(({
@@ -29,7 +24,8 @@ const ItemComponent: React.FC<ItemComponentProps> = React.memo(({
     removeItem,
     isGridView = false,
     isSelected = false,
-    onSelect
+    onSelect,
+    onChestClick
 }) => {
 
     const handlePointerDown = (e: React.PointerEvent) => {
@@ -104,9 +100,21 @@ const ItemComponent: React.FC<ItemComponentProps> = React.memo(({
             </div>
             <div className="flex-1 line-clamp-1">{item.item.replace(/_/g, ' ')}</div>
             {chestIds && chestIds.length > 0 && (
-                <span className="absolute flex items-center text-neutral-400 top-1 right-2 text-xs">
-                    <SpriteIcon icon="barrel.png" size={16} className="mr-1" />
-                    {chestIds.map(id => `#${id}`).join(', ')}
+                <span className="absolute flex items-center text-neutral-400 top-1 right-2 text-xs gap-1">
+                    <SpriteIcon icon="barrel.png" size={16} />
+                    {chestIds.map((id, idx) => (
+                        <React.Fragment key={id}>
+                            {idx > 0 && <span>,</span>}
+                            <button
+                                className="hover:text-blue-400 hover:underline transition-colors cursor-pointer"
+                                onClick={(e) => { e.stopPropagation(); onChestClick?.(id); }}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                title={`Gå til kiste #${id}`}
+                            >
+                                #{id}
+                            </button>
+                        </React.Fragment>
+                    ))}
                 </span>
             )}
             {removeItem && (

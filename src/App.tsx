@@ -33,7 +33,7 @@ import { ToastContainer, toast, Zoom } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ConfirmationModal from './ConfirmationModal';
 
-import { DraggableSource } from './dnd/DraggableSource';
+import { DraggableSource } from './dnd/Draggable';
 import { Item, Chest, Tab, Profile } from './types';
 import { canAddItemToChest, addItemToChest, cloneItemWithNewUid } from './chestUtils';
 
@@ -120,7 +120,7 @@ const App: React.FC = () => {
 
   const [showAll, setShowAll] = useState<boolean>(() => JSON.parse(localStorage.getItem('showAll') || 'true'));
   const [isGridView, setIsGridView] = useState<boolean>(() => JSON.parse(localStorage.getItem('isGridView') || 'false'));
-  const [chestGridView, setChestGridView] = useState<boolean>(() => JSON.parse(localStorage.getItem('chestGridView') || 'false'));
+  const [chestGridView, setChestGridView] = useState<boolean>(() => JSON.parse(localStorage.getItem('chestGridView') || 'true'));
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [listHeight, setListHeight] = useState(window.innerHeight - 250);
@@ -507,6 +507,33 @@ const App: React.FC = () => {
     setSelectedItems(new Set());
   }, []);
 
+  // Navigate to a chest when clicking its ID in the sidebar
+  const handleChestClick = useCallback((chestId: number) => {
+    // Find which tab contains this chest
+    for (const tab of tabs) {
+      const chest = tab.chests.find(c => c.id === chestId);
+      if (chest) {
+        // Switch to the tab if needed
+        if (tab.id !== activeTabId) {
+          setActiveTabId(tab.id);
+        }
+        // Scroll to chest after a brief delay for tab switch
+        setTimeout(() => {
+          const chestElement = document.querySelector(`[data-chest-id="${chestId}"]`);
+          if (chestElement) {
+            chestElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Flash highlight effect (same as drop hover)
+            chestElement.classList.add('ring-2', 'ring-inset', 'ring-blue-500');
+            setTimeout(() => {
+              chestElement.classList.remove('ring-2', 'ring-inset', 'ring-blue-500');
+            }, 1500);
+          }
+        }, 100);
+        return;
+      }
+    }
+  }, [tabs, activeTabId]);
+
   const renderRow = ({ index, style }: { index: number; style: React.CSSProperties }) => {
     const item = itemsToShow[index];
     const chestIds = chestItemsMap.get(item.item);
@@ -522,6 +549,7 @@ const App: React.FC = () => {
             isGridView={false}
             isSelected={isSelected}
             onSelect={handleItemSelect}
+            onChestClick={handleChestClick}
           />
         </DraggableSource>
       </div>
@@ -598,6 +626,47 @@ const App: React.FC = () => {
     const chest = chests.find(c => c.id === id);
     if (chest) return chest;
     return null;
+  };
+
+  // Helper to gather selected items from both sidebar and chests
+  const gatherSelectedItems = (activeIdStr: string): {
+    sidebarItems: Item[];
+    chestItems: { item: Item; sourceChestId: number }[];
+  } => {
+    const hasMultipleSelected = selectedItems.has(activeIdStr) && selectedItems.size > 1;
+    const sidebarItems: Item[] = [];
+    const chestItems: { item: Item; sourceChestId: number }[] = [];
+
+    if (hasMultipleSelected) {
+      for (const uid of Array.from(selectedItems)) {
+        const sidebarItem = items.find(i => i.uid === uid);
+        if (sidebarItem) {
+          sidebarItems.push(sidebarItem);
+          continue;
+        }
+        for (const chest of chests) {
+          const chestItem = chest.items.find(i => i.uid === uid);
+          if (chestItem) {
+            chestItems.push({ item: chestItem, sourceChestId: chest.id });
+            break;
+          }
+        }
+      }
+    } else {
+      const sidebarItem = items.find(i => i.uid === activeIdStr);
+      if (sidebarItem) {
+        sidebarItems.push(sidebarItem);
+      } else {
+        for (const chest of chests) {
+          const chestItem = chest.items.find(i => i.uid === activeIdStr);
+          if (chestItem) {
+            chestItems.push({ item: chestItem, sourceChestId: chest.id });
+            break;
+          }
+        }
+      }
+    }
+    return { sidebarItems, chestItems };
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -744,27 +813,61 @@ const App: React.FC = () => {
       return singleItem ? [singleItem] : [];
     };
 
-    // Handle dropping on "Add Chest" drop zone
-    if (over.id === 'add-chest-drop-zone' && isSource) {
-      const itemsToAdd = getItemsToAdd();
-      if (itemsToAdd.length > 0) {
+    // Handle dropping on "Add Chest" drop zone (unified: sidebar + chest items)
+    if (over.id === 'add-chest-drop-zone') {
+      const { sidebarItems, chestItems } = gatherSelectedItems(activeIdStr);
+
+      if (sidebarItems.length > 0 || chestItems.length > 0) {
         setUndoStack(prev => [...prev, tabs]);
         setRedoStack([]);
         const newChestId = getNextChestId();
-        // First item determines icon and name
-        const firstItem = itemsToAdd[0];
+
+        // Use the dragged item for naming (not first selected)
+        const draggedSidebarItem = sidebarItems.find(i => i.uid === activeIdStr);
+        const draggedChestItem = chestItems.find(({ item }) => item.uid === activeIdStr);
+        const firstItem = draggedSidebarItem || draggedChestItem?.item ||
+          (sidebarItems.length > 0 ? sidebarItems[0] : chestItems[0].item);
         const itemName = firstItem.item.replace(/_/g, ' ');
         const itemIcon = firstItem.image.replace('.png', '');
-        // Clone all items with new UIDs
-        const newItems = itemsToAdd.map(item => cloneItemWithNewUid(item));
+
+        // Clone sidebar items, keep chest items as-is - deduplicate by variable
+        const seenVariables = new Set<string>();
+        const newChestItems: Item[] = [];
+
+        // Add sidebar items first (cloned), skip duplicates
+        for (const item of sidebarItems) {
+          if (!seenVariables.has(item.variable)) {
+            seenVariables.add(item.variable);
+            newChestItems.push(cloneItemWithNewUid(item));
+          }
+        }
+        // Add chest items, skip duplicates
+        for (const { item } of chestItems) {
+          if (!seenVariables.has(item.variable)) {
+            seenVariables.add(item.variable);
+            newChestItems.push(item);
+          }
+        }
+
         const newChest: Chest = {
           id: newChestId,
           label: itemName.charAt(0).toUpperCase() + itemName.slice(1),
-          items: newItems,
+          items: newChestItems,
           icon: itemIcon,
           checked: false
         };
-        updateChests([...(chests || []), newChest]);
+
+        // Remove moved chest items from source chests
+        const sourceUids = new Set(chestItems.map(({ item }) => item.uid));
+        const newChests = chests.map(c => {
+          const hasItemsToRemove = c.items.some(i => sourceUids.has(i.uid));
+          if (hasItemsToRemove) {
+            return { ...c, items: c.items.filter(i => !sourceUids.has(i.uid)) };
+          }
+          return c;
+        });
+
+        updateChests([...newChests, newChest]);
         clearSelection();
         return;
       }
@@ -803,93 +906,69 @@ const App: React.FC = () => {
       setUndoStack(prev => [...prev, tabs]);
       setRedoStack([]);
 
-      if (isSource) {
-        // Add items from sidebar (possibly multiple if multi-selected)
-        const itemsToAdd = getItemsToAdd();
-        if (itemsToAdd.length > 0) {
-          const newChests = chests.map(c => {
-            if (c.id === targetChestId) {
-              let updatedItems = [...c.items];
-              // Add each item that doesn't already exist in the chest
-              for (const item of itemsToAdd) {
-                const newItem = cloneItemWithNewUid(item);
-                if (canAddItemToChest({ ...c, items: updatedItems }, newItem)) {
-                  updatedItems.push(newItem);
-                }
-              }
-              return { ...c, items: updatedItems };
-            }
-            return c;
-          });
-          updateChests(newChests);
-          clearSelection();
-        }
-      } else {
-        // Moving existing item from one chest to another (possibly across tabs)
-        // Find source chest ACROSS ALL TABS
-        let sourceTabId: number | null = null;
-        let sourceChestId: number | null = null;
-        let sourceIndex: number | null = null;
-        let sourceItem: Item | null = null;
+      // Unified handling: gather all items to process (from sidebar AND chests)
+      const { sidebarItems, chestItems } = gatherSelectedItems(activeIdStr);
 
-        for (const tab of tabs) {
-          for (const chest of tab.chests) {
-            const idx = chest.items.findIndex(i => i.uid === activeIdStr);
-            if (idx !== -1) {
-              sourceTabId = tab.id;
-              sourceChestId = chest.id;
-              sourceIndex = idx;
-              sourceItem = chest.items[idx];
-              break;
-            }
-          }
-          if (sourceChestId !== null) break;
-        }
-
-        if (sourceChestId !== null && sourceIndex !== null && sourceItem) {
-          // Same tab, same chest - just reorder
-          if (sourceChestId === targetChestId && typeof targetIndex === 'number') {
-            const chest = chests.find(c => c.id === sourceChestId)!;
-            const newItems = arrayMove(chest.items, sourceIndex, targetIndex);
-            updateChests(chests.map(c => c.id === sourceChestId ? { ...c, items: newItems } : c));
-          } else {
-            // Cross-chest move (possibly cross-tab)
-            // Check if target chest can accept the item
-            const targetChest = chests.find(c => c.id === targetChestId);
-            if (targetChest && !canAddItemToChest(targetChest, sourceItem)) {
-              // Already has this item, don't add (but still remove from source)
-              // Only remove if same tab
-              if (sourceTabId === activeTabId) {
-                updateChests(chests.map(c =>
-                  c.id === sourceChestId
-                    ? { ...c, items: c.items.filter(i => i.uid !== activeIdStr) }
-                    : c
-                ));
-              }
-              return;
-            }
-
-            // Update tabs to handle cross-tab moves
-            const newTabs = tabs.map(tab => ({
-              ...tab,
-              chests: tab.chests.map(chest => {
-                // Remove from source chest
-                if (chest.id === sourceChestId) {
-                  return { ...chest, items: chest.items.filter(i => i.uid !== activeIdStr) };
-                }
-                // Add to target chest
-                if (chest.id === targetChestId) {
-                  const newItems = addItemToChest(chest, sourceItem!, targetIndex);
-                  if (newItems === null) return chest;
-                  return { ...chest, items: newItems };
-                }
-                return chest;
-              })
-            }));
-            setTabs(newTabs);
-          }
-        }
+      // Handle single chest item reorder (same chest)
+      if (chestItems.length === 1 && sidebarItems.length === 0 &&
+        chestItems[0].sourceChestId === targetChestId && typeof targetIndex === 'number') {
+        const sourceInfo = chestItems[0];
+        const chest = chests.find(c => c.id === sourceInfo.sourceChestId)!;
+        const sourceIndex = chest.items.findIndex(i => i.uid === sourceInfo.item.uid);
+        const newItems = arrayMove(chest.items, sourceIndex, targetIndex);
+        updateChests(chests.map(c => c.id === sourceInfo.sourceChestId ? { ...c, items: newItems } : c));
+        clearSelection();
+        return;
       }
+
+      // Process all items - clone sidebar items, move chest items
+      const targetChest = chests.find(c => c.id === targetChestId);
+      const sourceUidsToRemove = new Set(chestItems.map(({ item }) => item.uid));
+
+      const newTabs = tabs.map(tab => ({
+        ...tab,
+        chests: tab.chests.map(chest => {
+          // Remove moved items from source chests
+          const hasItemsToRemove = chest.items.some(i => sourceUidsToRemove.has(i.uid));
+          if (hasItemsToRemove && chest.id !== targetChestId) {
+            return { ...chest, items: chest.items.filter(i => !sourceUidsToRemove.has(i.uid)) };
+          }
+
+          // Add items to target chest
+          if (chest.id === targetChestId) {
+            let newItems = hasItemsToRemove
+              ? chest.items.filter(i => !sourceUidsToRemove.has(i.uid))
+              : [...chest.items];
+
+            // Add cloned sidebar items
+            for (const item of sidebarItems) {
+              const clonedItem = cloneItemWithNewUid(item);
+              if (canAddItemToChest({ ...chest, items: newItems }, clonedItem)) {
+                newItems.push(clonedItem);
+              }
+            }
+
+            // Add moved chest items (that can be added)
+            for (const { item } of chestItems) {
+              if (canAddItemToChest({ ...chest, items: newItems }, item)) {
+                if (typeof targetIndex === 'number') {
+                  newItems.splice(targetIndex, 0, item);
+                  targetIndex++;
+                } else {
+                  newItems.push(item);
+                }
+              }
+            }
+
+            return { ...chest, items: newItems };
+          }
+
+          return chest;
+        })
+      }));
+
+      setTabs(newTabs);
+      clearSelection();
     }
   };
 
@@ -1175,19 +1254,14 @@ const App: React.FC = () => {
                     removeItemFromChest={removeItemFromChest}
                     gridView={chestGridView}
                     isPlaceholder={incomingChest?.id === chest.id}
+                    selectedItems={selectedItems}
+                    onItemSelect={handleItemSelect}
                   />
                 ))}
               </SortableContext>
 
-              {/* Add Chest Drop Zone - also shows placeholder when dragging chest from another tab */}
-              <AddChestDropZone
-                onAddChest={addChest}
-                isDraggingChestFromOtherTab={
-                  activeId !== null &&
-                  typeof activeId === 'number' &&
-                  !chests.some(c => c.id === activeId)
-                }
-              />
+              {/* Add Chest Drop Zone */}
+              <AddChestDropZone onAddChest={addChest} />
             </div>
           </main>
         </div>

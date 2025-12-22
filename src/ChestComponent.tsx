@@ -9,10 +9,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import Portal from './Portal';
 import { pixelatedIcons } from './utils';
 import SpriteIcon from './SpriteIcon';
-import { DraggableItem } from './dnd/DraggableItem';
-
-interface Item { uid: string; item: string; variable: string; image: string; }
-interface Chest { id: number; label: string; items: Item[]; icon: string; checked: boolean; }
+import { DraggableItem } from './dnd/Draggable';
+import { Item, Chest } from './types';
 
 interface ChestComponentProps {
   chest: Chest;
@@ -23,6 +21,8 @@ interface ChestComponentProps {
   removeItemFromChest: (chestId: number, item: Item) => void;
   gridView: boolean;
   isPlaceholder?: boolean;
+  selectedItems?: Set<string>;
+  onItemSelect?: (uid: string, ctrlKey: boolean) => void;
 }
 
 // Drop zone component for items inside a chest (no visual highlight - outer chest handles that)
@@ -67,6 +67,8 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
   removeItemFromChest,
   gridView,
   isPlaceholder,
+  selectedItems,
+  onItemSelect,
 }) => {
   const iconButtonRef = useRef<HTMLDivElement>(null);
   const { over, active } = useDndContext();
@@ -188,6 +190,7 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
     <div
       ref={setNodeRef}
       style={style}
+      data-chest-id={chest.id}
       className={`relative flex flex-col border rounded-2xl bg-neutral-900/80 border-neutral-800 p-3 shadow-sm hover:shadow-md transition ${isOver ? 'ring-2 ring-inset ring-blue-500 border-transparent' : ''}`}
     >
       {/* Header */}
@@ -319,6 +322,8 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
                     lastIndex={chest.items.length - 1}
                     removeItem={() => removeItemFromChest(chest.id, item)}
                     isGridView={gridView}
+                    isSelected={selectedItems?.has(item.uid)}
+                    onSelect={onItemSelect}
                   />
                 </DraggableItem>
               ))}
@@ -333,6 +338,8 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
                     lastIndex={chest.items.length - 1}
                     removeItem={() => removeItemFromChest(chest.id, item)}
                     isGridView={gridView}
+                    isSelected={selectedItems?.has(item.uid)}
+                    onSelect={onItemSelect}
                   />
                 </DraggableItem>
               ))}
