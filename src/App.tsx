@@ -48,13 +48,13 @@ const AddChestDropZone: React.FC<{
   });
 
   const isDraggingItem = active && typeof active.id === 'string';
-  const showHighlight = isDraggingItem && isOver;
+  const showItemHighlight = isDraggingItem && isOver;
 
   return (
     <div
       ref={setNodeRef}
       onClick={onAddChest}
-      className={`flex items-center justify-center border-2 border-dashed rounded p-4 min-h-[200px] transition-colors cursor-pointer ${showHighlight
+      className={`flex items-center justify-center border-2 border-dashed rounded p-4 min-h-[200px] transition-colors cursor-pointer ${showItemHighlight
         ? 'border-blue-500 bg-blue-500/10'
         : 'border-neutral-700 hover:border-neutral-600 hover:bg-neutral-900'
         }`}
@@ -62,7 +62,9 @@ const AddChestDropZone: React.FC<{
       <div className="flex flex-col items-center gap-3 p-6 text-neutral-400">
         <FaPlus size={24} />
         <span className="text-lg font-medium">
-          {showHighlight ? 'Slip for at oprette kiste' : 'Tilføj kiste'}
+          {showItemHighlight
+            ? 'Slip for at oprette kiste'
+            : 'Tilføj kiste'}
         </span>
       </div>
     </div>
@@ -75,7 +77,7 @@ const DroppableTab: React.FC<{
   isActive: boolean;
   isEditing: boolean;
   onSwitchTab: (tabId: number) => void;
-  children: React.ReactNode;
+  children: (showHighlight: boolean) => React.ReactNode;
 }> = ({ tabId, isActive, isEditing, onSwitchTab, children }) => {
   const { active } = useDndContext();
   const { setNodeRef, isOver } = useDroppable({
@@ -100,17 +102,11 @@ const DroppableTab: React.FC<{
     };
   }, [isOver, active, isActive, isEditing, tabId, onSwitchTab]);
 
-  const showHighlight = isOver && active && !isEditing;
+  const showHighlight = isOver && !!active && !isEditing;
 
   return (
-    <div
-      ref={setNodeRef}
-      style={showHighlight ? {
-        boxShadow: '0 0 0 2px #3b82f6, inset 0 0 8px rgba(59, 130, 246, 0.3)',
-        borderRadius: '4px',
-      } : {}}
-    >
-      {children}
+    <div ref={setNodeRef}>
+      {children(showHighlight)}
     </div>
   );
 };
@@ -568,6 +564,27 @@ const App: React.FC = () => {
   const [activeId, setActiveId] = useState<string | number | null>(null);
   const [activeItem, setActiveItem] = useState<Item | Chest | null>(null);
 
+  // Detect if we're dragging a chest from another tab into this one
+  const incomingChest = useMemo(() => {
+    if (activeId === null || typeof activeId !== 'number') return null;
+    // Check if this chest is NOT in current tab
+    if (chests.some(c => c.id === activeId)) return null;
+    // Find it in other tabs
+    for (const tab of tabs) {
+      if (tab.id === activeTabId) continue;
+      const chest = tab.chests.find(c => c.id === activeId);
+      if (chest) return chest;
+    }
+    return null;
+  }, [activeId, chests, tabs, activeTabId]);
+
+  // Display chests includes placeholder for incoming cross-tab chest
+  const displayChests = useMemo(() => {
+    if (!incomingChest) return chests;
+    // Add the incoming chest at the end as a placeholder
+    return [...chests, incomingChest];
+  }, [chests, incomingChest]);
+
   const findItem = (id: string | number) => {
     // Check source items
     const sourceItem = items.find(i => i.uid === id);
@@ -637,14 +654,73 @@ const App: React.FC = () => {
 
     if (!over) return;
 
-    // Chest Sorting
-    if (typeof active.id === 'number' && typeof over.id === 'number') {
-      if (active.id !== over.id) {
-        const oldIndex = chests.findIndex(c => c.id === active.id);
-        const newIndex = chests.findIndex(c => c.id === over.id);
-        setUndoStack(prev => [...prev, tabs]);
-        setRedoStack([]);
-        updateChests(arrayMove(chests, oldIndex, newIndex));
+    // Chest Sorting/Moving
+    if (typeof active.id === 'number') {
+      const activeChestId = active.id;
+
+      // Find source tab and chest
+      let sourceTabId: number | null = null;
+      let sourceChest: Chest | null = null;
+      for (const tab of tabs) {
+        const chest = tab.chests.find(c => c.id === activeChestId);
+        if (chest) {
+          sourceTabId = tab.id;
+          sourceChest = chest;
+          break;
+        }
+      }
+
+      if (!sourceChest || sourceTabId === null) return;
+
+      // Determine target
+      let targetTabId = activeTabId; // Default to active tab
+      let targetChestId: number | null = null;
+
+      // Dropped on another chest
+      if (typeof over.id === 'number') {
+        targetChestId = over.id;
+      }
+      // Dropped on a tab drop zone - move to that tab's end
+      else if (typeof over.id === 'string' && over.id.startsWith('tab-drop-')) {
+        targetTabId = parseInt(over.id.replace('tab-drop-', ''), 10);
+      }
+
+      // Same tab, same position - nothing to do
+      if (sourceTabId === targetTabId && targetChestId === activeChestId) return;
+
+      setUndoStack(prev => [...prev, tabs]);
+      setRedoStack([]);
+
+      // Same tab - just reorder
+      if (sourceTabId === targetTabId && targetChestId !== null) {
+        const oldIndex = chests.findIndex(c => c.id === activeChestId);
+        const newIndex = chests.findIndex(c => c.id === targetChestId);
+        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+          updateChests(arrayMove(chests, oldIndex, newIndex));
+        }
+      } else {
+        // Cross-tab move
+        const newTabs = tabs.map(tab => {
+          // Remove from source tab
+          if (tab.id === sourceTabId) {
+            return { ...tab, chests: tab.chests.filter(c => c.id !== activeChestId) };
+          }
+          // Add to target tab
+          if (tab.id === targetTabId) {
+            if (targetChestId !== null) {
+              // Insert at specific position
+              const targetIndex = tab.chests.findIndex(c => c.id === targetChestId);
+              const newChests = [...tab.chests];
+              newChests.splice(targetIndex, 0, sourceChest!);
+              return { ...tab, chests: newChests };
+            } else {
+              // Add to end
+              return { ...tab, chests: [...tab.chests, sourceChest!] };
+            }
+          }
+          return tab;
+        });
+        setTabs(newTabs);
       }
       return;
     }
@@ -749,57 +825,68 @@ const App: React.FC = () => {
           clearSelection();
         }
       } else {
-        // Moving existing item
-        // Find source chest
+        // Moving existing item from one chest to another (possibly across tabs)
+        // Find source chest ACROSS ALL TABS
+        let sourceTabId: number | null = null;
         let sourceChestId: number | null = null;
         let sourceIndex: number | null = null;
-        for (const chest of chests) {
-          const idx = chest.items.findIndex(i => i.uid === activeIdStr);
-          if (idx !== -1) {
-            sourceChestId = chest.id;
-            sourceIndex = idx;
-            break;
+        let sourceItem: Item | null = null;
+
+        for (const tab of tabs) {
+          for (const chest of tab.chests) {
+            const idx = chest.items.findIndex(i => i.uid === activeIdStr);
+            if (idx !== -1) {
+              sourceTabId = tab.id;
+              sourceChestId = chest.id;
+              sourceIndex = idx;
+              sourceItem = chest.items[idx];
+              break;
+            }
           }
+          if (sourceChestId !== null) break;
         }
 
-        if (sourceChestId !== null && sourceIndex !== null) {
-          const newChests = chests.map(c => {
-            // Remove from source
-            if (c.id === sourceChestId) {
-              return { ...c, items: c.items.filter(i => i.uid !== activeIdStr) };
-            }
-            return c;
-          });
-
-          // Add to user target (could be same chest!)
-          // Wait, if same chest, arrayMove is better
+        if (sourceChestId !== null && sourceIndex !== null && sourceItem) {
+          // Same tab, same chest - just reorder
           if (sourceChestId === targetChestId && typeof targetIndex === 'number') {
-            // Sort
             const chest = chests.find(c => c.id === sourceChestId)!;
             const newItems = arrayMove(chest.items, sourceIndex, targetIndex);
             updateChests(chests.map(c => c.id === sourceChestId ? { ...c, items: newItems } : c));
           } else {
-            // Move to diff chest
-            const item = chests.find(c => c.id === sourceChestId)?.items[sourceIndex!];
-            if (item) {
-              // Use utility function for duplicate check
-              const targetChest = newChests.find(c => c.id === targetChestId);
-              if (targetChest && !canAddItemToChest(targetChest, item)) {
-                // Already has this item, just remove from source (don't add to target)
-                updateChests(newChests);
-                return;
+            // Cross-chest move (possibly cross-tab)
+            // Check if target chest can accept the item
+            const targetChest = chests.find(c => c.id === targetChestId);
+            if (targetChest && !canAddItemToChest(targetChest, sourceItem)) {
+              // Already has this item, don't add (but still remove from source)
+              // Only remove if same tab
+              if (sourceTabId === activeTabId) {
+                updateChests(chests.map(c =>
+                  c.id === sourceChestId
+                    ? { ...c, items: c.items.filter(i => i.uid !== activeIdStr) }
+                    : c
+                ));
               }
-
-              const finalChests = newChests.map(c => {
-                if (c.id === targetChestId) {
-                  const newItems = addItemToChest(c, item, targetIndex);
-                  if (newItems === null) return c;
-                  return { ...c, items: newItems };
-                }
-                return c;
-              });
-              updateChests(finalChests);
+              return;
             }
+
+            // Update tabs to handle cross-tab moves
+            const newTabs = tabs.map(tab => ({
+              ...tab,
+              chests: tab.chests.map(chest => {
+                // Remove from source chest
+                if (chest.id === sourceChestId) {
+                  return { ...chest, items: chest.items.filter(i => i.uid !== activeIdStr) };
+                }
+                // Add to target chest
+                if (chest.id === targetChestId) {
+                  const newItems = addItemToChest(chest, sourceItem!, targetIndex);
+                  if (newItems === null) return chest;
+                  return { ...chest, items: newItems };
+                }
+                return chest;
+              })
+            }));
+            setTabs(newTabs);
           }
         }
       }
@@ -964,42 +1051,46 @@ const App: React.FC = () => {
                         isEditing={isEditingTabName === tab.id}
                         onSwitchTab={setActiveTabId}
                       >
-                        <div className="flex items-center flex-shrink-0">
-                          {isEditingTabName === tab.id ? (
-                            <input
-                              type="text"
-                              spellCheck="false"
-                              value={tab.name}
-                              onChange={(e) => updateTabName(tab.id, e.target.value)}
-                              onBlur={() => setIsEditingTabName(null)}
-                              onKeyDown={(e) => { if (e.key === 'Enter') setIsEditingTabName(null); }}
-                              className="px-3 py-1 text-sm border rounded w-32 bg-neutral-800 border-neutral-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              autoFocus
-                            />
-                          ) : (
-                            <button
-                              id={`tab-btn-${tab.id}`}
-                              type="button"
-                              className={`flex-shrink-0 px-3 py-1 text-sm rounded border-b-2 transition-colors flex items-center gap-1 ${activeTabId === tab.id
-                                ? 'bg-neutral-800 border-blue-400 text-white'
-                                : 'bg-neutral-900 border-transparent text-neutral-300 hover:text-white hover:bg-neutral-800'
-                                }`}
-                              onClick={() => setActiveTabId(tab.id)}
-                              onDoubleClick={() => setIsEditingTabName(tab.id)}
-                            >
-                              <span className="truncate">{tab.name}{rangeText}</span>
-                              {tabs.length > 1 && (
-                                <span
-                                  className="text-red-500 hover:text-red-400 transition-colors flex-shrink-0"
-                                  onClick={(e) => { e.stopPropagation(); removeTab(tab.id); }}
-                                  title="Luk tab"
-                                >
-                                  <FaTimes size={10} />
-                                </span>
-                              )}
-                            </button>
-                          )}
-                        </div>
+                        {(showHighlight) => (
+                          <div className="flex items-center flex-shrink-0">
+                            {isEditingTabName === tab.id ? (
+                              <input
+                                type="text"
+                                spellCheck="false"
+                                value={tab.name}
+                                onChange={(e) => updateTabName(tab.id, e.target.value)}
+                                onBlur={() => setIsEditingTabName(null)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') setIsEditingTabName(null); }}
+                                className="px-3 py-1 text-sm rounded bg-neutral-800 border-2 border-blue-500 text-white focus:outline-none min-w-[100px]"
+                                autoFocus
+                              />
+                            ) : (
+                              <button
+                                id={`tab-btn-${tab.id}`}
+                                type="button"
+                                className={`flex-shrink-0 px-3 py-1 text-sm rounded border-b-2 transition-colors flex items-center gap-1 ${showHighlight
+                                  ? 'ring-2 ring-inset ring-blue-500'
+                                  : ''} ${activeTabId === tab.id
+                                    ? 'bg-neutral-800 border-blue-400 text-white'
+                                    : 'bg-neutral-900 border-transparent text-neutral-300 hover:text-white hover:bg-neutral-800'
+                                  }`}
+                                onClick={() => setActiveTabId(tab.id)}
+                                onDoubleClick={() => setIsEditingTabName(tab.id)}
+                              >
+                                <span className="truncate">{tab.name}{rangeText}</span>
+                                {tabs.length > 1 && (
+                                  <span
+                                    className="text-red-500 hover:text-red-400 transition-colors flex-shrink-0"
+                                    onClick={(e) => { e.stopPropagation(); removeTab(tab.id); }}
+                                    title="Luk tab"
+                                  >
+                                    <FaTimes size={10} />
+                                  </span>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </DroppableTab>
                     );
                   })}
@@ -1072,8 +1163,8 @@ const App: React.FC = () => {
 
             {/* Kister */}
             <div ref={gridContainerRef} className="grid-cols-auto-fit dark-theme overflow-x-hidden">
-              <SortableContext items={chests.map(c => c.id)} strategy={rectSortingStrategy}>
-                {chests.map((chest, index) => (
+              <SortableContext items={displayChests.map(c => c.id)} strategy={rectSortingStrategy}>
+                {displayChests.map((chest, index) => (
                   <ChestComponent
                     key={chest.id}
                     chest={chest}
@@ -1083,12 +1174,20 @@ const App: React.FC = () => {
                     updateChestIcon={updateChestIcon}
                     removeItemFromChest={removeItemFromChest}
                     gridView={chestGridView}
+                    isPlaceholder={incomingChest?.id === chest.id}
                   />
                 ))}
               </SortableContext>
 
-              {/* Add Chest Drop Zone */}
-              <AddChestDropZone onAddChest={addChest} />
+              {/* Add Chest Drop Zone - also shows placeholder when dragging chest from another tab */}
+              <AddChestDropZone
+                onAddChest={addChest}
+                isDraggingChestFromOtherTab={
+                  activeId !== null &&
+                  typeof activeId === 'number' &&
+                  !chests.some(c => c.id === activeId)
+                }
+              />
             </div>
           </main>
         </div>
@@ -1135,8 +1234,8 @@ const App: React.FC = () => {
       <DragOverlay modifiers={activeItem && !('items' in activeItem) ? [snapCenterToCursor] : []} dropAnimation={null}>
         {activeId ? (
           activeItem && 'items' in activeItem ? (
-            // Chest Overlay - use global position
-            <div className="opacity-90 min-w-[350px] text-white dark-theme" style={{ height: '400px' }}>
+            // Chest Overlay - use global position with fixed height matching grid
+            <div className="opacity-90 min-w-[350px] text-white dark-theme" style={{ height: '280px' }}>
               <ChestComponent
                 chest={activeItem as Chest}
                 index={globalChestOffset + chests.findIndex(c => c.id === (activeItem as Chest).id)}

@@ -22,6 +22,7 @@ interface ChestComponentProps {
   updateChestIcon: (id: number, icon: string) => void;
   removeItemFromChest: (chestId: number, item: Item) => void;
   gridView: boolean;
+  isPlaceholder?: boolean;
 }
 
 // Drop zone component for items inside a chest (no visual highlight - outer chest handles that)
@@ -43,8 +44,6 @@ const ItemsDropZone: React.FC<{
       ref={setNodeRef}
       className="mt-3 p-2 w-full flex-1 rounded-lg bg-neutral-900/50 border-2 border-dashed border-neutral-700"
       style={{
-        maxHeight: '200px',
-        minHeight: '60px',
         overflowY: 'auto',
         overflowX: 'hidden',
       }}
@@ -67,6 +66,7 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
   updateChestIcon,
   removeItemFromChest,
   gridView,
+  isPlaceholder,
 }) => {
   const iconButtonRef = useRef<HTMLDivElement>(null);
   const { over, active } = useDndContext();
@@ -83,7 +83,9 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0 : 1,
+    opacity: isDragging ? 0 : isPlaceholder ? 0.3 : 1,
+    pointerEvents: isPlaceholder ? 'none' as const : 'auto' as const,
+    height: '100%' as const,
   };
 
 
