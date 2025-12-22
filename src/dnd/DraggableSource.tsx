@@ -16,8 +16,9 @@ export const DraggableSource: React.FC<DraggableSourceProps> = ({ id, data, chil
         disabled,
     });
 
-    const style = {
+    const style: React.CSSProperties = {
         opacity: isDragging ? 0.5 : 1,
+        willChange: isDragging ? 'transform' : undefined,
     };
 
     return (

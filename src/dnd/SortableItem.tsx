@@ -13,6 +13,11 @@ interface SortableItemProps {
 
 export const SortableItem: React.FC<SortableItemProps> = ({ id, children, disabled, className, style }) => {
     const { active } = useDndContext();
+
+    // Disable sorting/dropping when dragging from sidebar (string IDs)
+    // This prevents hidden scrolled items from catching drops
+    const isDraggingFromSidebar = active && typeof active.id === 'string';
+
     const {
         attributes,
         listeners,
@@ -20,7 +25,10 @@ export const SortableItem: React.FC<SortableItemProps> = ({ id, children, disabl
         transform,
         transition,
         isDragging
-    } = useSortable({ id, disabled });
+    } = useSortable({
+        id,
+        disabled: !!disabled || !!isDraggingFromSidebar
+    });
 
     // Only hide if this specific sortable item is actually being dragged (not just matching ID from source)
     // The `isDragging` from useSortable is true only when THIS sortable node is the active drag source

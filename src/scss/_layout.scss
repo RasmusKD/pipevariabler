@@ -51,8 +51,9 @@
 }
 
 .chest-items {
-  max-height: 200px;
-  overflow-y: auto;
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 .chest-placeholder {
@@ -76,6 +77,10 @@
 
 .item-dragging {
   opacity: 1;
+  /* GPU acceleration for drag overlay */
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  pointer-events: none;
 }
 
 .Toastify__toast-body {

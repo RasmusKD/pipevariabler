@@ -22,7 +22,7 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
-import { FaCog, FaCaretDown, FaTimes, FaEdit, FaPlus, FaTh, FaBars } from 'react-icons/fa';
+import { FaCog, FaCaretDown, FaTimes, FaEdit, FaPlus, FaTh, FaBars, FaSearch } from 'react-icons/fa';
 import { FixedSizeList as List } from 'react-window';
 import './scss/main.scss';
 import itemsData from './data.json';
@@ -36,6 +36,7 @@ import ConfirmationModal from './ConfirmationModal';
 import { DraggableSource } from './dnd/DraggableSource';
 import { Item, Chest, Tab, Profile } from './types';
 import { canAddItemToChest, addItemToChest, cloneItemWithNewUid } from './chestUtils';
+
 
 // Drop zone for creating new chests - can drag item here to create chest with that item
 const AddChestDropZone: React.FC<{
@@ -64,6 +65,52 @@ const AddChestDropZone: React.FC<{
           {showHighlight ? 'Slip for at oprette kiste' : 'Tilføj kiste'}
         </span>
       </div>
+    </div>
+  );
+};
+
+// Droppable tab wrapper - switches to tab when dragging over it
+const DroppableTab: React.FC<{
+  tabId: number;
+  isActive: boolean;
+  isEditing: boolean;
+  onSwitchTab: (tabId: number) => void;
+  children: React.ReactNode;
+}> = ({ tabId, isActive, isEditing, onSwitchTab, children }) => {
+  const { active } = useDndContext();
+  const { setNodeRef, isOver } = useDroppable({
+    id: `tab-drop-${tabId}`,
+    data: { tabId },
+  });
+
+  const hoverTimeout = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Switch tab after hovering for 500ms
+  React.useEffect(() => {
+    if (isOver && active && !isActive && !isEditing) {
+      hoverTimeout.current = setTimeout(() => {
+        onSwitchTab(tabId);
+      }, 500);
+    }
+    return () => {
+      if (hoverTimeout.current) {
+        clearTimeout(hoverTimeout.current);
+        hoverTimeout.current = null;
+      }
+    };
+  }, [isOver, active, isActive, isEditing, tabId, onSwitchTab]);
+
+  const showHighlight = isOver && active && !isEditing;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={showHighlight ? {
+        boxShadow: '0 0 0 2px #3b82f6, inset 0 0 8px rgba(59, 130, 246, 0.3)',
+        borderRadius: '4px',
+      } : {}}
+    >
+      {children}
     </div>
   );
 };
@@ -101,17 +148,27 @@ const App: React.FC = () => {
   const activeTab = useMemo(() => tabs.find(tab => tab.id === activeTabId), [tabs, activeTabId]);
   const chests = useMemo(() => activeTab?.chests || [], [activeTab]);
 
+  // Compute global offset for current tab's chests (how many chests exist in previous tabs)
+  const globalChestOffset = useMemo(() => {
+    let offset = 0;
+    for (const tab of tabs) {
+      if (tab.id === activeTabId) break;
+      offset += tab.chests.length;
+    }
+    return offset;
+  }, [tabs, activeTabId]);
+
   const getNextChestId = useCallback(() => {
     let maxId = 0;
     tabs.forEach(tab => tab.chests.forEach(chest => { if (chest.id > maxId) maxId = chest.id; }));
     return maxId + 1;
   }, [tabs]);
 
-  /* Dnd Sensors - distance: 5 means you need to move 5px before drag starts, allowing clicks for selection */
+  /* Dnd Sensors - distance: 3 means you need to move 3px before drag starts, allowing clicks for selection */
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5,
+        distance: 3,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -332,13 +389,16 @@ const App: React.FC = () => {
     [items, searchTerm]
   );
 
+  // Map item names to their chest locations with global sequential IDs across all tabs
   const chestItemsMap = useMemo(() => {
     const map = new Map<string, number[]>();
+    let globalIndex = 0;
     tabs.forEach(tab => {
       tab.chests.forEach(chest => {
+        globalIndex++;
         chest.items.forEach(item => {
           if (!map.has(item.item)) map.set(item.item, []);
-          map.get(item.item)!.push(chest.id);
+          map.get(item.item)!.push(globalIndex);
         });
       });
     });
@@ -527,6 +587,26 @@ const App: React.FC = () => {
     setActiveId(event.active.id);
     setActiveItem(findItem(event.active.id) as any);
   };
+
+  // Enable scroll wheel during drag (and prevent browser zoom with Ctrl+wheel)
+  useEffect(() => {
+    if (!activeId) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Prevent browser zoom during drag
+      if (e.ctrlKey) {
+        e.preventDefault();
+      }
+      // Find the main scrollable container and scroll it
+      const mainContent = document.querySelector('.grid-cols-auto-fit');
+      if (mainContent) {
+        mainContent.scrollTop += e.deltaY;
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, [activeId]);
 
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
@@ -733,29 +813,38 @@ const App: React.FC = () => {
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
-      autoScroll={false}
+      autoScroll={{
+        enabled: true,
+        acceleration: 25, // Faster scroll speed
+        threshold: { x: 0.1, y: 0.1 }, // Wider activation zone
+      }}
     >
       <div className="flex flex-col min-h-screen overflow-x-hidden bg-neutral-950 text-white">
         <div className="flex flex-1 flex-col md:flex-row h-full min-h-0">
           {/* SIDEBAR */}
           <aside className="p-4 border-b md:border-r flex-shrink-0 gap-4 flex flex-col bg-neutral-900 border-neutral-800 dark-theme">
             <div className="logo-dark" />
+
+            {/* Search with icon */}
             <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">
+                <FaSearch size={14} />
+              </div>
               <input
                 type="text"
                 spellCheck="false"
                 value={searchTerm}
                 placeholder="Søg..."
-                className="border p-2 pr-10 w-full bg-neutral-800 border-neutral-700 text-white rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="border pl-9 pr-10 py-2 w-full bg-neutral-800 border-neutral-700 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 onChange={handleSearch}
               />
               {searchTerm && (
                 <button
-                  className="absolute right-0 top-0 mt-3 mr-3 text-neutral-400 hover:text-neutral-200 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-200 transition-colors"
                   onClick={handleClearSearch}
                   aria-label="Ryd søgning"
                 >
-                  <FaTimes />
+                  <FaTimes size={14} />
                 </button>
               )}
             </div>
@@ -763,7 +852,7 @@ const App: React.FC = () => {
             {/* Item-liste header + toggles */}
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Item liste</h2>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowAll(!showAll)}
                   className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm transition-colors ${showAll
@@ -775,7 +864,6 @@ const App: React.FC = () => {
                   <span>Vis alle</span>
                 </button>
 
-                {/* KVADRATISK item-liste grid toggle */}
                 <button
                   onClick={() => setIsGridView(!isGridView)}
                   className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 transition-colors text-sm text-neutral-300 hover:text-white"
@@ -857,44 +945,64 @@ const App: React.FC = () => {
                   className="flex items-center gap-2 overflow-x-auto overflow-y-hidden dark-theme"
                   style={{ maxWidth: '100%', width: '100%' }}
                 >
-                  {tabs.map((tab) => (
-                    <div key={tab.id} className="flex items-center flex-shrink-0">
-                      {isEditingTabName === tab.id ? (
-                        <input
-                          type="text"
-                          spellCheck="false"
-                          value={tab.name}
-                          onChange={(e) => updateTabName(tab.id, e.target.value)}
-                          onBlur={() => setIsEditingTabName(null)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') setIsEditingTabName(null); }}
-                          className="px-3 py-1 text-sm border rounded w-32 bg-neutral-800 border-neutral-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          autoFocus
-                        />
-                      ) : (
-                        <button
-                          id={`tab-btn-${tab.id}`}
-                          type="button"
-                          className={`flex-shrink-0 px-3 py-1 text-sm rounded border-b-2 transition-colors flex items-center gap-1 max-w-40 ${activeTabId === tab.id
-                            ? 'bg-neutral-800 border-blue-400 text-white'
-                            : 'bg-neutral-900 border-transparent text-neutral-300 hover:text-white hover:bg-neutral-800'
-                            }`}
-                          onClick={() => setActiveTabId(tab.id)}
-                          onDoubleClick={() => setIsEditingTabName(tab.id)}
-                        >
-                          <span className="truncate block max-w-28">{tab.name}</span>
-                          {tabs.length > 1 && (
-                            <span
-                              className="text-red-500 hover:text-red-400 transition-colors flex-shrink-0"
-                              onClick={(e) => { e.stopPropagation(); removeTab(tab.id); }}
-                              title="Luk tab"
+                  {tabs.map((tab, tabIndex) => {
+                    // Compute chest ID range for this tab
+                    let startId = 1;
+                    for (let i = 0; i < tabIndex; i++) {
+                      startId += tabs[i].chests.length;
+                    }
+                    const endId = startId + tab.chests.length - 1;
+                    const rangeText = tab.chests.length > 0
+                      ? startId === endId ? ` (${startId})` : ` (${startId}-${endId})`
+                      : '';
+
+                    return (
+                      <DroppableTab
+                        key={tab.id}
+                        tabId={tab.id}
+                        isActive={activeTabId === tab.id}
+                        isEditing={isEditingTabName === tab.id}
+                        onSwitchTab={setActiveTabId}
+                      >
+                        <div className="flex items-center flex-shrink-0">
+                          {isEditingTabName === tab.id ? (
+                            <input
+                              type="text"
+                              spellCheck="false"
+                              value={tab.name}
+                              onChange={(e) => updateTabName(tab.id, e.target.value)}
+                              onBlur={() => setIsEditingTabName(null)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') setIsEditingTabName(null); }}
+                              className="px-3 py-1 text-sm border rounded w-32 bg-neutral-800 border-neutral-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              autoFocus
+                            />
+                          ) : (
+                            <button
+                              id={`tab-btn-${tab.id}`}
+                              type="button"
+                              className={`flex-shrink-0 px-3 py-1 text-sm rounded border-b-2 transition-colors flex items-center gap-1 ${activeTabId === tab.id
+                                ? 'bg-neutral-800 border-blue-400 text-white'
+                                : 'bg-neutral-900 border-transparent text-neutral-300 hover:text-white hover:bg-neutral-800'
+                                }`}
+                              onClick={() => setActiveTabId(tab.id)}
+                              onDoubleClick={() => setIsEditingTabName(tab.id)}
                             >
-                              <FaTimes size={10} />
-                            </span>
+                              <span className="truncate">{tab.name}{rangeText}</span>
+                              {tabs.length > 1 && (
+                                <span
+                                  className="text-red-500 hover:text-red-400 transition-colors flex-shrink-0"
+                                  onClick={(e) => { e.stopPropagation(); removeTab(tab.id); }}
+                                  title="Luk tab"
+                                >
+                                  <FaTimes size={10} />
+                                </span>
+                              )}
+                            </button>
                           )}
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                        </div>
+                      </DroppableTab>
+                    );
+                  })}
                   <button
                     type="button"
                     className="flex-shrink-0 px-2 py-1 text-sm rounded border-2 border-dashed border-neutral-700 text-neutral-400 hover:border-neutral-600 hover:text-white transition-colors"
@@ -969,7 +1077,7 @@ const App: React.FC = () => {
                   <ChestComponent
                     key={chest.id}
                     chest={chest}
-                    index={index}
+                    index={globalChestOffset + index}
                     removeChest={confirmDeleteChest}
                     updateChestLabel={updateChestLabel}
                     updateChestIcon={updateChestIcon}
@@ -1023,14 +1131,15 @@ const App: React.FC = () => {
           />
         )}
       </div>
-      <DragOverlay modifiers={[snapCenterToCursor]} dropAnimation={null}>
+      {/* Only center items on cursor, not chests */}
+      <DragOverlay modifiers={activeItem && !('items' in activeItem) ? [snapCenterToCursor] : []} dropAnimation={null}>
         {activeId ? (
           activeItem && 'items' in activeItem ? (
-            // Chest Overlay
+            // Chest Overlay - use global position
             <div className="opacity-90 min-w-[350px] text-white dark-theme" style={{ height: '400px' }}>
               <ChestComponent
                 chest={activeItem as Chest}
-                index={0}
+                index={globalChestOffset + chests.findIndex(c => c.id === (activeItem as Chest).id)}
                 removeChest={() => { }}
                 updateChestLabel={() => { }}
                 updateChestIcon={() => { }}

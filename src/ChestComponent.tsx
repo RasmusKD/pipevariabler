@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import React, { useState, useRef, useEffect, useMemo, memo } from 'react';
+import { useSortable } from '@dnd-kit/sortable';
 import { useDndContext, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import ItemComponent from './ItemComponent';
@@ -9,7 +9,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import Portal from './Portal';
 import { pixelatedIcons } from './utils';
 import SpriteIcon from './SpriteIcon';
-import { SortableItem } from './dnd/SortableItem';
+import { DraggableItem } from './dnd/DraggableItem';
 
 interface Item { uid: string; item: string; variable: string; image: string; }
 interface Chest { id: number; label: string; items: Item[]; icon: string; checked: boolean; }
@@ -28,46 +28,38 @@ interface ChestComponentProps {
 const ItemsDropZone: React.FC<{
   chestId: number;
   children: React.ReactNode;
-}> = ({ chestId, children }) => {
+}> = memo(({ chestId, children }) => {
   const { active } = useDndContext();
   const { setNodeRef } = useDroppable({
     id: `chest-drop-${chestId}`,
     data: { chestId },
   });
 
-  // Check if dragging from sidebar (string IDs)
-  const isDraggingFromSidebar = active && typeof active.id === 'string';
-
-  // Prevent scroll during drag
-  const handleScroll = (e: React.UIEvent) => {
-    if (isDraggingFromSidebar) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  };
+  // Disable hover effects on items when dragging
+  const isDragging = !!active;
 
   return (
     <div
       ref={setNodeRef}
-      className="mt-3 p-2 rounded-lg flex-1 flex flex-col bg-neutral-900/50 border-2 border-dashed border-neutral-700"
+      className="mt-3 p-2 w-full flex-1 rounded-lg bg-neutral-900/50 border-2 border-dashed border-neutral-700"
       style={{
-        overflowY: isDraggingFromSidebar ? 'hidden' : 'auto',
-        pointerEvents: 'auto'
+        maxHeight: '200px',
+        minHeight: '60px',
+        overflowY: 'auto',
+        overflowX: 'hidden',
       }}
-      onScroll={handleScroll}
     >
-      {/* Disable pointer events on items during sidebar drag so drop zone gets events */}
-      <div className="flex-1 flex flex-col" style={{ pointerEvents: isDraggingFromSidebar ? 'none' : 'auto' }}>
+      <div style={{ pointerEvents: isDragging ? 'none' : 'auto', height: '100%' }}>
         {children}
       </div>
     </div>
   );
-};
+});
 
 const CMD_PREFIX = '/signedit 3 ' as const;
 const CMD_LIMIT = 256;
 
-const ChestComponent: React.FC<ChestComponentProps> = ({
+const ChestComponent: React.FC<ChestComponentProps> = memo(({
   chest,
   index,
   removeChest,
@@ -194,7 +186,7 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative flex flex-col h-full border rounded-2xl bg-neutral-900/80 border-neutral-800 p-3 shadow-sm hover:shadow-md transition ${isOver ? 'ring-2 ring-inset ring-blue-500 border-transparent' : ''}`}
+      className={`relative flex flex-col border rounded-2xl bg-neutral-900/80 border-neutral-800 p-3 shadow-sm hover:shadow-md transition ${isOver ? 'ring-2 ring-inset ring-blue-500 border-transparent' : ''}`}
     >
       {/* Header */}
       <div
@@ -295,8 +287,8 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
           </div>
         )}
 
-        {/* ID tag */}
-        <div className="absolute top-1 right-2 text-[11px] text-neutral-400 select-none">#{chest.id}</div>
+        {/* Position number */}
+        <div className="absolute top-1 right-2 text-[11px] text-neutral-400 select-none">#{index + 1}</div>
       </div>
 
       {/* Progress Bar */}
@@ -314,46 +306,44 @@ const ChestComponent: React.FC<ChestComponentProps> = ({
 
       {/* Items Drop Zone */}
       <ItemsDropZone chestId={chest.id}>
-        <SortableContext items={chest.items.map(i => i.uid || i.item)} strategy={rectSortingStrategy}>
-          {chest.items.length > 0 ? (
-            gridView ? (
-              <div className="grid grid-cols-6 gap-2">
-                {chest.items.map((item, itemIndex) => (
-                  <SortableItem key={item.uid || `${item.item}-${itemIndex}`} id={item.uid || item.item}>
-                    <ItemComponent
-                      item={item}
-                      index={itemIndex}
-                      lastIndex={chest.items.length - 1}
-                      removeItem={() => removeItemFromChest(chest.id, item)}
-                      isGridView={gridView}
-                    />
-                  </SortableItem>
-                ))}
-              </div>
-            ) : (
-              <ul className="chest-items dark-theme">
-                {chest.items.map((item, i) => (
-                  <SortableItem key={item.uid || `${item.item}-${i}`} id={item.uid || item.item} className="mb-1">
-                    <ItemComponent
-                      item={item}
-                      index={i}
-                      lastIndex={chest.items.length - 1}
-                      removeItem={() => removeItemFromChest(chest.id, item)}
-                      isGridView={gridView}
-                    />
-                  </SortableItem>
-                ))}
-              </ul>
-            )
-          ) : (
-            <div className="h-full flex items-center justify-center text-neutral-500 text-base font-medium">
-              Træk ting her
+        {chest.items.length > 0 ? (
+          gridView ? (
+            <div className="grid grid-cols-6 gap-2">
+              {chest.items.map((item, itemIndex) => (
+                <DraggableItem key={item.uid || `${item.item}-${itemIndex}`} id={item.uid || item.item}>
+                  <ItemComponent
+                    item={item}
+                    index={itemIndex}
+                    lastIndex={chest.items.length - 1}
+                    removeItem={() => removeItemFromChest(chest.id, item)}
+                    isGridView={gridView}
+                  />
+                </DraggableItem>
+              ))}
             </div>
-          )}
-        </SortableContext>
+          ) : (
+            <ul className="chest-items dark-theme">
+              {chest.items.map((item, i) => (
+                <DraggableItem key={item.uid || `${item.item}-${i}`} id={item.uid || item.item} className="mb-1">
+                  <ItemComponent
+                    item={item}
+                    index={i}
+                    lastIndex={chest.items.length - 1}
+                    removeItem={() => removeItemFromChest(chest.id, item)}
+                    isGridView={gridView}
+                  />
+                </DraggableItem>
+              ))}
+            </ul>
+          )
+        ) : (
+          <div className="h-full flex items-center justify-center text-neutral-500 text-base font-medium">
+            Træk ting her
+          </div>
+        )}
       </ItemsDropZone>
     </div>
   );
-};
+});
 
 export default ChestComponent;

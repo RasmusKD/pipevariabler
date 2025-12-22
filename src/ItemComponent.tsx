@@ -21,7 +21,7 @@ interface ItemComponentProps {
     onSelect?: (uid: string, ctrlKey: boolean) => void;
 }
 
-const ItemComponent: React.FC<ItemComponentProps> = ({
+const ItemComponent: React.FC<ItemComponentProps> = React.memo(({
     item,
     index,
     lastIndex,
@@ -32,10 +32,9 @@ const ItemComponent: React.FC<ItemComponentProps> = ({
     onSelect
 }) => {
 
-    const handleClick = (e: React.MouseEvent) => {
+    const handlePointerDown = (e: React.PointerEvent) => {
         if (onSelect) {
-            e.preventDefault();
-            e.stopPropagation();
+            // Only handle selection, don't prevent default so drag can still work
             onSelect(item.uid, e.ctrlKey || e.metaKey);
         }
     };
@@ -53,14 +52,14 @@ const ItemComponent: React.FC<ItemComponentProps> = ({
 
     // GRID VIEW
     if (isGridView) {
-        const tooltipText = `${item.item.replace(/_/g, ' ')}${chestIds && chestIds.length > 0 ? ` (Chest IDs: ${chestIds.map(id => `#${id}`).join(', ')})` : ''}`;
+        const tooltipText = `${item.item.replace(/_/g, ' ')}${chestIds && chestIds.length > 0 ? ` (Chests: ${chestIds.map(id => `#${id}`).join(', ')})` : ''}`;
         const displayCount = chestIds && chestIds.length > 9 ? '9+' : (chestIds ? String(chestIds.length) : '0');
 
         return (
             <div
                 className={`group relative cursor-pointer p-1 rounded border bg-neutral-800 border-neutral-700 hover:bg-neutral-700 transition-colors h-full ${selectedClass}`}
                 title={tooltipText}
-                onClick={handleClick}
+                onPointerDown={handlePointerDown}
             >
                 {removeItem && (
                     <button
@@ -98,7 +97,7 @@ const ItemComponent: React.FC<ItemComponentProps> = ({
     return (
         <li
             className={`relative w-full cursor-pointer p-2 flex items-center gap-4 hover:bg-neutral-700 border-neutral-700 ${index !== lastIndex ? 'border-b' : ''} ${selectedClass}`}
-            onClick={handleClick}
+            onPointerDown={handlePointerDown}
         >
             <div className="item-icons flex items-center justify-center">
                 {renderIcon(32)}
@@ -107,7 +106,7 @@ const ItemComponent: React.FC<ItemComponentProps> = ({
             {chestIds && chestIds.length > 0 && (
                 <span className="absolute flex items-center text-neutral-400 top-1 right-2 text-xs">
                     <SpriteIcon icon="barrel.png" size={16} className="mr-1" />
-                    {chestIds.map((id) => `#${id}`).join(', ')}
+                    {chestIds.map(id => `#${id}`).join(', ')}
                 </span>
             )}
             {removeItem && (
@@ -123,7 +122,7 @@ const ItemComponent: React.FC<ItemComponentProps> = ({
             )}
         </li>
     );
-};
+});
 
 export default ItemComponent;
 
