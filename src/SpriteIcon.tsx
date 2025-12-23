@@ -15,7 +15,7 @@ interface SpriteIconProps {
 }
 
 // Get sprite sheet URL from process.env
-const SPRITE_URL = `${process.env.PUBLIC_URL}/assets/images/spritesheet.png`;
+const SPRITE_URL = `${process.env.PUBLIC_URL}/assets/images/spritesheet.webp`;
 
 // Type for sprite coordinates
 interface SpriteCoords {

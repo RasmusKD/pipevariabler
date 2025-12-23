@@ -16,8 +16,7 @@ import {
     findItem,
     gatherSelectedItems,
     canAddItemToChest,
-    cloneItemWithNewUid,
-    addItemToChest
+    cloneItemWithNewUid
 } from '../chestUtils';
 
 interface UseDragControllerProps {
@@ -84,7 +83,6 @@ export const useDragController = ({
 
         if (!overId || active.id === overId) return;
 
-        const activeIdStr = String(active.id);
         const item = findItem(active.id, items, chests);
         if (!item || !('uid' in item)) return; // Don't drag chests into chests
 

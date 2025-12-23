@@ -4,7 +4,7 @@ import { useDndContext, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import ItemComponent from './ItemComponent';
 import { FaEdit, FaTimes, FaRegCopy, FaCheckSquare, FaRegSquare, FaCheck } from 'react-icons/fa';
-import { CMD_PREFIX, CMD_LIMIT, buildCommand } from './chestUtils';
+import { CMD_LIMIT, buildCommand } from './chestUtils';
 import ChestIconPicker from './components/ChestIconPicker';
 import { DraggableItem } from './dnd/Draggable';
 import { Item, Chest } from './types';
