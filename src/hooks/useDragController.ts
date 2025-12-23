@@ -54,6 +54,10 @@ export const useDragController = ({
     const [activeId, setActiveId] = useState<string | number | null>(null);
     const [activeItem, setActiveItem] = useState<Item | Chest | null>(null);
 
+    // Track if we're dragging an item (string id) vs chest (number id)
+    // This ref persists through the render cycle so the DragOverlay animation can check it
+    const dragSourceIsItemRef = useRef<boolean>(false);
+
     const chests = activeTab?.chests || [];
 
     const sensors = useSensors(
@@ -70,6 +74,8 @@ export const useDragController = ({
     const handleDragStart = useCallback((event: DragStartEvent) => {
         setActiveId(event.active.id);
         setActiveItem(findItem(event.active.id, items, chests) as any);
+        // Track if this is an item drag (string id) for animation purposes
+        dragSourceIsItemRef.current = typeof event.active.id === 'string';
     }, [items, chests]);
 
     const handleDragOver = useCallback((event: DragOverEvent) => {
@@ -127,7 +133,7 @@ export const useDragController = ({
                     updateChests(arrayMove(chests, oldIndex, newIndex));
                 }
             }
-            // If dragging to different tab (or explicitly to tab header of same tab to move to end?)
+            // If dragging to different tab (or currently active tab but chest is from another one)
             else if (sourceTab.id !== targetTabId) {
                 setUndoStack(prev => [...prev, tabs]);
                 setRedoStack([]);
@@ -139,7 +145,18 @@ export const useDragController = ({
                         return { ...t, chests: t.chests.filter(c => c.id !== activeChestId) };
                     }
                     if (t.id === targetTabId) {
-                        return { ...t, chests: [...t.chests, chestToMove] };
+                        // Calculate target index if dropping on a specific chest
+                        let insertIndex = t.chests.length;
+                        if (over && typeof over.id === 'number') {
+                            const overChestIndex = t.chests.findIndex(c => c.id === over.id);
+                            if (overChestIndex !== -1) {
+                                insertIndex = overChestIndex;
+                            }
+                        }
+
+                        const newChests = [...t.chests];
+                        newChests.splice(insertIndex, 0, chestToMove);
+                        return { ...t, chests: newChests };
                     }
                     return t;
                 });
@@ -287,13 +304,16 @@ export const useDragController = ({
                     ? cloneItemWithNewUid(uItem.item)
                     : uItem.item;
 
+                // If it's a move (from chest), we want to remove it from source REGARDLESS of whether we add it to target.
+                // (Unless target is same as source, which is handled in reorder block above or handled by 'tempTargetItems' filtering).
+
+                if (uItem.type === 'chest') {
+                    sourceUidsToRemove.add(uItem.item.uid);
+                }
+
                 if (canAddItemToChest({ ...targetChest, items: tempTargetItems }, itemToAdd)) {
                     validItemsToAdd.push(itemToAdd);
                     tempTargetItems.push(itemToAdd);
-
-                    if (uItem.type === 'chest') {
-                        sourceUidsToRemove.add(uItem.item.uid);
-                    }
                 }
             }
 
@@ -322,30 +342,50 @@ export const useDragController = ({
         setActiveItem(null);
     }, [items, chests, tabs, activeTabId, updateChests, selectedItems, getNextChestId, setTabs, setSelectedItems, setUndoStack, setRedoStack]);
 
-    const handleItemSelect = useCallback((uid: string, ctrlKey: boolean) => {
+    // We need to handle selection. 
+    // If we click a selected item (without Ctrl), we DON'T want to clear others immediately on PointerDown, 
+    // because we might be starting a drag of the whole group.
+    // However, if it's just a click (MouseUp), we DO want to clear others.
+    // But dnd-kit uses PointerDown.
+    // Solution: If item is selected and no modifiers, do NOTHING on PointerDown (let selection stick).
+    // The onClick handler in the component (or a separate logic) would be needed for the "Clear others on simple click" behavior.
+    // OR: We can clear others in `handleDragStart` if we realize we dragged an item that wasn't in the selection? No.
+
+    // Revised Strategy:
+    // 1. On PointerDown:
+    //    - If Ctrl/Meta: Toggle.
+    //    - If Not Selected: Select ONLY this (clear others).
+    //    - If Already Selected: Do NOTHING (keep group for potential drag).
+    // 2. On Click (which fires if NO drag occurred):
+    //    - If Not Ctrl/Meta AND it was already selected: NOW clear others.
+
+    // Since `handleItemSelect` is called on PointerDown currently... we need to adapt it 
+    // OR invoke it differently from the component.
+    // For now, let's update it to support a `isClick` flag or similar? 
+    // Or just change the logic here and assume component handles the rest.
+
+    const handleItemSelect = useCallback((uid: string, ctrlKey: boolean, isClick: boolean = false) => {
         setSelectedItems(prev => {
             const newSet = new Set(prev);
             if (ctrlKey) {
-                if (newSet.has(uid)) {
-                    newSet.delete(uid);
-                } else {
-                    newSet.add(uid);
-                }
+                if (isClick) return newSet; // modifying on click with ctrl is redundant/handled on down? 
+                // Actually typical OS: Ctrl click toggles on Down.
+                if (newSet.has(uid)) newSet.delete(uid);
+                else newSet.add(uid);
             } else {
-                // If clicking an item that is NOT selected, select ONLY that item
-                // If clicking an item chat IS selected, keep the selection (for drag)
+                // No modifier
                 if (!newSet.has(uid)) {
+                    // Not selected? Select it immediately (and clear others)
                     newSet.clear();
                     newSet.add(uid);
                 } else {
-                    // If just clicking (mouse up without drag), we might want to select only this?
-                    // But this is onPointerDown usually? No, onClick probably.
-                    // App.tsx uses onPointerDown logic in ItemComponent usually?
-                    // App passed `onItemSelect` to ChestComponent.
-
-                    // Logic: Simple selection
-                    newSet.clear();
-                    newSet.add(uid);
+                    // Already selected.
+                    if (isClick) {
+                        // If this is a dedicated CLICK (mouse up, no drag), then we clear others
+                        newSet.clear();
+                        newSet.add(uid);
+                    }
+                    // On PointerDown, we do NOTHING to preserve the group for dragging
                 }
             }
             return newSet;
@@ -370,6 +410,7 @@ export const useDragController = ({
         handleDragOver,
         handleDragEnd,
         handleItemSelect,
-        dropAnimation
+        dropAnimation,
+        dragSourceIsItemRef
     };
 };

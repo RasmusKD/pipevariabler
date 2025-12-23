@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { FaSearch, FaTimes } from 'react-icons/fa';
 import Portal from '../Portal';
 import SpriteIcon from '../SpriteIcon';
-import { pixelatedIcons } from '../utils';
+import data from '../data.json';
 
 interface ChestIconPickerProps {
     chestId: number;
@@ -25,25 +26,6 @@ const ChestIconPicker: React.FC<ChestIconPickerProps> = ({
 
     // Close dropdown when clicking outside
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownOpen && iconButtonRef.current && !iconButtonRef.current.contains(event.target as Node)) {
-                // Also check if click is inside the portal content (which is not in ref)
-                // Ideally we'd have a ref on the portal content too.
-                // For simplicity, we rely on the implementation below or add a ref to the portal wrapper.
-            }
-        };
-
-        // Actually, simpler: we put a backdrop or handle clicks on window.
-        // The previous implementation used onClick events on the toggle. 
-        // And likely a backdrop in Portal or just relying on Portal's isolation? 
-        // Let's stick to the previous implementation logic:
-        // It had "Toggle" and "Portal".
-
-        // Existing logic relied on `toggleDropdown` handling click.
-        // And maybe clicking elsewhere didn't close it? Or maybe it did? 
-        // The previous code had "setDropdownOpen(false)" in toggleDropdown.
-
-        // Let's implement click outside listener to be safe.
         if (dropdownOpen) {
             const close = () => setDropdownOpen(false);
             window.addEventListener('click', close);
@@ -72,7 +54,7 @@ const ChestIconPicker: React.FC<ChestIconPickerProps> = ({
         }
     };
 
-    const IconChoice = ({ icon }: { icon: string }) => (
+    const IconChoice = ({ icon, name }: { icon: string, name: string }) => (
         <div
             className="cursor-pointer hover:bg-neutral-800 rounded flex justify-center items-center"
             style={{ width: 40, height: 40, flexShrink: 0 }}
@@ -81,19 +63,20 @@ const ChestIconPicker: React.FC<ChestIconPickerProps> = ({
                 updateChestIcon(chestId, icon.replace('.png', ''));
                 setDropdownOpen(false);
             }}
+            title={name}
         >
-            <SpriteIcon icon={icon} size={32} className={pixelatedIcons.includes(icon.replace('.png', '')) ? 'pixelated-icon' : ''} />
+            <SpriteIcon icon={icon} size={32} />
         </div>
     );
 
-    const filteredIcons = pixelatedIcons.filter(icon =>
-        icon.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredIcons = data.items.filter(item =>
+        item.item.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
         <div className="relative" ref={iconButtonRef}>
             <div onClick={toggleDropdown} style={{ cursor: 'pointer' }} onPointerDown={e => e.stopPropagation()}>
-                <SpriteIcon icon={`${currentIcon}.png`} size={32} className={pixelatedIcons.includes(currentIcon) ? 'pixelated-icon' : ''} />
+                <SpriteIcon icon={`${currentIcon}.png`} size={32} />
             </div>
 
             {dropdownOpen && (
@@ -111,18 +94,32 @@ const ChestIconPicker: React.FC<ChestIconPickerProps> = ({
                         }}
                         onClick={(e) => e.stopPropagation()} // Prevent close
                     >
-                        <input
-                            type="text"
-                            placeholder="Søg efter ikon..."
-                            className="w-full bg-neutral-800 border border-neutral-700 rounded px-3 py-2 mb-3 text-sm text-white focus:outline-none focus:border-blue-500"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            autoFocus
-                        />
+                        <div className="relative mb-3">
+                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">
+                                <FaSearch size={14} />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Søg..."
+                                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg pl-9 pr-10 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                autoFocus
+                            />
+                            {searchTerm && (
+                                <button
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-200 transition-colors"
+                                    onClick={() => setSearchTerm('')}
+                                    aria-label="Ryd søgning"
+                                >
+                                    <FaTimes size={14} />
+                                </button>
+                            )}
+                        </div>
                         <div className="flex-1 overflow-y-auto grid grid-cols-6 gap-2 pr-1 custom-scrollbar">
                             {filteredIcons
-                                .map((icon) => (
-                                    <IconChoice key={icon} icon={`${icon}.png`} />
+                                .map((item) => (
+                                    <IconChoice key={item.item} icon={item.image} name={item.item} />
                                 ))}
                         </div>
                     </div>

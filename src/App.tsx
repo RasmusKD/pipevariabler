@@ -2,9 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { DndContext, DragOverlay, pointerWithin } from '@dnd-kit/core';
 import { snapCenterToCursor } from '@dnd-kit/modifiers';
 import {
-  arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { FaTimes, FaEdit, FaPlus, FaTh, FaBars, FaSearch } from 'react-icons/fa';
@@ -24,7 +22,7 @@ import { useDragController } from './hooks/useDragController';
 
 import { DraggableSource } from './dnd/Draggable';
 import { Item, Chest, Tab, Profile } from './types';
-import { canAddItemToChest, cloneItemWithNewUid, gatherSelectedItems, findItem } from './chestUtils';
+
 
 
 
@@ -51,11 +49,9 @@ const App: React.FC = () => {
   const [chestToDelete, setChestToDelete] = useState<number | null>(null);
 
   const {
-    pendingProfile,
     importProfileModalVisible,
     newProfileModalVisible,
     deleteTabModalVisible,
-    tabToDelete,
     handleImportProfile,
     handleExportProfile,
     confirmNewProfile,
@@ -209,7 +205,8 @@ const App: React.FC = () => {
     handleDragOver,
     handleDragEnd,
     handleItemSelect,
-    dropAnimation
+    dropAnimation,
+    dragSourceIsItemRef
   } = useDragController({
     items,
     setItems,
@@ -527,8 +524,8 @@ const App: React.FC = () => {
                       spellCheck="false"
                       value={profileName}
                       onChange={(e) => setProfileName(e.target.value)}
-                      className="border p-2 rounded bg-neutral-800 border-neutral-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Profilnavn"
+                      className="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                     />
                     <button className="text-blue-400 hover:text-blue-300 transition-colors" onClick={() => setIsEditingProfileName(false)}>Gem</button>
                   </>
@@ -585,7 +582,7 @@ const App: React.FC = () => {
                                 onChange={(e) => updateTabName(tab.id, e.target.value)}
                                 onBlur={() => setIsEditingTabName(null)}
                                 onKeyDown={(e) => { if (e.key === 'Enter') setIsEditingTabName(null); }}
-                                className="px-3 py-1 text-sm rounded bg-neutral-800 border-2 border-blue-500 text-white focus:outline-none min-w-[100px]"
+                                className="px-3 py-1 text-sm rounded bg-neutral-800 text-white focus:outline-none ring-2 ring-inset ring-blue-500 min-w-[100px]"
                                 autoFocus
                               />
                             ) : (
@@ -731,7 +728,10 @@ const App: React.FC = () => {
         )}
       </div>
       {/* Only center items on cursor, not chests */}
-      <DragOverlay modifiers={activeItem && !('items' in activeItem) ? [snapCenterToCursor] : []} dropAnimation={dropAnimation}>
+      <DragOverlay
+        modifiers={activeItem && !('items' in activeItem) ? [snapCenterToCursor] : []}
+        dropAnimation={dragSourceIsItemRef.current ? null : dropAnimation}
+      >
         {activeId ? (
           activeItem && 'items' in activeItem ? (
             // Chest Overlay - use global position with fixed height matching grid

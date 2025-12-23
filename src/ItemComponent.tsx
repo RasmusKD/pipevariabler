@@ -1,6 +1,5 @@
 import React from 'react';
 import { FaTimes } from 'react-icons/fa';
-import { pixelatedIcons } from './utils';
 import SpriteIcon from './SpriteIcon';
 import { Item } from './types';
 
@@ -12,7 +11,7 @@ interface ItemComponentProps {
     removeItem?: () => void;
     isGridView?: boolean;
     isSelected?: boolean;
-    onSelect?: (uid: string, ctrlKey: boolean) => void;
+    onSelect?: (uid: string, ctrlKey: boolean, isClick?: boolean) => void;
     onChestClick?: (chestId: number) => void;
 }
 
@@ -30,8 +29,14 @@ const ItemComponent: React.FC<ItemComponentProps> = React.memo(({
 
     const handlePointerDown = (e: React.PointerEvent) => {
         if (onSelect) {
-            // Only handle selection, don't prevent default so drag can still work
             onSelect(item.uid, e.ctrlKey || e.metaKey);
+        }
+    };
+
+    const handleClick = (e: React.MouseEvent) => {
+        if (onSelect) {
+            // Pass true for isClick to handle "clear others" if needed
+            onSelect(item.uid, e.ctrlKey || e.metaKey, true);
         }
     };
 
@@ -39,7 +44,6 @@ const ItemComponent: React.FC<ItemComponentProps> = React.memo(({
         <SpriteIcon
             icon={item.image}
             size={size}
-            className={pixelatedIcons.includes(item.item) ? 'pixelated-icon' : ''}
         />
     );
 
@@ -56,6 +60,7 @@ const ItemComponent: React.FC<ItemComponentProps> = React.memo(({
                 className={`group relative cursor-pointer p-1 rounded border bg-neutral-800 border-neutral-700 hover:bg-neutral-700 transition-colors h-full ${selectedClass}`}
                 title={tooltipText}
                 onPointerDown={handlePointerDown}
+                onClick={handleClick}
             >
                 {removeItem && (
                     <button
@@ -92,8 +97,9 @@ const ItemComponent: React.FC<ItemComponentProps> = React.memo(({
     // LIST VIEW
     return (
         <li
-            className={`relative w-full cursor-pointer p-2 flex items-center gap-4 hover:bg-neutral-700 border-neutral-700 ${index !== lastIndex ? 'border-b' : ''} ${selectedClass}`}
+            className={`relative w-full cursor-pointer p-2 flex items-center gap-4 hover:bg-neutral-700 border-neutral-700 border-b ${index === 0 ? 'border-t' : ''} ${selectedClass}`}
             onPointerDown={handlePointerDown}
+            onClick={handleClick}
         >
             <div className="item-icons flex items-center justify-center">
                 {renderIcon(32)}

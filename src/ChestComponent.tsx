@@ -3,7 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { useDndContext, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import ItemComponent from './ItemComponent';
-import { FaEdit, FaSave, FaTimes, FaRegCopy, FaCheckSquare, FaRegSquare, FaCheck } from 'react-icons/fa';
+import { FaEdit, FaTimes, FaRegCopy, FaCheckSquare, FaRegSquare, FaCheck } from 'react-icons/fa';
 import { CMD_PREFIX, CMD_LIMIT, buildCommand } from './chestUtils';
 import ChestIconPicker from './components/ChestIconPicker';
 import { DraggableItem } from './dnd/Draggable';
@@ -19,7 +19,7 @@ interface ChestComponentProps {
   gridView: boolean;
   isPlaceholder?: boolean;
   selectedItems?: Set<string>;
-  onItemSelect?: (uid: string, ctrlKey: boolean) => void;
+  onItemSelect?: (uid: string, ctrlKey: boolean, isClick?: boolean) => void;
 }
 
 // Drop zone component for items inside a chest (no visual highlight - outer chest handles that)
@@ -27,7 +27,9 @@ const ItemsDropZone: React.FC<{
   chestId: number;
   children: React.ReactNode;
   containerRef?: React.RefObject<HTMLDivElement>;
-}> = memo(({ chestId, children, containerRef }) => {
+  hasItems: boolean;
+  isGridView: boolean;
+}> = memo(({ chestId, children, containerRef, hasItems, isGridView }) => {
   const { active } = useDndContext();
   const { setNodeRef } = useDroppable({
     id: `chest-drop-${chestId}`,
@@ -48,7 +50,10 @@ const ItemsDropZone: React.FC<{
   return (
     <div
       ref={handleRef}
-      className="mt-3 p-2 w-full flex-1 rounded-lg bg-neutral-900/50 border-2 border-dashed border-neutral-700"
+      className={`mt-3 p-2 w-full flex-1 rounded-lg bg-neutral-900/50 border-2 transition-colors ${hasItems
+        ? 'border-transparent'
+        : 'border-dashed border-neutral-700'
+        }`}
       style={{
         overflowY: 'auto',
         overflowX: 'hidden',
@@ -193,7 +198,7 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
           {isEditing ? (
             <div className="flex items-center gap-2 w-full">
               <input
-                className="border px-2 py-1 flex-1 rounded-lg bg-neutral-800 border-neutral-700 text-white outline-none focus:ring-2 focus:ring-blue-500"
+                className="bg-neutral-800 border border-neutral-700 rounded-lg px-2 py-1 flex-1 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 spellCheck={false}
                 value={chestLabel}
                 onClick={(e) => e.stopPropagation()}
@@ -202,8 +207,8 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }}
                 autoFocus
               />
-              <button className="text-blue-400 hover:text-blue-300 transition-colors" onClick={(e) => { e.stopPropagation(); handleSave(); }} onPointerDown={e => e.stopPropagation()} aria-label="Gem navn">
-                <FaSave />
+              <button className="text-blue-400 hover:text-blue-300 transition-colors text-sm font-medium" onClick={(e) => { e.stopPropagation(); handleSave(); }} onPointerDown={e => e.stopPropagation()} aria-label="Gem navn">
+                Gem
               </button>
             </div>
           ) : (
@@ -270,7 +275,7 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
       </div>
 
       {/* Items Drop Zone */}
-      <ItemsDropZone chestId={chest.id} containerRef={itemsContainerRef}>
+      <ItemsDropZone chestId={chest.id} containerRef={itemsContainerRef} hasItems={chest.items.length > 0} isGridView={gridView}>
         {chest.items.length > 0 ? (
           gridView ? (
             <div className="grid grid-cols-6 gap-2">
@@ -291,7 +296,7 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
           ) : (
             <ul className="chest-items dark-theme">
               {chest.items.map((item, i) => (
-                <DraggableItem key={item.uid || `${item.item}-${i}`} id={item.uid || item.item} className="mb-1">
+                <DraggableItem key={item.uid || `${item.item}-${i}`} id={item.uid || item.item}>
                   <ItemComponent
                     item={item}
                     index={i}
