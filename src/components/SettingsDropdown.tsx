@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaCog, FaCaretDown, FaFileImport, FaFileExport, FaUserPlus, FaUndo, FaRedo } from 'react-icons/fa';
+import { FaCog, FaCaretDown, FaFileImport, FaFileExport, FaUserPlus, FaUndo, FaRedo, FaBook } from 'react-icons/fa';
 
 interface SettingsDropdownProps {
     onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onExport: () => void;
     onNewProfile: () => void;
+    onLoadPreset: (presetName: string) => void;
     onUndo: () => void;
     onRedo: () => void;
     undoDisabled: boolean;
@@ -15,6 +16,7 @@ const SettingsDropdown: React.FC<SettingsDropdownProps> = ({
     onImport,
     onExport,
     onNewProfile,
+    onLoadPreset,
     onUndo,
     onRedo,
     undoDisabled,
@@ -99,6 +101,24 @@ const SettingsDropdown: React.FC<SettingsDropdownProps> = ({
                         >
                             <FaUserPlus className="text-purple-400" />
                             <span>Ny Profil</span>
+                        </button>
+                    </div>
+
+                    {/* Presets Section */}
+                    <div className="px-3 py-2 text-xs font-semibold text-neutral-500 uppercase tracking-wider border-t border-neutral-800">
+                        Skabeloner
+                    </div>
+                    <div className="p-1">
+                        <button
+                            className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-neutral-800 transition-colors"
+                            onClick={() => {
+                                onLoadPreset('ivers_kisterum');
+                                setIsOpen(false);
+                            }}
+                        >
+                            <FaBook className="text-cyan-400" />
+                            <span>Ivers Kisterum</span>
+                            <span className="ml-auto text-xs text-neutral-500">142 kister</span>
                         </button>
                     </div>
 

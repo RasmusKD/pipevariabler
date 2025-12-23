@@ -12,7 +12,7 @@ interface ItemComponentProps {
     isGridView?: boolean;
     isSelected?: boolean;
     onSelect?: (uid: string, ctrlKey: boolean, isClick?: boolean) => void;
-    onChestClick?: (chestId: number) => void;
+    onChestClick?: (chestId: number, itemName: string) => void;
 }
 
 const ItemComponent: React.FC<ItemComponentProps> = React.memo(({
@@ -48,7 +48,7 @@ const ItemComponent: React.FC<ItemComponentProps> = React.memo(({
     );
 
     // Selection highlight classes
-    const selectedClass = isSelected ? 'ring-2 ring-blue-500 bg-blue-500/20' : '';
+    const selectedClass = isSelected ? 'ring-2 ring-inset ring-blue-500 bg-blue-500/20' : '';
 
     // GRID VIEW
     if (isGridView) {
@@ -113,7 +113,7 @@ const ItemComponent: React.FC<ItemComponentProps> = React.memo(({
                             {idx > 0 && <span>,</span>}
                             <button
                                 className="hover:text-blue-400 hover:underline transition-colors cursor-pointer"
-                                onClick={(e) => { e.stopPropagation(); onChestClick?.(id); }}
+                                onClick={(e) => { e.stopPropagation(); onChestClick?.(id, item.item); }}
                                 onPointerDown={(e) => e.stopPropagation()}
                                 title={`Gå til kiste #${id}`}
                             >

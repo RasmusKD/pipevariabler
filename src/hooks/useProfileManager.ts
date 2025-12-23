@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Tab, Profile, Chest } from '../types';
+import itemsData from '../data.json';
 
 interface UseProfileManagerProps {
     tabs: Tab[];
@@ -31,6 +32,8 @@ export const useProfileManager = ({
     const [newProfileModalVisible, setNewProfileModalVisible] = useState(false);
     const [deleteTabModalVisible, setDeleteTabModalVisible] = useState(false);
     const [tabToDelete, setTabToDelete] = useState<number | null>(null);
+    const [presetModalVisible, setPresetModalVisible] = useState(false);
+    const [pendingPresetName, setPendingPresetName] = useState<string | null>(null);
 
     const getNextChestId = useCallback(() => {
         let maxId = 0;
@@ -144,6 +147,98 @@ export const useProfileManager = ({
 
     const cancelImportProfile = () => { setPendingProfile(null); setImportProfileModalVisible(false); };
 
+    // Preset loading with confirmation
+    const loadPreset = useCallback((presetName: string) => {
+        if (tabs.some(tab => tab.chests.some(chest => chest.items.length > 0))) {
+            setPendingPresetName(presetName);
+            setPresetModalVisible(true);
+        } else {
+            confirmLoadPresetInternal(presetName);
+        }
+    }, [tabs]);
+
+    const confirmLoadPresetInternal = async (presetName: string) => {
+        try {
+            const response = await fetch(`${process.env.PUBLIC_URL}/presets/${presetName}.json`);
+            if (!response.ok) throw new Error('Failed to load preset');
+            const preset = await response.json();
+
+            setUndoStack(prev => [...prev, tabs]);
+            setRedoStack([]);
+            tabs.forEach(tab => tab.chests.forEach(chest => localStorage.removeItem(`chest-checked-${chest.id}`)));
+            setProfileName(preset.name || presetName);
+
+            let globalChestId = 1;
+            // Create lookup maps from data.json
+            const itemDataMap = new Map<string, { image: string; variable: string }>();
+            itemsData.items.forEach((item: any) => {
+                itemDataMap.set(item.item, { image: item.image, variable: item.variable });
+            });
+
+            if (preset.tabs) {
+                let tabId = 1;
+                const processedTabs = preset.tabs.map((tab: any) => ({
+                    ...tab,
+                    id: tabId++,
+                    chests: tab.chests.map((chest: any) => ({
+                        ...chest,
+                        id: globalChestId++,
+                        icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
+                        checked: chest.checked || false,
+                        items: (chest.items || []).map((i: any) => {
+                            const dataItem = itemDataMap.get(i.item);
+                            return {
+                                ...i,
+                                image: i.image || dataItem?.image || `${i.item}.png`,
+                                variable: i.variable || dataItem?.variable || '',
+                                uid: i.uid || Math.random().toString(36).substr(2, 9)
+                            };
+                        })
+                    }))
+                }));
+                setTabs(processedTabs);
+                setActiveTabId(processedTabs[0]?.id || 1);
+            } else if (preset.chests) {
+                const processedChests = preset.chests.map((chest: any) => ({
+                    ...chest,
+                    id: globalChestId++,
+                    icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
+                    checked: chest.checked || false,
+                    items: (chest.items || []).map((i: any) => {
+                        const dataItem = itemDataMap.get(i.item);
+                        return {
+                            ...i,
+                            image: i.image || dataItem?.image || `${i.item}.png`,
+                            variable: i.variable || dataItem?.variable || '',
+                            uid: i.uid || Math.random().toString(36).substr(2, 9)
+                        };
+                    })
+                }));
+                const defaultTab: Tab = { id: 1, name: 'Tab 1', chests: processedChests };
+                setTabs([defaultTab]);
+                setActiveTabId(1);
+            }
+
+            setProfileVersion(prev => prev + 1);
+        } catch (error) {
+            console.error('Error loading preset:', error);
+            alert('Fejl ved indlæsning af skabelon');
+        }
+    };
+
+    const confirmLoadPreset = () => {
+        if (pendingPresetName) {
+            confirmLoadPresetInternal(pendingPresetName);
+            setPendingPresetName(null);
+            setPresetModalVisible(false);
+        }
+    };
+
+    const cancelLoadPreset = () => {
+        setPendingPresetName(null);
+        setPresetModalVisible(false);
+    };
+
     const addTab = useCallback(() => {
         const newTabId = Math.max(...tabs.map(tab => tab.id), 0) + 1;
         const nextChestId = getNextChestId();
@@ -189,6 +284,7 @@ export const useProfileManager = ({
         importProfileModalVisible,
         newProfileModalVisible,
         deleteTabModalVisible,
+        presetModalVisible,
         tabToDelete,
         handleImportProfile,
         handleExportProfile,
@@ -197,6 +293,9 @@ export const useProfileManager = ({
         cancelNewProfile,
         confirmImportProfile,
         cancelImportProfile,
+        loadPreset,
+        confirmLoadPreset,
+        cancelLoadPreset,
         addTab,
         removeTab,
         confirmDeleteTab,

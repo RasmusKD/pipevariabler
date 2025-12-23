@@ -42,6 +42,7 @@ export const Draggable: React.FC<DraggableProps> = ({
             ref={setNodeRef}
             style={combinedStyle}
             className={className}
+            data-item-id={id}
             {...attributes}
             {...listeners}
         >

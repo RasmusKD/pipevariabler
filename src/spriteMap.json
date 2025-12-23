@@ -444,7 +444,7 @@
     "height": 64
   },
   "grass.png": {
-    "x": 896,
+    "x": 960,
     "y": 2240,
     "width": 48,
     "height": 48
@@ -2694,7 +2694,7 @@
     "height": 64
   },
   "scute.png": {
-    "x": 944,
+    "x": 1008,
     "y": 2240,
     "width": 48,
     "height": 48
@@ -5292,7 +5292,7 @@
     "height": 64
   },
   "broken_elytra.png": {
-    "x": 992,
+    "x": 1056,
     "y": 2240,
     "width": 16,
     "height": 16
@@ -7655,8 +7655,14 @@
     "width": 64,
     "height": 64
   },
-  "pale_oak_boat.png": {
+  "pale_oak_chest_boat.png": {
     "x": 832,
+    "y": 2240,
+    "width": 64,
+    "height": 64
+  },
+  "pale_oak_boat.png": {
+    "x": 896,
     "y": 2240,
     "width": 64,
     "height": 64

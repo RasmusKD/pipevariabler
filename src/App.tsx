@@ -52,6 +52,7 @@ const App: React.FC = () => {
     importProfileModalVisible,
     newProfileModalVisible,
     deleteTabModalVisible,
+    presetModalVisible,
     handleImportProfile,
     handleExportProfile,
     confirmNewProfile,
@@ -59,6 +60,9 @@ const App: React.FC = () => {
     cancelNewProfile,
     confirmImportProfile,
     cancelImportProfile,
+    loadPreset,
+    confirmLoadPreset,
+    cancelLoadPreset,
     addTab,
     removeTab,
     confirmDeleteTab,
@@ -301,9 +305,8 @@ const App: React.FC = () => {
   const handleClearSearch = () => setSearchTerm('');
 
 
-
   // Navigate to a chest when clicking its ID in the sidebar
-  const handleChestClick = useCallback((chestId: number) => {
+  const handleChestClick = useCallback((chestId: number, itemName?: string) => {
     // Find which tab contains this chest
     for (const tab of tabs) {
       const chest = tab.chests.find(c => c.id === chestId);
@@ -322,6 +325,21 @@ const App: React.FC = () => {
             setTimeout(() => {
               chestElement.classList.remove('ring-2', 'ring-inset', 'ring-blue-500');
             }, 1500);
+            // If itemName provided, highlight that item in the chest
+            if (itemName) {
+              const itemInChest = chest.items.find(i => i.item === itemName);
+              if (itemInChest) {
+                setSelectedItems(new Set([itemInChest.uid]));
+                // Scroll to the item
+                setTimeout(() => {
+                  const itemElement = chestElement.querySelector(`[data-item-id="${itemInChest.uid}"]`);
+                  if (itemElement) {
+                    itemElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                  }
+                }, 150);
+                setTimeout(() => setSelectedItems(new Set()), 2000);
+              }
+            }
           }
         }, 100);
         return;
@@ -644,6 +662,7 @@ const App: React.FC = () => {
                 onImport={handleImportProfile}
                 onExport={handleExportProfile}
                 onNewProfile={createNewProfile}
+                onLoadPreset={loadPreset}
                 onUndo={handleUndo}
                 onRedo={handleRedo}
                 undoDisabled={undoStack.length === 0}
@@ -723,6 +742,18 @@ const App: React.FC = () => {
             title="Bekræft Tab Sletning"
             variant="danger"
             confirmText="Slet"
+            cancelText="Annuller"
+          />
+        )}
+
+        {presetModalVisible && (
+          <ConfirmationModal
+            onConfirm={confirmLoadPreset}
+            onCancel={cancelLoadPreset}
+            message="Har du husket at eksportere den nuværende profil? Ændringer kan gå tabt, hvis du fortsætter uden at gemme."
+            title="Indlæs Skabelon"
+            variant="warning"
+            confirmText="Indlæs"
             cancelText="Annuller"
           />
         )}
