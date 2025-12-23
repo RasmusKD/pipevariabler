@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaCog, FaCaretDown, FaFileImport, FaFileExport, FaUserPlus, FaUndo, FaRedo, FaBook } from 'react-icons/fa';
+import { FaCog, FaCaretDown, FaFileImport, FaFileExport, FaUserPlus, FaUndo, FaRedo, FaBook, FaShare, FaClipboard, FaPaste } from 'react-icons/fa';
 
 interface SettingsDropdownProps {
     onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onExport: () => void;
+    onShare: () => void;
+    onCopyCode: () => void;
+    onImportCode: () => void;
     onNewProfile: () => void;
     onLoadPreset: (presetName: string) => void;
     onUndo: () => void;
@@ -15,6 +18,9 @@ interface SettingsDropdownProps {
 const SettingsDropdown: React.FC<SettingsDropdownProps> = ({
     onImport,
     onExport,
+    onShare,
+    onCopyCode,
+    onImportCode,
     onNewProfile,
     onLoadPreset,
     onUndo,
@@ -91,6 +97,36 @@ const SettingsDropdown: React.FC<SettingsDropdownProps> = ({
                         >
                             <FaFileExport className="text-green-400" />
                             <span>Eksporter Profil</span>
+                        </button>
+                        <button
+                            className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-neutral-800 transition-colors"
+                            onClick={() => {
+                                onShare();
+                                setIsOpen(false);
+                            }}
+                        >
+                            <FaShare className="text-teal-400" />
+                            <span>Del Profil (URL)</span>
+                        </button>
+                        <button
+                            className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-neutral-800 transition-colors"
+                            onClick={() => {
+                                onCopyCode();
+                                setIsOpen(false);
+                            }}
+                        >
+                            <FaClipboard className="text-orange-400" />
+                            <span>Kopier Kode</span>
+                        </button>
+                        <button
+                            className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-neutral-800 transition-colors"
+                            onClick={() => {
+                                onImportCode();
+                                setIsOpen(false);
+                            }}
+                        >
+                            <FaPaste className="text-pink-400" />
+                            <span>Importer Kode</span>
                         </button>
                         <button
                             className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-neutral-800 transition-colors"

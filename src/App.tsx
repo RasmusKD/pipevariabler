@@ -8,6 +8,7 @@ import {
 import { FaTimes, FaEdit, FaPlus, FaTh, FaBars, FaSearch } from 'react-icons/fa';
 import { FixedSizeList as List } from 'react-window';
 import './scss/main.scss';
+import pako from 'pako';
 import itemsData from './data.json';
 import ItemComponent from './ItemComponent';
 import ChestComponent from './ChestComponent';
@@ -47,6 +48,8 @@ const App: React.FC = () => {
   const [isEditingTabName, setIsEditingTabName] = useState<number | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [chestToDelete, setChestToDelete] = useState<number | null>(null);
+  const [importCodeModalVisible, setImportCodeModalVisible] = useState(false);
+  const [importCodeValue, setImportCodeValue] = useState('');
 
   const {
     importProfileModalVisible,
@@ -104,37 +107,90 @@ const App: React.FC = () => {
   /* Dnd Sensors moved to hook */
 
   useEffect(() => {
-    const savedProfile = localStorage.getItem('profile');
-    if (savedProfile) {
-      const profile: Profile = JSON.parse(savedProfile);
-      setProfileName(profile.name);
+    // Create lookup map for images/variables
+    const itemDataMap = new Map<string, { image: string; variable: string }>();
+    itemsData.items.forEach((item: any) => {
+      itemDataMap.set(item.item, { image: item.image, variable: item.variable });
+    });
+
+    const processItems = (items: any[]) => items.map((i: any) => {
+      const dataItem = itemDataMap.get(i.item);
+      return {
+        ...i,
+        image: i.image || dataItem?.image || `${i.item}.png`,
+        variable: i.variable || dataItem?.variable || '',
+        uid: i.uid || Math.random().toString(36).substr(2, 9)
+      };
+    });
+
+    const loadProfile = (profile: any) => {
+      setProfileName(profile.name || 'Delt Profil');
+      let globalChestId = 1;
+      let tabId = 1;
 
       if (profile.tabs) {
-        let globalChestId = 1;
-        const processedTabs = profile.tabs.map(tab => ({
+        const processedTabs = profile.tabs.map((tab: any) => ({
           ...tab,
+          id: tabId++,
           chests: tab.chests.map((chest: any) => ({
             ...chest,
             id: globalChestId++,
             icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
             checked: chest.checked || false,
-            items: (chest.items || []).map((i: any) => ({ ...i, uid: i.uid || Math.random().toString(36).substr(2, 9) }))
+            items: processItems(chest.items || [])
           }))
         }));
         setTabs(processedTabs);
         setActiveTabId(processedTabs[0]?.id || 1);
       } else if (profile.chests) {
-        const processedChests = profile.chests.map((chest: any, index: number) => ({
+        const processedChests = profile.chests.map((chest: any) => ({
           ...chest,
-          id: index + 1,
+          id: globalChestId++,
           icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
           checked: chest.checked || false,
-          items: (chest.items || []).map((i: any) => ({ ...i, uid: i.uid || Math.random().toString(36).substr(2, 9) }))
+          items: processItems(chest.items || [])
         }));
         const defaultTab: Tab = { id: 1, name: 'Tab 1', chests: processedChests };
         setTabs([defaultTab]);
         setActiveTabId(1);
       }
+    };
+
+    // Check for shared profile in URL hash
+    const hash = window.location.hash;
+    if (hash.startsWith('#p=') || hash.startsWith('#profile=')) {
+      try {
+        let jsonStr: string;
+        if (hash.startsWith('#p=')) {
+          // New compressed format
+          const base64 = hash.substring('#p='.length);
+          const binaryStr = atob(base64);
+          const bytes = new Uint8Array(binaryStr.length);
+          for (let i = 0; i < binaryStr.length; i++) {
+            bytes[i] = binaryStr.charCodeAt(i);
+          }
+          jsonStr = pako.inflate(bytes, { to: 'string' });
+        } else {
+          // Old uncompressed format for backwards compatibility
+          const base64 = hash.substring('#profile='.length);
+          jsonStr = decodeURIComponent(escape(atob(base64)));
+        }
+        const sharedProfile = JSON.parse(jsonStr);
+        loadProfile(sharedProfile);
+        // Clear hash after loading
+        window.history.replaceState(null, '', window.location.pathname);
+        return;
+      } catch (error) {
+        console.error('Error loading shared profile:', error);
+        // Fall through to localStorage
+      }
+    }
+
+    // Load from localStorage
+    const savedProfile = localStorage.getItem('profile');
+    if (savedProfile) {
+      const profile = JSON.parse(savedProfile);
+      loadProfile(profile);
     } else {
       setProfileName('Ny Profil');
       const defaultChest: Chest = { id: 1, label: 'Min første kiste', items: [], icon: 'barrel', checked: false };
@@ -301,6 +357,164 @@ const App: React.FC = () => {
       setRedoStack(newRedo);
     }
   }, [redoStack, tabs]);
+
+  // Share profile via URL
+  const handleShare = useCallback(() => {
+    // Create minimal profile structure (only item names, no images/variables)
+    const minimalProfile = {
+      name: profileName,
+      tabs: tabs.map(tab => ({
+        name: tab.name,
+        chests: tab.chests.map(chest => ({
+          label: chest.label,
+          icon: chest.icon,
+          items: chest.items.map(item => ({ item: item.item }))
+        }))
+      }))
+    };
+
+    try {
+      const jsonStr = JSON.stringify(minimalProfile);
+      // Compress with pako then base64 encode
+      const compressed = pako.deflate(jsonStr);
+      const base64 = btoa(String.fromCharCode.apply(null, Array.from(compressed)));
+      const shareUrl = `${window.location.origin}${window.location.pathname}#p=${base64}`;
+
+      // Check if URL is too long for practical sharing
+      if (shareUrl.length > 2000) {
+        const proceed = window.confirm(
+          `URL'en er ${shareUrl.length.toLocaleString()} tegn lang - for stor til de fleste browsere.\n\n` +
+          `For store profiler anbefales "Eksporter Profil" i stedet.\n\n` +
+          `Vil du stadig kopiere URL'en?`
+        );
+        if (!proceed) return;
+      }
+
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        alert(`URL kopieret! (${shareUrl.length.toLocaleString()} tegn)`);
+      }).catch(() => {
+        prompt('Kopier dette link:', shareUrl);
+      });
+    } catch (error) {
+      console.error('Error sharing profile:', error);
+      alert('Kunne ikke generere delelink');
+    }
+  }, [tabs, profileName]);
+
+  // Copy profile as code (without URL)
+  const handleCopyCode = useCallback(() => {
+    const minimalProfile = {
+      name: profileName,
+      tabs: tabs.map(tab => ({
+        name: tab.name,
+        chests: tab.chests.map(chest => ({
+          label: chest.label,
+          icon: chest.icon,
+          items: chest.items.map(item => ({ item: item.item }))
+        }))
+      }))
+    };
+
+    try {
+      const jsonStr = JSON.stringify(minimalProfile);
+      const compressed = pako.deflate(jsonStr);
+      const base64 = btoa(String.fromCharCode.apply(null, Array.from(compressed)));
+
+      navigator.clipboard.writeText(base64).then(() => {
+        alert(`Kode kopieret! (${base64.length.toLocaleString()} tegn)\n\nDel denne kode med andre - de kan importere den via "Importer Kode".`);
+      }).catch(() => {
+        prompt('Kopier denne kode:', base64);
+      });
+    } catch (error) {
+      console.error('Error copying code:', error);
+      alert('Kunne ikke generere kode');
+    }
+  }, [tabs, profileName]);
+
+  // Open import code modal
+  const handleImportCode = useCallback(() => {
+    setImportCodeValue('');
+    setImportCodeModalVisible(true);
+  }, []);
+
+  // Process the imported code
+  const processImportCode = useCallback(() => {
+    const code = importCodeValue.trim();
+    if (!code) {
+      alert('Indtast venligst en kode');
+      return;
+    }
+
+    try {
+      const binaryStr = atob(code);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+      const jsonStr = pako.inflate(bytes, { to: 'string' });
+      const profile = JSON.parse(jsonStr);
+
+      // Create lookup map for images/variables
+      const itemDataMap = new Map<string, { image: string; variable: string }>();
+      itemsData.items.forEach((item: any) => {
+        itemDataMap.set(item.item, { image: item.image, variable: item.variable });
+      });
+
+      const processItems = (items: any[]) => items.map((i: any) => {
+        const dataItem = itemDataMap.get(i.item);
+        return {
+          ...i,
+          image: i.image || dataItem?.image || `${i.item}.png`,
+          variable: i.variable || dataItem?.variable || '',
+          uid: i.uid || Math.random().toString(36).substr(2, 9)
+        };
+      });
+
+      setUndoStack(prev => [...prev, tabs]);
+      setRedoStack([]);
+      setProfileName(profile.name || 'Importeret Profil');
+
+      let globalChestId = 1;
+      let tabId = 1;
+
+      // Increment profileVersion FIRST to force ChestComponent remount before setting new tabs
+      // This prevents the scroll-to-bottom behavior from triggering on import
+      setProfileVersion(v => v + 1);
+
+      if (profile.tabs) {
+        const processedTabs = profile.tabs.map((tab: any) => ({
+          ...tab,
+          id: tabId++,
+          chests: tab.chests.map((chest: any) => ({
+            ...chest,
+            id: globalChestId++,
+            icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
+            checked: chest.checked || false,
+            items: processItems(chest.items || [])
+          }))
+        }));
+        setTabs(processedTabs);
+        setActiveTabId(processedTabs[0]?.id || 1);
+      } else if (profile.chests) {
+        const processedChests = profile.chests.map((chest: any) => ({
+          ...chest,
+          id: globalChestId++,
+          icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
+          checked: chest.checked || false,
+          items: processItems(chest.items || [])
+        }));
+        const defaultTab: Tab = { id: 1, name: 'Tab 1', chests: processedChests };
+        setTabs([defaultTab]);
+        setActiveTabId(1);
+      }
+      setImportCodeModalVisible(false);
+      setImportCodeValue('');
+      alert('Profil importeret!');
+    } catch (error) {
+      console.error('Error importing code:', error);
+      alert('Ugyldig kode. Tjek at du har kopieret hele koden korrekt.');
+    }
+  }, [importCodeValue, tabs, setUndoStack, setRedoStack]);
 
   const handleClearSearch = () => setSearchTerm('');
 
@@ -661,6 +875,9 @@ const App: React.FC = () => {
               <SettingsDropdown
                 onImport={handleImportProfile}
                 onExport={handleExportProfile}
+                onShare={handleShare}
+                onCopyCode={handleCopyCode}
+                onImportCode={handleImportCode}
                 onNewProfile={createNewProfile}
                 onLoadPreset={loadPreset}
                 onUndo={handleUndo}
@@ -756,6 +973,41 @@ const App: React.FC = () => {
             confirmText="Indlæs"
             cancelText="Annuller"
           />
+        )}
+
+        {importCodeModalVisible && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl max-w-lg w-full p-6">
+              <h2 className="text-xl font-bold text-white mb-4">Importer Kode</h2>
+              <p className="text-neutral-400 text-sm mb-4">
+                Indsæt den kode du har modtaget fra en anden bruger herunder.
+              </p>
+              <textarea
+                value={importCodeValue}
+                onChange={(e) => setImportCodeValue(e.target.value)}
+                placeholder="Indsæt kode her..."
+                className="w-full h-32 bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-white text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                autoFocus
+              />
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  onClick={() => {
+                    setImportCodeModalVisible(false);
+                    setImportCodeValue('');
+                  }}
+                  className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors"
+                >
+                  Annuller
+                </button>
+                <button
+                  onClick={processImportCode}
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+                >
+                  Importer
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
       {/* Only center items on cursor, not chests */}

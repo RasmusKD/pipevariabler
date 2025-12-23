@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import {
     DragStartEvent,
     DragOverEvent,
@@ -57,7 +57,7 @@ export const useDragController = ({
     // This ref persists through the render cycle so the DragOverlay animation can check it
     const dragSourceIsItemRef = useRef<boolean>(false);
 
-    const chests = activeTab?.chests || [];
+    const chests = useMemo(() => activeTab?.chests || [], [activeTab?.chests]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -338,7 +338,7 @@ export const useDragController = ({
 
         setActiveId(null);
         setActiveItem(null);
-    }, [items, chests, tabs, activeTabId, updateChests, selectedItems, getNextChestId, setTabs, setSelectedItems, setUndoStack, setRedoStack]);
+    }, [items, chests, tabs, activeTabId, setActiveTabId, updateChests, selectedItems, getNextChestId, setTabs, setSelectedItems, setUndoStack, setRedoStack]);
 
     // We need to handle selection. 
     // If we click a selected item (without Ctrl), we DON'T want to clear others immediately on PointerDown, 

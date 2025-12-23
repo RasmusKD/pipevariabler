@@ -147,17 +147,8 @@ export const useProfileManager = ({
 
     const cancelImportProfile = () => { setPendingProfile(null); setImportProfileModalVisible(false); };
 
-    // Preset loading with confirmation
-    const loadPreset = useCallback((presetName: string) => {
-        if (tabs.some(tab => tab.chests.some(chest => chest.items.length > 0))) {
-            setPendingPresetName(presetName);
-            setPresetModalVisible(true);
-        } else {
-            confirmLoadPresetInternal(presetName);
-        }
-    }, [tabs]);
-
-    const confirmLoadPresetInternal = async (presetName: string) => {
+    // Preset loading internal function wrapped in useCallback
+    const confirmLoadPresetInternal = useCallback(async (presetName: string) => {
         try {
             const response = await fetch(`${process.env.PUBLIC_URL}/presets/${presetName}.json`);
             if (!response.ok) throw new Error('Failed to load preset');
@@ -224,7 +215,17 @@ export const useProfileManager = ({
             console.error('Error loading preset:', error);
             alert('Fejl ved indlæsning af skabelon');
         }
-    };
+    }, [tabs, setUndoStack, setRedoStack, setProfileName, setTabs, setActiveTabId, setProfileVersion]);
+
+    // Preset loading with confirmation
+    const loadPreset = useCallback((presetName: string) => {
+        if (tabs.some(tab => tab.chests.some(chest => chest.items.length > 0))) {
+            setPendingPresetName(presetName);
+            setPresetModalVisible(true);
+        } else {
+            confirmLoadPresetInternal(presetName);
+        }
+    }, [tabs, confirmLoadPresetInternal]);
 
     const confirmLoadPreset = () => {
         if (pendingPresetName) {
