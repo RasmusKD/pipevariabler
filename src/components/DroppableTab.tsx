@@ -1,5 +1,6 @@
 import React from 'react';
 import { useDndContext, useDroppable } from '@dnd-kit/core';
+import { TAB_SWITCH_DELAY } from '../constants';
 
 interface DroppableTabProps {
     tabId: number;
@@ -19,12 +20,12 @@ const DroppableTab: React.FC<DroppableTabProps> = ({ tabId, isActive, isEditing,
 
     const hoverTimeout = React.useRef<NodeJS.Timeout | null>(null);
 
-    // Switch tab after hovering for 500ms
+    // Switch tab after hovering for TAB_SWITCH_DELAY ms
     React.useEffect(() => {
         if (isOver && active && !isActive && !isEditing) {
             hoverTimeout.current = setTimeout(() => {
                 onSwitchTab(tabId);
-            }, 500);
+            }, TAB_SWITCH_DELAY);
         }
         return () => {
             if (hoverTimeout.current) {

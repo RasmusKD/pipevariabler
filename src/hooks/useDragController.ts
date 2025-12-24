@@ -18,6 +18,7 @@ import {
     canAddItemToChest,
     cloneItemWithNewUid
 } from '../chestUtils';
+import { DRAG_ACTIVATION_DISTANCE } from '../constants';
 
 interface UseDragControllerProps {
     items: Item[];
@@ -62,7 +63,7 @@ export const useDragController = ({
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 3,
+                distance: DRAG_ACTIVATION_DISTANCE,
             },
         }),
         useSensor(KeyboardSensor, {

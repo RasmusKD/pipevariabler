@@ -1,29 +1,27 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DndContext, DragOverlay, pointerWithin } from '@dnd-kit/core';
 import { snapCenterToCursor } from '@dnd-kit/modifiers';
-import {
-  SortableContext,
-  rectSortingStrategy,
-} from '@dnd-kit/sortable';
-import { FaTimes, FaEdit, FaPlus, FaTh, FaBars, FaSearch } from 'react-icons/fa';
-import { FixedSizeList as List } from 'react-window';
 import './scss/main.scss';
 import pako from 'pako';
 import itemsData from './data.json';
-import ItemComponent from './ItemComponent';
 import ChestComponent from './ChestComponent';
 import SpriteIcon from './SpriteIcon';
 
 import ConfirmationModal from './ConfirmationModal';
-import SettingsDropdown from './components/SettingsDropdown';
-import DroppableTab from './components/DroppableTab';
-import AddChestDropZone from './components/AddChestDropZone';
+import Sidebar from './components/Sidebar';
+import TabBar from './components/TabBar';
+import ChestGrid from './components/ChestGrid';
+import { AppProvider, AppContextType } from './context/AppContext';
 import { useProfileManager } from './hooks/useProfileManager';
 import { useDragController } from './hooks/useDragController';
+import { useChests } from './hooks/useChests';
 
-import { DraggableSource } from './dnd/Draggable';
 import { Item, Chest, Tab, Profile } from './types';
-
+import {
+  AUTO_SCROLL_ACCELERATION,
+  AUTO_SCROLL_THRESHOLD,
+  SIDEBAR_HEIGHT_OFFSET,
+} from './constants';
 
 
 
@@ -40,7 +38,7 @@ const App: React.FC = () => {
   const [isGridView, setIsGridView] = useState<boolean>(() => JSON.parse(localStorage.getItem('isGridView') || 'false'));
   const [chestGridView, setChestGridView] = useState<boolean>(() => JSON.parse(localStorage.getItem('chestGridView') || 'true'));
 
-  const [listHeight, setListHeight] = useState(window.innerHeight - 250);
+  const [listHeight, setListHeight] = useState(window.innerHeight - SIDEBAR_HEIGHT_OFFSET);
   const [undoStack, setUndoStack] = useState<Tab[][]>([]);
   const [redoStack, setRedoStack] = useState<Tab[][]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -228,13 +226,31 @@ const App: React.FC = () => {
     else if (elRight > visibleRight) scroller.scrollTo({ left: elRight - scroller.clientWidth + 16, behavior: 'smooth' });
   }, [activeTabId]);
 
-  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value);
 
 
 
   const updateChests = useCallback((newChests: Chest[]) => {
     setTabs(prev => prev.map(tab => (tab.id === activeTabId ? { ...tab, chests: newChests } : tab)));
   }, [activeTabId]);
+
+  // Chest CRUD operations
+  const {
+    addChest,
+    handleDeleteChest,
+    confirmDeleteChest,
+    updateChestLabel,
+    updateChestIcon,
+    removeItemFromChest,
+  } = useChests({
+    chests,
+    tabs,
+    updateChests,
+    getNextChestId,
+    setUndoStack,
+    setRedoStack,
+    setModalVisible,
+    setChestToDelete,
+  });
 
   const filteredItems = useMemo(
     () => items.filter(item => item.item.toLowerCase().includes(searchTerm.toLowerCase().replace(/ /g, '_'))),
@@ -287,54 +303,6 @@ const App: React.FC = () => {
     () => (showAll ? filteredItems : filteredItems.filter(item => !chestItemsMap.has(item.item))),
     [filteredItems, showAll, chestItemsMap]
   );
-
-  const addChest = useCallback(() => {
-    setUndoStack(prev => [...prev, tabs]);
-    setRedoStack([]);
-    const newChestId = getNextChestId();
-    const newChest: Chest = { id: newChestId, label: 'Barrel', items: [], icon: 'barrel', checked: false };
-    updateChests([...(chests || []), newChest]);
-  }, [chests, tabs, updateChests, getNextChestId]);
-
-  const handleDeleteChest = useCallback((id: number) => {
-    setUndoStack(prev => [...prev, tabs]);
-    setRedoStack([]);
-    const newChests = (chests || []).filter(chest => chest.id !== id);
-    updateChests(newChests);
-    setModalVisible(false);
-  }, [chests, tabs, updateChests]);
-
-  const confirmDeleteChest = useCallback((id: number) => {
-    const toRemove = (chests || []).find(chest => chest.id === id);
-    if (toRemove && toRemove.items.length > 0) {
-      setChestToDelete(id);
-      setModalVisible(true);
-    } else {
-      handleDeleteChest(id);
-    }
-  }, [chests, handleDeleteChest]);
-
-  const updateChestLabel = useCallback((id: number, label: string) => {
-    const newChests = (chests || []).map(chest => (chest.id === id ? { ...chest, label } : chest));
-    updateChests(newChests);
-  }, [chests, updateChests]);
-
-  const updateChestIcon = useCallback((id: number, icon: string) => {
-    const newChests = (chests || []).map(chest => (chest.id === id ? { ...chest, icon } : chest));
-    updateChests(newChests);
-  }, [chests, updateChests]);
-
-  const removeItemFromChest = useCallback((chestId: number, item: Item) => {
-    setUndoStack(prev => [...prev, tabs]);
-    setRedoStack([]);
-    const newChests = (chests || []).map(chest => {
-      if (chest.id === chestId) {
-        return { ...chest, items: chest.items.filter(chestItem => chestItem.item !== item.item) };
-      }
-      return chest;
-    });
-    updateChests(newChests);
-  }, [chests, tabs, updateChests]);
 
 
 
@@ -516,7 +484,6 @@ const App: React.FC = () => {
     }
   }, [importCodeValue, tabs, setUndoStack, setRedoStack]);
 
-  const handleClearSearch = () => setSearchTerm('');
 
 
   // Navigate to a chest when clicking its ID in the sidebar
@@ -561,27 +528,6 @@ const App: React.FC = () => {
     }
   }, [tabs, activeTabId]);
 
-  const renderRow = ({ index, style }: { index: number; style: React.CSSProperties }) => {
-    const item = itemsToShow[index];
-    const chestIds = chestItemsMap.get(item.item);
-    const isSelected = selectedItems.has(item.uid);
-    return (
-      <div style={style} key={item.uid}>
-        <DraggableSource id={item.uid} className="h-full">
-          <ItemComponent
-            item={item}
-            index={index}
-            lastIndex={itemsToShow.length - 1}
-            chestIds={chestIds}
-            isGridView={false}
-            isSelected={isSelected}
-            onSelect={handleItemSelect}
-            onChestClick={handleChestClick}
-          />
-        </DraggableSource>
-      </div>
-    );
-  };
 
   const updateHeights = () => {
     const listContainer = listContainerRef.current;
@@ -646,409 +592,243 @@ const App: React.FC = () => {
 
 
 
+  // Build context value
+  const appContextValue: AppContextType = useMemo(() => ({
+    profile: {
+      profileName,
+      setProfileName,
+      isEditingProfileName,
+      setIsEditingProfileName,
+    },
+    tabs: {
+      tabs,
+      activeTabId,
+      setActiveTabId,
+      isEditingTabName,
+      setIsEditingTabName,
+      updateTabName,
+      addTab,
+      removeTab,
+    },
+    settings: {
+      onImport: handleImportProfile,
+      onExport: handleExportProfile,
+      onShare: handleShare,
+      onCopyCode: handleCopyCode,
+      onImportCode: handleImportCode,
+      onNewProfile: createNewProfile,
+      onLoadPreset: loadPreset,
+      onUndo: handleUndo,
+      onRedo: handleRedo,
+      undoDisabled: undoStack.length === 0,
+      redoDisabled: redoStack.length === 0,
+    },
+    view: {
+      chestGridView,
+      setChestGridView,
+      isGridView,
+      setIsGridView,
+      showAll,
+      setShowAll,
+    },
+    selection: {
+      selectedItems,
+      handleItemSelect,
+    },
+  }), [
+    profileName, setProfileName, isEditingProfileName, setIsEditingProfileName,
+    tabs, activeTabId, setActiveTabId, isEditingTabName, setIsEditingTabName, updateTabName, addTab, removeTab,
+    handleImportProfile, handleExportProfile, handleShare, handleCopyCode, handleImportCode, createNewProfile, loadPreset, handleUndo, handleRedo, undoStack.length, redoStack.length,
+    chestGridView, setChestGridView, isGridView, setIsGridView, showAll, setShowAll,
+    selectedItems, handleItemSelect,
+  ]);
+
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={pointerWithin}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-      autoScroll={{
-        enabled: true,
-        acceleration: 25, // Faster scroll speed
-        threshold: { x: 0.1, y: 0.1 }, // Wider activation zone
-      }}
-    >
-      <div className="flex flex-col min-h-screen overflow-x-hidden bg-neutral-950 text-white">
-        <div className="flex flex-1 flex-col md:flex-row h-full min-h-0">
-          {/* SIDEBAR */}
-          <aside className="p-4 border-b md:border-r flex-shrink-0 gap-4 flex flex-col bg-neutral-900 border-neutral-800 dark-theme">
-            <div className="logo-dark" />
+    <AppProvider value={appContextValue}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={pointerWithin}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        autoScroll={{
+          enabled: true,
+          acceleration: AUTO_SCROLL_ACCELERATION,
+          threshold: { x: AUTO_SCROLL_THRESHOLD, y: AUTO_SCROLL_THRESHOLD },
+        }}
+      >
+        <div className="flex flex-col min-h-screen overflow-x-hidden bg-neutral-950 text-white">
+          <div className="flex flex-1 flex-col md:flex-row h-full min-h-0">
+            {/* SIDEBAR */}
+            <Sidebar
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              itemsToShow={itemsToShow}
+              chestItemsMap={chestItemsMap}
+              handleChestClick={handleChestClick}
+              listHeight={listHeight}
+              listContainerRef={listContainerRef}
+            />
 
-            {/* Search with icon */}
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">
-                <FaSearch size={14} />
-              </div>
-              <input
-                type="text"
-                spellCheck="false"
-                value={searchTerm}
-                placeholder="Søg..."
-                className="border pl-9 pr-10 py-2 w-full bg-neutral-800 border-neutral-700 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                onChange={handleSearch}
+            {/* MAIN */}
+            <main className="flex-1 p-4 flex flex-col gap-4 overflow-x-hidden">
+              {/* HEADER – Tabs, Chest Grid Toggle, Settings */}
+              <TabBar tabScrollRef={tabScrollRef} />
+
+              {/* Kister */}
+              <ChestGrid
+                displayChests={displayChests}
+                profileVersion={profileVersion}
+                globalChestOffset={globalChestOffset}
+                incomingChest={incomingChest}
+                gridContainerRef={gridContainerRef}
+                confirmDeleteChest={confirmDeleteChest}
+                updateChestLabel={updateChestLabel}
+                updateChestIcon={updateChestIcon}
+                removeItemFromChest={removeItemFromChest}
+                addChest={addChest}
               />
-              {searchTerm && (
-                <button
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-200 transition-colors"
-                  onClick={handleClearSearch}
-                  aria-label="Ryd søgning"
-                >
-                  <FaTimes size={14} />
-                </button>
-              )}
-            </div>
+            </main>
+          </div>
 
-            {/* Item-liste header + toggles */}
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold">Item liste</h2>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowAll(!showAll)}
-                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm transition-colors ${showAll
-                    ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                    : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white'
-                    }`}
-                  title={showAll ? 'Vis kun items i kister' : 'Vis alle items'}
-                >
-                  <span>Vis alle</span>
-                </button>
 
-                <button
-                  onClick={() => setIsGridView(!isGridView)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 transition-colors text-sm text-neutral-300 hover:text-white"
-                  title={isGridView ? 'Item-liste: Listevisning' : 'Item-liste: Gittervisning'}
-                  aria-pressed={isGridView}
-                >
-                  {isGridView ? <FaBars size={14} /> : <FaTh size={14} />}
-                  <span>{isGridView ? 'Liste' : 'Gitter'}</span>
-                </button>
-              </div>
-            </div>
 
-            <div ref={listContainerRef} className="flex-1 overflow-auto dark-theme overflow-x-hidden">
-              {isGridView ? (
-                <div className="h-full" style={{ height: listHeight }}>
-                  <div className="grid grid-cols-6 gap-2">
-                    {itemsToShow.map((item, index) => (
-                      <DraggableSource key={item.uid} id={item.uid}>
-                        <ItemComponent
-                          item={item}
-                          index={index}
-                          lastIndex={itemsToShow.length - 1}
-                          chestIds={chestItemsMap.get(item.item)}
-                          isGridView
-                          isSelected={selectedItems.has(item.uid)}
-                          onSelect={handleItemSelect}
-                        />
-                      </DraggableSource>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <List className="dark-theme" height={listHeight} itemCount={itemsToShow.length} itemSize={50} width="100%">
-                  {renderRow}
-                </List>
-              )}
-            </div>
-          </aside>
+          {modalVisible && (
+            <ConfirmationModal
+              onConfirm={() => handleDeleteChest(chestToDelete!)}
+              onCancel={() => setModalVisible(false)}
+              message="Er du sikker på, at du vil slette denne kiste? Den er ikke tom."
+              title="Bekræft Sletning"
+              variant="danger"
+              confirmText="Slet"
+              cancelText="Annuller"
+            />
+          )}
 
-          {/* MAIN */}
-          <main className="flex-1 p-4 flex flex-col gap-4 overflow-x-hidden">
-            {/* HEADER – Tabs, Chest Grid Toggle (kvadratisk), Settings */}
-            <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 h-8 w-full">
-              {/* Profilnavn */}
-              <div className="flex items-center gap-2">
-                {isEditingProfileName ? (
-                  <>
-                    <input
-                      type="text"
-                      spellCheck="false"
-                      value={profileName}
-                      onChange={(e) => setProfileName(e.target.value)}
-                      placeholder="Profilnavn"
-                      className="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    />
-                    <button className="text-blue-400 hover:text-blue-300 transition-colors" onClick={() => setIsEditingProfileName(false)}>Gem</button>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-xl font-bold">{profileName}</span>
-                    <button className="text-blue-400 hover:text-blue-300 transition-colors" onClick={() => setIsEditingProfileName(true)} aria-label="Rediger profilnavn">
-                      <FaEdit />
-                    </button>
-                  </>
-                )}
-              </div>
+          {newProfileModalVisible && (
+            <ConfirmationModal
+              onConfirm={confirmNewProfile}
+              onCancel={cancelNewProfile}
+              message="Har du husket at eksportere den nuværende profil? Ændringer kan gå tabt, hvis du fortsætter uden at gemme."
+              title="Ny Profil"
+              variant="warning"
+              confirmText="Fortsæt"
+              cancelText="Annuller"
+            />
+          )}
 
-              {/* Tabs */}
-              <div className="min-w-0 overflow-hidden">
-                <div
-                  ref={tabScrollRef}
-                  onWheel={(e) => {
-                    const dx = e.deltaX || (e.shiftKey ? e.deltaY : 0);
-                    if (dx !== 0) {
-                      e.preventDefault();
-                      e.currentTarget.scrollLeft += dx;
-                    }
-                  }}
-                  className="flex items-center gap-2 overflow-x-auto overflow-y-hidden dark-theme"
-                  style={{ maxWidth: '100%', width: '100%' }}
-                >
-                  {tabs.map((tab, tabIndex) => {
-                    // Compute chest ID range for this tab
-                    let startId = 1;
-                    for (let i = 0; i < tabIndex; i++) {
-                      startId += tabs[i].chests.length;
-                    }
-                    const endId = startId + tab.chests.length - 1;
-                    const rangeText = tab.chests.length > 0
-                      ? startId === endId ? ` (${startId})` : ` (${startId}-${endId})`
-                      : '';
+          {importProfileModalVisible && (
+            <ConfirmationModal
+              onConfirm={confirmImportProfile}
+              onCancel={cancelImportProfile}
+              message="Har du husket at eksportere den nuværende profil? Ændringer kan gå tabt, hvis du fortsætter uden at gemme."
+              title="Importer Profil"
+              variant="warning"
+              confirmText="Importer"
+              cancelText="Annuller"
+            />
+          )}
 
-                    return (
-                      <DroppableTab
-                        key={tab.id}
-                        tabId={tab.id}
-                        isActive={activeTabId === tab.id}
-                        isEditing={isEditingTabName === tab.id}
-                        onSwitchTab={setActiveTabId}
-                      >
-                        {(showHighlight) => (
-                          <div className="flex items-center flex-shrink-0">
-                            {isEditingTabName === tab.id ? (
-                              <input
-                                type="text"
-                                spellCheck="false"
-                                value={tab.name}
-                                onChange={(e) => updateTabName(tab.id, e.target.value)}
-                                onBlur={() => setIsEditingTabName(null)}
-                                onKeyDown={(e) => { if (e.key === 'Enter') setIsEditingTabName(null); }}
-                                className="px-3 py-1 text-sm rounded bg-neutral-800 text-white focus:outline-none ring-2 ring-inset ring-blue-500 min-w-[100px]"
-                                autoFocus
-                              />
-                            ) : (
-                              <button
-                                id={`tab-btn-${tab.id}`}
-                                type="button"
-                                className={`flex-shrink-0 px-3 py-1 text-sm rounded border-b-2 transition-colors flex items-center gap-1 ${showHighlight
-                                  ? 'ring-2 ring-inset ring-blue-500'
-                                  : ''} ${activeTabId === tab.id
-                                    ? 'bg-neutral-800 border-blue-400 text-white'
-                                    : 'bg-neutral-900 border-transparent text-neutral-300 hover:text-white hover:bg-neutral-800'
-                                  }`}
-                                onClick={() => setActiveTabId(tab.id)}
-                                onDoubleClick={() => setIsEditingTabName(tab.id)}
-                              >
-                                <span className="truncate">{tab.name}{rangeText}</span>
-                                {tabs.length > 1 && (
-                                  <span
-                                    className="text-red-500 hover:text-red-400 transition-colors flex-shrink-0"
-                                    onClick={(e) => { e.stopPropagation(); removeTab(tab.id); }}
-                                    title="Luk tab"
-                                  >
-                                    <FaTimes size={10} />
-                                  </span>
-                                )}
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </DroppableTab>
-                    );
-                  })}
+          {deleteTabModalVisible && (
+            <ConfirmationModal
+              onConfirm={confirmDeleteTab}
+              onCancel={cancelDeleteTab}
+              message="Er du sikker på, at du vil slette dette tab? Det indeholder kister med indhold."
+              title="Bekræft Tab Sletning"
+              variant="danger"
+              confirmText="Slet"
+              cancelText="Annuller"
+            />
+          )}
+
+          {presetModalVisible && (
+            <ConfirmationModal
+              onConfirm={confirmLoadPreset}
+              onCancel={cancelLoadPreset}
+              message="Har du husket at eksportere den nuværende profil? Ændringer kan gå tabt, hvis du fortsætter uden at gemme."
+              title="Indlæs Skabelon"
+              variant="warning"
+              confirmText="Indlæs"
+              cancelText="Annuller"
+            />
+          )}
+
+          {importCodeModalVisible && (
+            <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+              <div className="bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl max-w-lg w-full p-6">
+                <h2 className="text-xl font-bold text-white mb-4">Importer Kode</h2>
+                <p className="text-neutral-400 text-sm mb-4">
+                  Indsæt den kode du har modtaget fra en anden bruger herunder.
+                </p>
+                <textarea
+                  value={importCodeValue}
+                  onChange={(e) => setImportCodeValue(e.target.value)}
+                  placeholder="Indsæt kode her..."
+                  className="w-full h-32 bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-white text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  autoFocus
+                />
+                <div className="flex justify-end gap-3 mt-4">
                   <button
-                    type="button"
-                    className="flex-shrink-0 px-2 py-1 text-sm rounded border-2 border-dashed border-neutral-700 text-neutral-400 hover:border-neutral-600 hover:text-white transition-colors"
-                    onClick={addTab}
-                    title="Tilføj nyt tab"
+                    onClick={() => {
+                      setImportCodeModalVisible(false);
+                      setImportCodeValue('');
+                    }}
+                    className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors"
                   >
-                    <FaPlus size={12} />
+                    Annuller
+                  </button>
+                  <button
+                    onClick={processImportCode}
+                    className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+                  >
+                    Importer
                   </button>
                 </div>
               </div>
-
-              {/* KVADRATISK chest grid/list toggle */}
-              <div className="justify-self-end">
-                <button
-                  onClick={() => setChestGridView(!chestGridView)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 transition-colors text-sm text-neutral-300 hover:text-white"
-                  title={chestGridView ? 'Kister: Listevisning' : 'Kister: Gittervisning'}
-                  aria-pressed={chestGridView}
-                >
-                  {chestGridView ? <FaBars size={14} /> : <FaTh size={14} />}
-                  <span>{chestGridView ? 'Liste' : 'Gitter'}</span>
-                </button>
-              </div>
-
-              {/* Settings */}
-              <SettingsDropdown
-                onImport={handleImportProfile}
-                onExport={handleExportProfile}
-                onShare={handleShare}
-                onCopyCode={handleCopyCode}
-                onImportCode={handleImportCode}
-                onNewProfile={createNewProfile}
-                onLoadPreset={loadPreset}
-                onUndo={handleUndo}
-                onRedo={handleRedo}
-                undoDisabled={undoStack.length === 0}
-                redoDisabled={redoStack.length === 0}
-              />
             </div>
-
-            {/* Kister */}
-            <div ref={gridContainerRef} className="grid-cols-auto-fit dark-theme overflow-x-hidden">
-              <SortableContext items={displayChests.map(c => c.id)} strategy={rectSortingStrategy}>
-                {displayChests.map((chest, index) => (
-                  <ChestComponent
-                    key={`${chest.id}-${profileVersion}`}
-                    chest={chest}
-                    index={globalChestOffset + index}
-                    removeChest={confirmDeleteChest}
-                    updateChestLabel={updateChestLabel}
-                    updateChestIcon={updateChestIcon}
-                    removeItemFromChest={removeItemFromChest}
-                    gridView={chestGridView}
-                    isPlaceholder={incomingChest?.id === chest.id}
-                    selectedItems={selectedItems}
-                    onItemSelect={handleItemSelect}
-                  />
-                ))}
-              </SortableContext>
-
-              {/* Add Chest Drop Zone */}
-              <AddChestDropZone onAddChest={addChest} />
-            </div>
-          </main>
+          )}
         </div>
-
-
-
-        {modalVisible && (
-          <ConfirmationModal
-            onConfirm={() => handleDeleteChest(chestToDelete!)}
-            onCancel={() => setModalVisible(false)}
-            message="Er du sikker på, at du vil slette denne kiste? Den er ikke tom."
-            title="Bekræft Sletning"
-            variant="danger"
-            confirmText="Slet"
-            cancelText="Annuller"
-          />
-        )}
-
-        {newProfileModalVisible && (
-          <ConfirmationModal
-            onConfirm={confirmNewProfile}
-            onCancel={cancelNewProfile}
-            message="Har du husket at eksportere den nuværende profil? Ændringer kan gå tabt, hvis du fortsætter uden at gemme."
-            title="Ny Profil"
-            variant="warning"
-            confirmText="Fortsæt"
-            cancelText="Annuller"
-          />
-        )}
-
-        {importProfileModalVisible && (
-          <ConfirmationModal
-            onConfirm={confirmImportProfile}
-            onCancel={cancelImportProfile}
-            message="Har du husket at eksportere den nuværende profil? Ændringer kan gå tabt, hvis du fortsætter uden at gemme."
-            title="Importer Profil"
-            variant="warning"
-            confirmText="Importer"
-            cancelText="Annuller"
-          />
-        )}
-
-        {deleteTabModalVisible && (
-          <ConfirmationModal
-            onConfirm={confirmDeleteTab}
-            onCancel={cancelDeleteTab}
-            message="Er du sikker på, at du vil slette dette tab? Det indeholder kister med indhold."
-            title="Bekræft Tab Sletning"
-            variant="danger"
-            confirmText="Slet"
-            cancelText="Annuller"
-          />
-        )}
-
-        {presetModalVisible && (
-          <ConfirmationModal
-            onConfirm={confirmLoadPreset}
-            onCancel={cancelLoadPreset}
-            message="Har du husket at eksportere den nuværende profil? Ændringer kan gå tabt, hvis du fortsætter uden at gemme."
-            title="Indlæs Skabelon"
-            variant="warning"
-            confirmText="Indlæs"
-            cancelText="Annuller"
-          />
-        )}
-
-        {importCodeModalVisible && (
-          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <div className="bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl max-w-lg w-full p-6">
-              <h2 className="text-xl font-bold text-white mb-4">Importer Kode</h2>
-              <p className="text-neutral-400 text-sm mb-4">
-                Indsæt den kode du har modtaget fra en anden bruger herunder.
-              </p>
-              <textarea
-                value={importCodeValue}
-                onChange={(e) => setImportCodeValue(e.target.value)}
-                placeholder="Indsæt kode her..."
-                className="w-full h-32 bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-white text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                autoFocus
-              />
-              <div className="flex justify-end gap-3 mt-4">
-                <button
-                  onClick={() => {
-                    setImportCodeModalVisible(false);
-                    setImportCodeValue('');
-                  }}
-                  className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors"
-                >
-                  Annuller
-                </button>
-                <button
-                  onClick={processImportCode}
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors"
-                >
-                  Importer
-                </button>
+        {/* Only center items on cursor, not chests */}
+        <DragOverlay
+          modifiers={activeItem && !('items' in activeItem) ? [snapCenterToCursor] : []}
+          dropAnimation={dragSourceIsItemRef.current ? null : dropAnimation}
+        >
+          {activeId ? (
+            activeItem && 'items' in activeItem ? (
+              // Chest Overlay - use global position with fixed height matching grid
+              <div className="opacity-90 min-w-[350px] text-white dark-theme pointer-events-none" style={{ height: '280px' }}>
+                <ChestComponent
+                  chest={activeItem as Chest}
+                  index={globalChestOffset + chests.findIndex(c => c.id === (activeItem as Chest).id)}
+                  removeChest={() => { }}
+                  updateChestLabel={() => { }}
+                  updateChestIcon={() => { }}
+                  removeItemFromChest={() => { }}
+                  gridView={chestGridView}
+                />
               </div>
-            </div>
-          </div>
-        )}
-      </div>
-      {/* Only center items on cursor, not chests */}
-      <DragOverlay
-        modifiers={activeItem && !('items' in activeItem) ? [snapCenterToCursor] : []}
-        dropAnimation={dragSourceIsItemRef.current ? null : dropAnimation}
-      >
-        {activeId ? (
-          activeItem && 'items' in activeItem ? (
-            // Chest Overlay - use global position with fixed height matching grid
-            <div className="opacity-90 min-w-[350px] text-white dark-theme pointer-events-none" style={{ height: '280px' }}>
-              <ChestComponent
-                chest={activeItem as Chest}
-                index={globalChestOffset + chests.findIndex(c => c.id === (activeItem as Chest).id)}
-                removeChest={() => { }}
-                updateChestLabel={() => { }}
-                updateChestIcon={() => { }}
-                removeItemFromChest={() => { }}
-                gridView={chestGridView}
-              />
-            </div>
-          ) : (
-            // Item Overlay
-            <div className="pointer-events-none inline-block relative">
-              {activeItem && (
-                <>
-                  <SpriteIcon icon={(activeItem as Item).image} size={48} className="drop-shadow-xl" />
-                  {/* Show badge if multiple items selected */}
-                  {selectedItems.size > 1 && selectedItems.has((activeItem as Item).uid) && (
-                    <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg">
-                      {selectedItems.size}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+            ) : (
+              // Item Overlay
+              <div className="pointer-events-none inline-block relative">
+                {activeItem && (
+                  <>
+                    <SpriteIcon icon={(activeItem as Item).image} size={48} className="drop-shadow-xl" />
+                    {/* Show badge if multiple items selected */}
+                    {selectedItems.size > 1 && selectedItems.has((activeItem as Item).uid) && (
+                      <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg">
+                        {selectedItems.size}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+    </AppProvider>
   );
 };
 
 export default App;
+

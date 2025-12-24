@@ -8,6 +8,7 @@ import { CMD_LIMIT, buildCommand } from './chestUtils';
 import ChestIconPicker from './components/ChestIconPicker';
 import { DraggableItem } from './dnd/Draggable';
 import { Item, Chest } from './types';
+import { COPY_FEEDBACK_DURATION } from './constants';
 
 interface ChestComponentProps {
   chest: Chest;
@@ -240,7 +241,7 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
                   e.stopPropagation();
                   navigator.clipboard.writeText(command);
                   setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
+                  setTimeout(() => setCopied(false), COPY_FEEDBACK_DURATION);
                 }}
                 onPointerDown={e => e.stopPropagation()}
                 className={`transition-colors ${copied ? 'text-green-400' : 'text-green-500 hover:text-green-400'}`}
