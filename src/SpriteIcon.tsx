@@ -14,8 +14,8 @@ interface SpriteIconProps {
     alt?: string;
 }
 
-// Get sprite sheet URL from process.env
-const SPRITE_URL = `${process.env.PUBLIC_URL}/assets/images/spritesheet.webp`;
+// Get sprite sheet URL from base path
+const SPRITE_URL = `${import.meta.env.BASE_URL}assets/images/spritesheet.webp`;
 
 // Type for sprite coordinates
 interface SpriteCoords {
@@ -46,7 +46,7 @@ const SpriteIcon: React.FC<SpriteIconProps> = memo(({
     if (!coords) {
         return (
             <img
-                src={`${process.env.PUBLIC_URL}/assets/images/icons/${icon}`}
+                src={`${import.meta.env.BASE_URL}assets/images/icons/${icon}`}
                 alt={alt || icon.replace('.png', '').replace(/_/g, ' ')}
                 className={className}
                 onClick={onClick}

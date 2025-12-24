@@ -213,7 +213,7 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
               </button>
             </div>
           ) : (
-            <>
+            <div className="flex items-center gap-2">
               <span
                 className="truncate text-base font-semibold cursor-pointer"
                 onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
@@ -222,7 +222,7 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
               <button className="text-blue-400 hover:text-blue-300 transition-colors" onClick={(e) => { e.stopPropagation(); setIsEditing(true); }} onPointerDown={e => e.stopPropagation()} aria-label="Rediger navn">
                 <FaEdit />
               </button>
-            </>
+            </div>
           )}
         </div>
 

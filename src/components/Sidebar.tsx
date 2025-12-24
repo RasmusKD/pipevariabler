@@ -10,7 +10,7 @@ interface SidebarProps {
     searchTerm: string;
     setSearchTerm: (term: string) => void;
     itemsToShow: Item[];
-    chestItemsMap: Map<string, number[]>;
+    chestItemsMap: Map<string, { chestId: number; displayIndex: number }[]>;
     handleChestClick: (chestId: number, itemName?: string) => void;
     listHeight: number;
     listContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -19,7 +19,7 @@ interface SidebarProps {
 // Props passed to rowComponent via rowProps
 interface RowData {
     itemsToShow: Item[];
-    chestItemsMap: Map<string, number[]>;
+    chestItemsMap: Map<string, { chestId: number; displayIndex: number }[]>;
     selectedItems: Set<string>;
     handleItemSelect: (uid: string, ctrlKey: boolean, isClick?: boolean) => void;
     handleChestClick: (chestId: number, itemName?: string) => void;

@@ -3,11 +3,16 @@ import { FaTimes } from 'react-icons/fa';
 import SpriteIcon from './SpriteIcon';
 import { Item } from './types';
 
+interface ChestLocation {
+    chestId: number;
+    displayIndex: number;
+}
+
 interface ItemComponentProps {
     item: Item;
     index: number;
     lastIndex: number;
-    chestIds?: number[];
+    chestIds?: ChestLocation[];
     removeItem?: () => void;
     isGridView?: boolean;
     isSelected?: boolean;
@@ -52,7 +57,7 @@ const ItemComponent: React.FC<ItemComponentProps> = React.memo(({
 
     // GRID VIEW
     if (isGridView) {
-        const tooltipText = `${item.item.replace(/_/g, ' ')}${chestIds && chestIds.length > 0 ? ` (Chests: ${chestIds.map(id => `#${id}`).join(', ')})` : ''}`;
+        const tooltipText = `${item.item.replace(/_/g, ' ')}${chestIds && chestIds.length > 0 ? ` (Chests: ${chestIds.map(c => `#${c.displayIndex}`).join(', ')})` : ''}`;
         const displayCount = chestIds && chestIds.length > 9 ? '9+' : (chestIds ? String(chestIds.length) : '0');
 
         return (
@@ -108,16 +113,16 @@ const ItemComponent: React.FC<ItemComponentProps> = React.memo(({
             {chestIds && chestIds.length > 0 && (
                 <span className="absolute flex items-center text-neutral-400 top-1 right-2 text-xs gap-1">
                     <SpriteIcon icon="barrel.png" size={16} />
-                    {chestIds.map((id, idx) => (
-                        <React.Fragment key={id}>
+                    {chestIds.map((chest, idx) => (
+                        <React.Fragment key={chest.chestId}>
                             {idx > 0 && <span>,</span>}
                             <button
                                 className="hover:text-blue-400 hover:underline transition-colors cursor-pointer"
-                                onClick={(e) => { e.stopPropagation(); onChestClick?.(id, item.item); }}
+                                onClick={(e) => { e.stopPropagation(); onChestClick?.(chest.chestId, item.item); }}
                                 onPointerDown={(e) => e.stopPropagation()}
-                                title={`Gå til kiste #${id}`}
+                                title={`Gå til kiste #${chest.displayIndex}`}
                             >
-                                #{id}
+                                #{chest.displayIndex}
                             </button>
                         </React.Fragment>
                     ))}
@@ -139,4 +144,3 @@ const ItemComponent: React.FC<ItemComponentProps> = React.memo(({
 });
 
 export default ItemComponent;
-

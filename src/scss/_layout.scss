@@ -1,3 +1,8 @@
+/* Tailwind 4 removed cursor:pointer from buttons in preflight */
+button {
+  cursor: pointer;
+}
+
 .item-icons {
   height: 32px;
   width: 32px;

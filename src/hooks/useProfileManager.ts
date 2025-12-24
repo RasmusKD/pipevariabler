@@ -150,7 +150,7 @@ export const useProfileManager = ({
     // Preset loading internal function wrapped in useCallback
     const confirmLoadPresetInternal = useCallback(async (presetName: string) => {
         try {
-            const response = await fetch(`${process.env.PUBLIC_URL}/presets/${presetName}.json`);
+            const response = await fetch(`${import.meta.env.BASE_URL}presets/${presetName}.json`);
             if (!response.ok) throw new Error('Failed to load preset');
             const preset = await response.json();
 
@@ -228,6 +228,17 @@ export const useProfileManager = ({
         setActiveTabId(newTabId);
     }, [tabs, getNextChestId, setTabs, setActiveTabId]);
 
+    const moveTab = useCallback((fromIndex: number, toIndex: number) => {
+        if (fromIndex === toIndex) return;
+        setTabs(prev => {
+            const newTabs = [...prev];
+            const [removed] = newTabs.splice(fromIndex, 1);
+            newTabs.splice(toIndex, 0, removed);
+            return newTabs;
+        });
+    }, [setTabs]);
+
+
     const handleDeleteTab = useCallback((tabId: number) => {
         const newTabs = tabs.filter(tab => tab.id !== tabId);
         setTabs(newTabs);
@@ -277,6 +288,7 @@ export const useProfileManager = ({
         confirmLoadPreset,
         cancelLoadPreset,
         addTab,
+        moveTab,
         removeTab,
         confirmDeleteTab,
         cancelDeleteTab,

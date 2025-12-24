@@ -110,6 +110,25 @@ export const useDragController = ({
         const overIdStr = String(over.id);
         const isTabDrop = overIdStr.startsWith('tab-drop-');
 
+        // Handle Tab-to-Tab reordering
+        if (activeIdStr.startsWith('tab-') && overIdStr.startsWith('tab-') && !isTabDrop) {
+            const activeTabIdNum = parseInt(activeIdStr.replace('tab-', ''), 10);
+            const overTabIdNum = parseInt(overIdStr.replace('tab-', ''), 10);
+
+            if (activeTabIdNum !== overTabIdNum) {
+                const oldIndex = tabs.findIndex(t => t.id === activeTabIdNum);
+                const newIndex = tabs.findIndex(t => t.id === overTabIdNum);
+
+                if (oldIndex !== -1 && newIndex !== -1) {
+                    setTabs(arrayMove(tabs, oldIndex, newIndex));
+                }
+            }
+
+            setActiveId(null);
+            setActiveItem(null);
+            return;
+        }
+
         // Handle Chest Dragging
         if (typeof active.id === 'number') {
             const activeChestId = active.id;

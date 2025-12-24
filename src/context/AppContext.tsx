@@ -19,6 +19,7 @@ interface TabsContextType {
     updateTabName: (id: number, name: string) => void;
     addTab: () => void;
     removeTab: (id: number) => void;
+    moveTab: (fromIndex: number, toIndex: number) => void;
 }
 
 // Settings/Profile management actions

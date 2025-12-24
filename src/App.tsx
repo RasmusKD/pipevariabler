@@ -65,6 +65,7 @@ const App: React.FC = () => {
     confirmLoadPreset,
     cancelLoadPreset,
     addTab,
+    moveTab,
     removeTab,
     confirmDeleteTab,
     cancelDeleteTab,
@@ -242,15 +243,19 @@ const App: React.FC = () => {
   );
 
   // Map item names to their chest locations with global sequential IDs across all tabs
+  // Stores { chestId, displayIndex } so we can show correct number and navigate correctly
   const chestItemsMap = useMemo(() => {
-    const map = new Map<string, number[]>();
+    const map = new Map<string, { chestId: number; displayIndex: number }[]>();
+    let globalIndex = 1;
     tabs.forEach(tab => {
       tab.chests.forEach(chest => {
+        const currentDisplayIndex = globalIndex;
         chest.items.forEach(item => {
           if (!map.has(item.item)) map.set(item.item, []);
-          // Use chest.id so handleChestClick can find the correct chest
-          map.get(item.item)!.push(chest.id);
+          // Store both chest.id for navigation AND displayIndex for visual display
+          map.get(item.item)!.push({ chestId: chest.id, displayIndex: currentDisplayIndex });
         });
+        globalIndex++;
       });
     });
     return map;
@@ -579,6 +584,7 @@ const App: React.FC = () => {
       setIsEditingTabName,
       updateTabName,
       addTab,
+      moveTab,
       removeTab,
     },
     settings: {
@@ -608,7 +614,7 @@ const App: React.FC = () => {
     },
   }), [
     profileName, setProfileName, isEditingProfileName, setIsEditingProfileName,
-    tabs, activeTabId, setActiveTabId, isEditingTabName, setIsEditingTabName, updateTabName, addTab, removeTab,
+    tabs, activeTabId, setActiveTabId, isEditingTabName, setIsEditingTabName, updateTabName, addTab, moveTab, removeTab,
     handleImportProfile, handleExportProfile, handleShare, handleCopyCode, handleImportCode, createNewProfile, loadPreset, handleUndo, handleRedo, undoStack.length, redoStack.length,
     chestGridView, setChestGridView, isGridView, setIsGridView, showAll, setShowAll,
     selectedItems, handleItemSelect,
