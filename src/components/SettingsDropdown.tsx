@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FaCog, FaCaretDown, FaFileImport, FaFileExport, FaUserPlus, FaUndo, FaRedo, FaBook, FaShare, FaClipboard, FaPaste } from 'react-icons/fa';
+import { version } from '../../package.json';
 
 interface SettingsDropdownProps {
     onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -191,7 +192,7 @@ const SettingsDropdown: React.FC<SettingsDropdownProps> = ({
 
                     {/* Footer with credits */}
                     <div className="px-3 py-2 text-xs text-neutral-500 border-t border-neutral-800 text-center">
-                        v2.0.0 • Lavet af WhoToldYou
+                        v{version} • Lavet af WhoToldYou
                     </div>
                 </div>
             )}
