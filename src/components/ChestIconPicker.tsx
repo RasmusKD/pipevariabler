@@ -24,12 +24,16 @@ const ChestIconPicker: React.FC<ChestIconPickerProps> = ({
     });
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Close dropdown when clicking outside
+    // Close dropdown when clicking outside or scrolling
     useEffect(() => {
         if (dropdownOpen) {
             const close = () => setDropdownOpen(false);
             window.addEventListener('click', close);
-            return () => window.removeEventListener('click', close);
+            window.addEventListener('scroll', close, true); // Close on any scroll
+            return () => {
+                window.removeEventListener('click', close);
+                window.removeEventListener('scroll', close, true);
+            };
         }
     }, [dropdownOpen]);
 
@@ -46,8 +50,9 @@ const ChestIconPicker: React.FC<ChestIconPickerProps> = ({
             const spaceAbove = rect.top;
             const positionAbove = spaceBelow < 320 && spaceAbove > 320;
             setDropdownPosition({
-                top: positionAbove ? rect.top - 310 + window.scrollY : rect.bottom + window.scrollY,
-                left: rect.left + window.scrollX,
+                // Use viewport coordinates for fixed positioning (no scroll offset)
+                top: positionAbove ? rect.top - 310 : rect.bottom,
+                left: rect.left,
                 positionAbove,
             });
             setDropdownOpen(true);

@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { FaEdit, FaTimes, FaPlus, FaTh, FaBars } from 'react-icons/fa';
+import { FaEdit, FaTimes, FaPlus, FaTh, FaBars, FaUndo, FaRedo } from 'react-icons/fa';
 import SettingsDropdown from './SettingsDropdown';
 import DroppableTab from './DroppableTab';
 import { useProfile, useTabs, useSettings, useView } from '../context/AppContext';
@@ -16,7 +16,7 @@ const TabBar: React.FC<TabBarProps> = ({ tabScrollRef }) => {
     const { chestGridView, setChestGridView } = useView();
 
     return (
-        <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 h-8 w-full">
+        <div className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-4 h-8 w-full">
             {/* Profile name */}
             <div className="flex items-center gap-2">
                 {isEditingProfileName ? (
@@ -126,6 +126,34 @@ const TabBar: React.FC<TabBarProps> = ({ tabScrollRef }) => {
                         <FaPlus size={12} />
                     </button>
                 </div>
+            </div>
+
+            {/* Undo/Redo buttons */}
+            <div className="flex items-center gap-1">
+                <button
+                    onClick={onUndo}
+                    disabled={undoDisabled}
+                    className={`p-2 rounded transition-colors ${undoDisabled
+                            ? 'text-neutral-600 cursor-not-allowed'
+                            : 'text-neutral-300 hover:text-white hover:bg-neutral-700'
+                        }`}
+                    title="Fortryd (Ctrl+Z)"
+                    aria-label="Fortryd"
+                >
+                    <FaUndo size={14} />
+                </button>
+                <button
+                    onClick={onRedo}
+                    disabled={redoDisabled}
+                    className={`p-2 rounded transition-colors ${redoDisabled
+                            ? 'text-neutral-600 cursor-not-allowed'
+                            : 'text-neutral-300 hover:text-white hover:bg-neutral-700'
+                        }`}
+                    title="Gentag (Ctrl+Y)"
+                    aria-label="Gentag"
+                >
+                    <FaRedo size={14} />
+                </button>
             </div>
 
             {/* Chest grid/list toggle */}

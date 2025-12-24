@@ -260,13 +260,12 @@ const App: React.FC = () => {
   // Map item names to their chest locations with global sequential IDs across all tabs
   const chestItemsMap = useMemo(() => {
     const map = new Map<string, number[]>();
-    let globalIndex = 0;
     tabs.forEach(tab => {
       tab.chests.forEach(chest => {
-        globalIndex++;
         chest.items.forEach(item => {
           if (!map.has(item.item)) map.set(item.item, []);
-          map.get(item.item)!.push(globalIndex);
+          // Use chest.id so handleChestClick can find the correct chest
+          map.get(item.item)!.push(chest.id);
         });
       });
     });
@@ -498,31 +497,35 @@ const App: React.FC = () => {
         }
         // Scroll to chest after a brief delay for tab switch
         setTimeout(() => {
-          const chestElement = document.querySelector(`[data-chest-id="${chestId}"]`);
+          const chestElement = document.querySelector(`[data-chest-id="${chestId}"]`) as HTMLElement;
           if (chestElement) {
-            chestElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Flash highlight effect (same as drop hover)
+            // First, instantly scroll chest to top to ensure it's fully visible
+            chestElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+
+            // Flash highlight effect
             chestElement.classList.add('ring-2', 'ring-inset', 'ring-blue-500');
             setTimeout(() => {
               chestElement.classList.remove('ring-2', 'ring-inset', 'ring-blue-500');
             }, 1500);
-            // If itemName provided, highlight that item in the chest
+
+            // If itemName provided, scroll to that item WITHIN the chest
             if (itemName) {
               const itemInChest = chest.items.find(i => i.item === itemName);
               if (itemInChest) {
                 setSelectedItems(new Set([itemInChest.uid]));
-                // Scroll to the item
+                // Scroll item into view within its container
                 setTimeout(() => {
-                  const itemElement = chestElement.querySelector(`[data-item-id="${itemInChest.uid}"]`);
+                  const itemElement = chestElement.querySelector(`[data-item-id="${itemInChest.uid}"]`) as HTMLElement;
                   if (itemElement) {
-                    itemElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    // Simple scrollIntoView - chest is already in view so this only scrolls within
+                    itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   }
-                }, 150);
+                }, 200);
                 setTimeout(() => setSelectedItems(new Set()), 2000);
               }
             }
           }
-        }, 100);
+        }, 150);
         return;
       }
     }

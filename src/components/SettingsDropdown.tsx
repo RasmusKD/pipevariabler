@@ -188,6 +188,11 @@ const SettingsDropdown: React.FC<SettingsDropdownProps> = ({
                             <kbd className="ml-auto text-xs text-neutral-500 bg-neutral-800 px-1.5 py-0.5 rounded">Ctrl+Y</kbd>
                         </button>
                     </div>
+
+                    {/* Footer with credits */}
+                    <div className="px-3 py-2 text-xs text-neutral-500 border-t border-neutral-800 text-center">
+                        v2.0.0 • Lavet af WhoToldYou
+                    </div>
                 </div>
             )}
         </div>

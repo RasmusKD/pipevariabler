@@ -1,6 +1,7 @@
 {
   "name": "my-app",
-  "version": "1.5.0",
+  "version": "2.0.0",
+  "author": "WhoToldYou",
   "private": true,
   "homepage": "https://rasmuskd.github.io/pipevariabler",
   "dependencies": {
