@@ -1,5 +1,5 @@
-import React, { memo } from 'react';
-import { FixedSizeList as List } from 'react-window';
+import React, { memo, CSSProperties, ReactElement } from 'react';
+import { List } from 'react-window';
 import { FaTimes, FaTh, FaBars, FaSearch } from 'react-icons/fa';
 import ItemComponent from '../ItemComponent';
 import { DraggableSource } from '../dnd/Draggable';
@@ -13,8 +13,44 @@ interface SidebarProps {
     chestItemsMap: Map<string, number[]>;
     handleChestClick: (chestId: number, itemName?: string) => void;
     listHeight: number;
-    listContainerRef: React.RefObject<HTMLDivElement>;
+    listContainerRef: React.RefObject<HTMLDivElement | null>;
 }
+
+// Props passed to rowComponent via rowProps
+interface RowData {
+    itemsToShow: Item[];
+    chestItemsMap: Map<string, number[]>;
+    selectedItems: Set<string>;
+    handleItemSelect: (uid: string, ctrlKey: boolean, isClick?: boolean) => void;
+    handleChestClick: (chestId: number, itemName?: string) => void;
+}
+
+// Row component for react-window 2.x
+const Row = ({ index, style, itemsToShow, chestItemsMap, selectedItems, handleItemSelect, handleChestClick }: {
+    ariaAttributes: { "aria-posinset": number; "aria-setsize": number; role: "listitem" };
+    index: number;
+    style: CSSProperties;
+} & RowData): ReactElement => {
+    const item = itemsToShow[index];
+    const chestIds = chestItemsMap.get(item.item);
+    const isSelected = selectedItems.has(item.uid);
+    return (
+        <div style={style} key={item.uid}>
+            <DraggableSource id={item.uid} className="h-full">
+                <ItemComponent
+                    item={item}
+                    index={index}
+                    lastIndex={itemsToShow.length - 1}
+                    chestIds={chestIds}
+                    isGridView={false}
+                    isSelected={isSelected}
+                    onSelect={handleItemSelect}
+                    onChestClick={handleChestClick}
+                />
+            </DraggableSource>
+        </div>
+    );
+};
 
 const Sidebar: React.FC<SidebarProps> = ({
     searchTerm,
@@ -31,28 +67,6 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value);
     const handleClearSearch = () => setSearchTerm('');
-
-    const renderRow = ({ index, style }: { index: number; style: React.CSSProperties }) => {
-        const item = itemsToShow[index];
-        const chestIds = chestItemsMap.get(item.item);
-        const isSelected = selectedItems.has(item.uid);
-        return (
-            <div style={style} key={item.uid}>
-                <DraggableSource id={item.uid} className="h-full">
-                    <ItemComponent
-                        item={item}
-                        index={index}
-                        lastIndex={itemsToShow.length - 1}
-                        chestIds={chestIds}
-                        isGridView={false}
-                        isSelected={isSelected}
-                        onSelect={handleItemSelect}
-                        onChestClick={handleChestClick}
-                    />
-                </DraggableSource>
-            </div>
-        );
-    };
 
     return (
         <aside className="p-4 border-b md:border-r flex-shrink-0 gap-4 flex flex-col bg-neutral-900 border-neutral-800 dark-theme">
@@ -129,9 +143,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </div>
                     </div>
                 ) : (
-                    <List className="dark-theme" height={listHeight} itemCount={itemsToShow.length} itemSize={50} width="100%">
-                        {renderRow}
-                    </List>
+                    <div style={{ height: listHeight }}>
+                        <List<RowData>
+                            className="dark-theme"
+                            rowComponent={Row}
+                            rowCount={itemsToShow.length}
+                            rowHeight={50}
+                            rowProps={{
+                                itemsToShow,
+                                chestItemsMap,
+                                selectedItems,
+                                handleItemSelect,
+                                handleChestClick,
+                            }}
+                        />
+                    </div>
                 )}
             </div>
         </aside>

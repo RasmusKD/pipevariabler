@@ -3,7 +3,7 @@ import { DndContext, DragOverlay, pointerWithin } from '@dnd-kit/core';
 import { snapCenterToCursor } from '@dnd-kit/modifiers';
 import './scss/main.scss';
 import pako from 'pako';
-import itemsData from './data.json';
+import { processItems, getAllItems } from './itemUtils';
 import ChestComponent from './ChestComponent';
 import SpriteIcon from './SpriteIcon';
 
@@ -105,23 +105,7 @@ const App: React.FC = () => {
   /* Dnd Sensors moved to hook */
 
   useEffect(() => {
-    // Create lookup map for images/variables
-    const itemDataMap = new Map<string, { image: string; variable: string }>();
-    itemsData.items.forEach((item: any) => {
-      itemDataMap.set(item.item, { image: item.image, variable: item.variable });
-    });
-
-    const processItems = (items: any[]) => items.map((i: any) => {
-      const dataItem = itemDataMap.get(i.item);
-      return {
-        ...i,
-        image: i.image || dataItem?.image || `${i.item}.png`,
-        variable: i.variable || dataItem?.variable || '',
-        uid: i.uid || Math.random().toString(36).substr(2, 9)
-      };
-    });
-
-    const loadProfile = (profile: any) => {
+    const loadProfile = (profile: Profile) => {
       setProfileName(profile.name || 'Delt Profil');
       let globalChestId = 1;
       let tabId = 1;
@@ -199,8 +183,8 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const sortedItems = itemsData.items.sort((a, b) => a.item.localeCompare(b.item));
-    setItems(sortedItems.map(i => ({ ...i, uid: i.item })));
+    const sortedItems = getAllItems().sort((a, b) => a.item.localeCompare(b.item));
+    setItems(sortedItems);
   }, []);
 
   useEffect(() => {
@@ -420,22 +404,6 @@ const App: React.FC = () => {
       }
       const jsonStr = pako.inflate(bytes, { to: 'string' });
       const profile = JSON.parse(jsonStr);
-
-      // Create lookup map for images/variables
-      const itemDataMap = new Map<string, { image: string; variable: string }>();
-      itemsData.items.forEach((item: any) => {
-        itemDataMap.set(item.item, { image: item.image, variable: item.variable });
-      });
-
-      const processItems = (items: any[]) => items.map((i: any) => {
-        const dataItem = itemDataMap.get(i.item);
-        return {
-          ...i,
-          image: i.image || dataItem?.image || `${i.item}.png`,
-          variable: i.variable || dataItem?.variable || '',
-          uid: i.uid || Math.random().toString(36).substr(2, 9)
-        };
-      });
 
       setUndoStack(prev => [...prev, tabs]);
       setRedoStack([]);

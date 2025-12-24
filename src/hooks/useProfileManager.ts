@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Tab, Profile, Chest } from '../types';
-import itemsData from '../data.json';
+import { processItems } from '../itemUtils';
 
 interface UseProfileManagerProps {
     tabs: Tab[];
@@ -160,50 +160,29 @@ export const useProfileManager = ({
             setProfileName(preset.name || presetName);
 
             let globalChestId = 1;
-            // Create lookup maps from data.json
-            const itemDataMap = new Map<string, { image: string; variable: string }>();
-            itemsData.items.forEach((item: any) => {
-                itemDataMap.set(item.item, { image: item.image, variable: item.variable });
-            });
 
             if (preset.tabs) {
                 let tabId = 1;
-                const processedTabs = preset.tabs.map((tab: any) => ({
+                const processedTabs = preset.tabs.map((tab: { id?: number; name: string; chests: Partial<Chest>[] }) => ({
                     ...tab,
                     id: tabId++,
-                    chests: tab.chests.map((chest: any) => ({
+                    chests: tab.chests.map((chest) => ({
                         ...chest,
                         id: globalChestId++,
                         icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
                         checked: chest.checked || false,
-                        items: (chest.items || []).map((i: any) => {
-                            const dataItem = itemDataMap.get(i.item);
-                            return {
-                                ...i,
-                                image: i.image || dataItem?.image || `${i.item}.png`,
-                                variable: i.variable || dataItem?.variable || '',
-                                uid: i.uid || Math.random().toString(36).substr(2, 9)
-                            };
-                        })
+                        items: processItems(chest.items || [])
                     }))
                 }));
-                setTabs(processedTabs);
+                setTabs(processedTabs as Tab[]);
                 setActiveTabId(processedTabs[0]?.id || 1);
             } else if (preset.chests) {
-                const processedChests = preset.chests.map((chest: any) => ({
+                const processedChests = preset.chests.map((chest: Partial<Chest>) => ({
                     ...chest,
                     id: globalChestId++,
                     icon: chest.icon ? chest.icon.replace('.png', '') : 'barrel',
                     checked: chest.checked || false,
-                    items: (chest.items || []).map((i: any) => {
-                        const dataItem = itemDataMap.get(i.item);
-                        return {
-                            ...i,
-                            image: i.image || dataItem?.image || `${i.item}.png`,
-                            variable: i.variable || dataItem?.variable || '',
-                            uid: i.uid || Math.random().toString(36).substr(2, 9)
-                        };
-                    })
+                    items: processItems(chest.items || [])
                 }));
                 const defaultTab: Tab = { id: 1, name: 'Tab 1', chests: processedChests };
                 setTabs([defaultTab]);

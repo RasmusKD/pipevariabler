@@ -27,7 +27,7 @@ interface ChestComponentProps {
 const ItemsDropZone: React.FC<{
   chestId: number;
   children: React.ReactNode;
-  containerRef?: React.RefObject<HTMLDivElement>;
+  containerRef?: React.RefObject<HTMLDivElement | null>;
   hasItems: boolean;
   isGridView: boolean;
 }> = memo(({ chestId, children, containerRef, hasItems, isGridView }) => {

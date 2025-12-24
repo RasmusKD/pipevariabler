@@ -1,46 +1,75 @@
-# Getting Started with Create React App
+# Pipe Variabler
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+En Minecraft storage planlægnings-app til at organisere kister og generere `/signedit` kommandoer.
 
-## Available Scripts
+**Lavet af WhoToldYou** • [Live Demo](https://rasmuskd.github.io/pipevariabler)
 
-In the project directory, you can run:
+## Om appen
 
-### `npm start`
+Pipe Variabler hjælper dig med at planlægge dit Minecraft storage room ved at lade dig:
+- Organisere items i virtuelle kister
+- Generere `/signedit` kommandoer automatisk (max 256 tegn)
+- Gemme og dele profiler via URL eller kode
+- Holde styr på hvilke items der er i hvilke kister
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## Features
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+### Drag & Drop
+- **Multi-select** - Vælg flere items med Ctrl+klik og træk dem alle på én gang
+- **Drag til tabs** - Træk items eller hele kister direkte til andre tabs
+- **Omarrangér kister** - Træk kister for at ændre rækkefølgen
+- **Auto-skift tab** - Hold over et tab mens du dragger for automatisk at skifte til det
+- **Opret kiste ved drop** - Træk items til "Tilføj kiste" zone eller et tab for at oprette ny kiste
 
-### `npm test`
+### Organisation
+- **Tabs** - Organiser kister i kategorier (fx Wood, Blocks, Plants)
+- **Søgning** - Find items hurtigt i 1400+ Minecraft items
+- **Visninger** - Skift mellem grid og liste for både sidebar og kister
+- **Chest icons** - Tilpas kiste-ikoner med alle Minecraft billeder
+- **Klik til kiste** - Klik på chest-ID i sidebar for at navigere til kisten
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Profiler & Deling
+- **Import/Export** - Gem profiler som JSON filer
+- **URL Deling** - Del profiler via link (Base64 + gzip kompression)
+- **Kopier Kode** - Del profiler som komprimeret kode-streng
+- **Templates** - Brug færdige templates (fx "Ivers Kisterum" med 142 kister)
+- **Undo/Redo** - Fortryd handlinger med Ctrl+Z / Ctrl+Y
 
-### `npm run build`
+### Chest Features
+- **Auto-navngivning** - Kister navngives automatisk efter første item
+- **Kommando kopiering** - Et-klik kopiering af signedit kommando
+- **Tegn-tæller** - Se antal tegn (max 256 for Minecraft signs)
+- **Mark som færdig** - Marker kister som færdige med checkbox
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Tech Stack
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+| Pakke | Version | Beskrivelse |
+|-------|---------|-------------|
+| React | 19.2.3 | UI framework |
+| TypeScript | 5.9.3 | Type safety |
+| Tailwind CSS | 4.1.18 | Utility-first styling |
+| @dnd-kit | 6.3+ | Drag-and-drop |
+| react-window | 2.2.3 | Virtualiseret liste |
+| pako | 2.1.0 | Kompression |
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Projektstruktur
 
-### `npm run eject`
+```
+src/
+├── components/      # UI komponenter (Sidebar, TabBar, ChestGrid...)
+├── context/         # React Context for global state
+├── hooks/           # Custom hooks (useDragController, useChests...)
+├── dnd/             # Drag-and-drop komponenter
+├── scss/            # Stylesheets
+├── data.json        # Minecraft items database (1400+ items)
+└── spriteMap.json   # Sprite positions for icons
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+## Udvikling
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+```bash
+npm install    # Installer dependencies
+npm start      # Start dev server
+npm run build  # Byg til produktion
+npm run deploy # Deploy til GitHub Pages
+```

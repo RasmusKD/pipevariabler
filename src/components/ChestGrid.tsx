@@ -10,7 +10,7 @@ interface ChestGridProps {
     profileVersion: number;
     globalChestOffset: number;
     incomingChest: Chest | null;
-    gridContainerRef: React.RefObject<HTMLDivElement>;
+    gridContainerRef: React.RefObject<HTMLDivElement | null>;
 
     // Chest handlers
     confirmDeleteChest: (id: number) => void;

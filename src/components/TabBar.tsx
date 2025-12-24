@@ -5,7 +5,7 @@ import DroppableTab from './DroppableTab';
 import { useProfile, useTabs, useSettings, useView } from '../context/AppContext';
 
 interface TabBarProps {
-    tabScrollRef: React.RefObject<HTMLDivElement>;
+    tabScrollRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const TabBar: React.FC<TabBarProps> = ({ tabScrollRef }) => {
@@ -134,8 +134,8 @@ const TabBar: React.FC<TabBarProps> = ({ tabScrollRef }) => {
                     onClick={onUndo}
                     disabled={undoDisabled}
                     className={`p-2 rounded transition-colors ${undoDisabled
-                            ? 'text-neutral-600 cursor-not-allowed'
-                            : 'text-neutral-300 hover:text-white hover:bg-neutral-700'
+                        ? 'text-neutral-600 cursor-not-allowed'
+                        : 'text-neutral-300 hover:text-white hover:bg-neutral-700'
                         }`}
                     title="Fortryd (Ctrl+Z)"
                     aria-label="Fortryd"
@@ -146,8 +146,8 @@ const TabBar: React.FC<TabBarProps> = ({ tabScrollRef }) => {
                     onClick={onRedo}
                     disabled={redoDisabled}
                     className={`p-2 rounded transition-colors ${redoDisabled
-                            ? 'text-neutral-600 cursor-not-allowed'
-                            : 'text-neutral-300 hover:text-white hover:bg-neutral-700'
+                        ? 'text-neutral-600 cursor-not-allowed'
+                        : 'text-neutral-300 hover:text-white hover:bg-neutral-700'
                         }`}
                     title="Gentag (Ctrl+Y)"
                     aria-label="Gentag"
