@@ -17,73 +17,94 @@ const colorItemOrder = [
     'stained_glass_pane', 'terracotta', 'wool'
 ];
 
-// Standard order for wood items (suffix order)
+// Standard order for wood items - full blocks first, then details
 const woodItemOrder = [
-    'button', 'door', 'fence', 'fence_gate', 'hanging_sign', 'log',
-    'planks', 'pressure_plate', 'sign', 'slab', 'stairs', 'trapdoor',
-    'wood', 'stripped_log', 'stripped_wood'
+    'log', 'wood', 'planks', 'slab', 'stairs',  // Full blocks first
+    'stripped_log', 'stripped_wood',             // Stripped variants
+    'fence', 'fence_gate',                       // Fences
+    'door', 'trapdoor',                          // Doors
+    'button', 'pressure_plate',                  // Redstone
+    'sign', 'hanging_sign',                      // Signs
+    'boat', 'chest_boat'                         // Boats last
 ];
 
-// Colors in the preset
-const colorNames = [
-    'white', 'light_gray', 'gray', 'black', 'brown', 'red', 'orange',
-    'yellow', 'lime', 'green', 'cyan', 'light_blue', 'blue', 'purple',
-    'magenta', 'pink'
-];
-
-// Wood types in the preset
-const woodTypes = [
-    'oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak',
-    'mangrove', 'cherry', 'bamboo', 'crimson', 'warped', 'pale_oak'
-];
-
-function getItemSuffix(itemName, prefixes) {
-    for (const prefix of prefixes) {
-        if (itemName.startsWith(prefix + '_')) {
-            return itemName.substring(prefix.length + 1);
-        }
-        if (itemName.startsWith('stripped_' + prefix + '_')) {
-            return 'stripped_' + itemName.substring(('stripped_' + prefix + '_').length);
+// Get suffix from item name
+function getSuffix(itemName, prefix) {
+    // Handle stripped_ prefix
+    if (itemName.startsWith('stripped_')) {
+        const rest = itemName.substring('stripped_'.length);
+        if (rest.startsWith(prefix + '_')) {
+            return 'stripped_' + rest.substring(prefix.length + 1);
         }
     }
-    return itemName; // Return as-is for special items
+    // Normal prefix
+    if (itemName.startsWith(prefix + '_')) {
+        return itemName.substring(prefix.length + 1);
+    }
+    return null;
 }
 
-function sortItems(items, orderArray, prefix) {
-    const prefixes = [prefix];
-    if (prefix.includes('_')) {
-        // Handle multi-word prefixes like light_gray
-        prefixes.push(prefix);
-    }
+function sortColorItems(items, colorPrefix) {
+    return [...items].sort((a, b) => {
+        const suffixA = getSuffix(a.item, colorPrefix) || a.item;
+        const suffixB = getSuffix(b.item, colorPrefix) || b.item;
 
-    return items.sort((a, b) => {
-        const suffixA = getItemSuffix(a.item, prefixes);
-        const suffixB = getItemSuffix(b.item, prefixes);
+        let indexA = colorItemOrder.indexOf(suffixA);
+        let indexB = colorItemOrder.indexOf(suffixB);
 
-        let indexA = orderArray.indexOf(suffixA);
-        let indexB = orderArray.indexOf(suffixB);
-
-        // Handle stripped_ variants
-        if (indexA === -1 && suffixA.startsWith('stripped_')) {
-            const baseSuffix = suffixA.replace('stripped_', '');
-            indexA = orderArray.indexOf('stripped_' + baseSuffix);
-            if (indexA === -1) indexA = orderArray.indexOf(baseSuffix);
-            if (indexA !== -1) indexA += 0.5; // Put after non-stripped version
-        }
-        if (indexB === -1 && suffixB.startsWith('stripped_')) {
-            const baseSuffix = suffixB.replace('stripped_', '');
-            indexB = orderArray.indexOf('stripped_' + baseSuffix);
-            if (indexB === -1) indexB = orderArray.indexOf(baseSuffix);
-            if (indexB !== -1) indexB += 0.5;
-        }
-
-        // Unknown items go at the end
         if (indexA === -1) indexA = 999;
         if (indexB === -1) indexB = 999;
 
         return indexA - indexB;
     });
 }
+
+function sortWoodItems(items, woodPrefix) {
+    return [...items].sort((a, b) => {
+        let suffixA = getSuffix(a.item, woodPrefix);
+        let suffixB = getSuffix(b.item, woodPrefix);
+
+        // Handle special cases like bamboo_block, bamboo_mosaic
+        if (suffixA === null) suffixA = a.item;
+        if (suffixB === null) suffixB = b.item;
+
+        // Handle nether woods with stem/hyphae
+        if (suffixA === 'stem') suffixA = 'log';
+        if (suffixB === 'stem') suffixB = 'log';
+        if (suffixA === 'hyphae') suffixA = 'wood';
+        if (suffixB === 'hyphae') suffixB = 'wood';
+        if (suffixA === 'stripped_stem') suffixA = 'stripped_log';
+        if (suffixB === 'stripped_stem') suffixB = 'stripped_log';
+        if (suffixA === 'stripped_hyphae') suffixA = 'stripped_wood';
+        if (suffixB === 'stripped_hyphae') suffixB = 'stripped_wood';
+
+        // Handle bamboo block
+        if (suffixA === 'block' || a.item === 'bamboo_block') suffixA = 'log';
+        if (suffixB === 'block' || b.item === 'bamboo_block') suffixB = 'log';
+        if (suffixA === 'stripped_block' || a.item === 'stripped_bamboo_block') suffixA = 'stripped_log';
+        if (suffixB === 'stripped_block' || b.item === 'stripped_bamboo_block') suffixB = 'stripped_log';
+
+        let indexA = woodItemOrder.indexOf(suffixA);
+        let indexB = woodItemOrder.indexOf(suffixB);
+
+        if (indexA === -1) indexA = 999;
+        if (indexB === -1) indexB = 999;
+
+        return indexA - indexB;
+    });
+}
+
+// Wood types
+const woodTypes = [
+    'oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak',
+    'mangrove', 'cherry', 'bamboo', 'crimson', 'warped', 'pale_oak'
+];
+
+const colorNames = [
+    'white', 'light_gray', 'gray', 'black', 'brown', 'red', 'orange',
+    'yellow', 'lime', 'green', 'cyan', 'light_blue', 'blue', 'purple',
+    'magenta', 'pink'
+];
 
 // Process preset
 preset.tabs.forEach(tab => {
@@ -93,20 +114,22 @@ preset.tabs.forEach(tab => {
                 chest.items.some(item => item.item.startsWith(c + '_'))
             );
             if (colorPrefix) {
-                chest.items = sortItems(chest.items, colorItemOrder, colorPrefix);
+                chest.items = sortColorItems(chest.items, colorPrefix);
             }
         });
     }
 
-    if (tab.name === 'Wood') {
+    if (tab.name === 'Woods') {
         tab.chests.forEach(chest => {
             const woodPrefix = woodTypes.find(w =>
                 chest.items.some(item =>
-                    item.item.startsWith(w + '_') || item.item === w + '_log'
+                    item.item.startsWith(w + '_') ||
+                    item.item.startsWith('stripped_' + w + '_')
                 )
             );
             if (woodPrefix) {
-                chest.items = sortItems(chest.items, woodItemOrder, woodPrefix);
+                console.log(`Sorting ${chest.label} with prefix ${woodPrefix}`);
+                chest.items = sortWoodItems(chest.items, woodPrefix);
             }
         });
     }
