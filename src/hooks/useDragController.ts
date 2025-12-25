@@ -264,8 +264,19 @@ export const useDragController = ({
             // Dropped on items list inside chest
             targetChestId = over.data.current.chestId;
             targetIndex = chests.find(c => c.id === targetChestId)?.items.length || 0;
+        } else if (overIdStr.startsWith('item-drop-')) {
+            // Dropped on a specific item (external drop from sidebar/other chest)
+            const targetItemId = overIdStr.replace('item-drop-', '');
+            for (const chest of chests) {
+                const index = chest.items.findIndex(i => i.uid === targetItemId);
+                if (index !== -1) {
+                    targetChestId = chest.id;
+                    targetIndex = index; // Insert at this position
+                    break;
+                }
+            }
         } else {
-            // Dropped on chest itself or an item
+            // Dropped on chest itself or an item (internal sort)
             // Check if dropped on a chest
             const targetChest = chests.find(c => c.id === over.id);
             if (targetChest) {

@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect, useMemo, memo } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy, rectSortingStrategy } from '@dnd-kit/sortable';
 import { useDndContext, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import ItemComponent from './ItemComponent';
 import { FaEdit, FaTimes, FaRegCopy, FaCheckSquare, FaRegSquare, FaCheck } from 'react-icons/fa';
 import { CMD_LIMIT, buildCommand } from './chestUtils';
 import ChestIconPicker from './components/ChestIconPicker';
-import { DraggableItem } from './dnd/Draggable';
+import { SortableItem } from './dnd/SortableItem';
 import { Item, Chest } from './types';
 import { COPY_FEEDBACK_DURATION } from './constants';
 
@@ -108,10 +109,63 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
   // Check if hovering over an item that belongs to this chest
   const overIdStr = over?.id ? String(over.id) : '';
   const isOverItemInThisChest = chest.items.some(item =>
-    (item.uid && item.uid === overIdStr) || item.item === overIdStr
+    (item.uid && item.uid === overIdStr) || item.item === overIdStr ||
+    overIdStr === `item-drop-${item.uid}` // Also check for item-drop- prefix
   );
 
   const isOver = !!(isDraggingItem && (isOverChestDirectly || isOverDropZone || isOverItemInThisChest));
+
+  // Detect if we're dragging an external item (from sidebar or another chest) over this chest
+  const incomingItem = useMemo(() => {
+    if (!isOver || !active || typeof active.id !== 'string') return null;
+    const activeId = String(active.id);
+    // Check if this item is NOT already in this chest
+    if (chest.items.some(i => i.uid === activeId)) return null;
+    // Create a placeholder item for the incoming external item
+    return {
+      uid: activeId,
+      item: activeId, // Will be replaced with actual item name on drop
+      variable: activeId,
+      isPlaceholder: true
+    } as Item & { isPlaceholder: boolean };
+  }, [isOver, active, chest.items]);
+
+  // Calculate target insert position based on what's being hovered
+  const targetInsertIndex = useMemo(() => {
+    if (!incomingItem || !over) return chest.items.length;
+
+    const overId = String(over.id);
+
+    // Check if hovering over a specific item (direct or via item-drop prefix)
+    let targetItemId: string | null = null;
+    if (overId.startsWith('item-drop-')) {
+      targetItemId = overId.replace('item-drop-', '');
+    } else if (chest.items.some(i => i.uid === overId)) {
+      targetItemId = overId;
+    }
+
+    if (targetItemId) {
+      const index = chest.items.findIndex(i => i.uid === targetItemId);
+      if (index !== -1) return index;
+    }
+
+    // Default to end
+    return chest.items.length;
+  }, [incomingItem, over, chest.items]);
+
+  // Display items includes placeholder for incoming external item at target position
+  const displayItems = useMemo(() => {
+    if (!incomingItem) return chest.items;
+    // Insert the incoming item at the target position
+    const result = [...chest.items];
+    result.splice(targetInsertIndex, 0, incomingItem);
+    return result;
+  }, [chest.items, incomingItem, targetInsertIndex]);
+
+  // Calculate sortable item IDs from displayItems
+  const sortableItemIds = useMemo(() => {
+    return displayItems.map(i => i.uid);
+  }, [displayItems]);
 
 
   const [isChecked, setIsChecked] = useState<boolean>(chest.checked);
@@ -276,41 +330,68 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
       </div>
 
       {/* Items Drop Zone */}
-      <ItemsDropZone chestId={chest.id} containerRef={itemsContainerRef} hasItems={chest.items.length > 0} isGridView={gridView}>
-        {chest.items.length > 0 ? (
-          gridView ? (
-            <div className="grid grid-cols-6 gap-2">
-              {chest.items.map((item, itemIndex) => (
-                <DraggableItem key={item.uid || `${item.item}-${itemIndex}`} id={item.uid || item.item}>
-                  <ItemComponent
-                    item={item}
-                    index={itemIndex}
-                    lastIndex={chest.items.length - 1}
-                    removeItem={() => removeItemFromChest(chest.id, item)}
-                    isGridView={gridView}
-                    isSelected={selectedItems?.has(item.uid)}
-                    onSelect={onItemSelect}
-                  />
-                </DraggableItem>
-              ))}
-            </div>
-          ) : (
-            <ul className="chest-items dark-theme">
-              {chest.items.map((item, i) => (
-                <DraggableItem key={item.uid || `${item.item}-${i}`} id={item.uid || item.item}>
-                  <ItemComponent
-                    item={item}
-                    index={i}
-                    lastIndex={chest.items.length - 1}
-                    removeItem={() => removeItemFromChest(chest.id, item)}
-                    isGridView={gridView}
-                    isSelected={selectedItems?.has(item.uid)}
-                    onSelect={onItemSelect}
-                  />
-                </DraggableItem>
-              ))}
-            </ul>
-          )
+      <ItemsDropZone chestId={chest.id} containerRef={itemsContainerRef} hasItems={displayItems.length > 0} isGridView={gridView}>
+        {displayItems.length > 0 ? (
+          <SortableContext items={sortableItemIds} strategy={gridView ? rectSortingStrategy : verticalListSortingStrategy}>
+            {gridView ? (
+              <div className="grid grid-cols-6 gap-2">
+                {displayItems.map((item, itemIndex) => {
+                  const isPlaceholder = 'isPlaceholder' in item && item.isPlaceholder;
+                  return (
+                    <SortableItem
+                      key={item.uid || `${item.item}-${itemIndex}`}
+                      id={item.uid || item.item}
+                      style={{ opacity: isPlaceholder ? 0.3 : 1, pointerEvents: isPlaceholder ? 'none' : 'auto' }}
+                    >
+                      {!isPlaceholder && (
+                        <ItemComponent
+                          item={item}
+                          index={itemIndex}
+                          lastIndex={chest.items.length - 1}
+                          removeItem={() => removeItemFromChest(chest.id, item)}
+                          isGridView={gridView}
+                          isSelected={selectedItems?.has(item.uid)}
+                          onSelect={onItemSelect}
+                        />
+                      )}
+                      {isPlaceholder && (
+                        <div className="w-12 h-12 rounded bg-blue-500/20 border-2 border-dashed border-blue-500/50" />
+                      )}
+                    </SortableItem>
+                  );
+                })}
+              </div>
+            ) : (
+              <ul className="chest-items dark-theme">
+                {displayItems.map((item, i) => {
+                  const isPlaceholder = 'isPlaceholder' in item && item.isPlaceholder;
+                  return (
+                    <SortableItem
+                      key={item.uid || `${item.item}-${i}`}
+                      id={item.uid || item.item}
+                      style={{ opacity: isPlaceholder ? 0.3 : 1, pointerEvents: isPlaceholder ? 'none' : 'auto' }}
+                    >
+                      {!isPlaceholder && (
+                        <ItemComponent
+                          item={item}
+                          index={i}
+                          lastIndex={chest.items.length - 1}
+                          removeItem={() => removeItemFromChest(chest.id, item)}
+                          isGridView={gridView}
+                          isSelected={selectedItems?.has(item.uid)}
+                          onSelect={onItemSelect}
+                        />
+                      )}
+                      {isPlaceholder && (
+                        <div className="h-8 rounded bg-blue-500/20 border-2 border-dashed border-blue-500/50" />
+                      )}
+                    </SortableItem>
+                  );
+                })}
+              </ul>
+            )}
+          </SortableContext>
+
         ) : (
           <div className="h-full flex items-center justify-center text-neutral-500 text-base font-medium">
             Træk ting her
