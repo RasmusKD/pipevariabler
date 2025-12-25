@@ -133,6 +133,60 @@ preset.tabs.forEach(tab => {
             }
         });
     }
+
+    if (tab.name === 'Minerals') {
+        tab.chests.forEach(chest => {
+            const label = chest.label.toLowerCase();
+            console.log(`Processing mineral: ${chest.label}`);
+
+            // Define standard order for each mineral type
+            const mineralOrders = {
+                coal: ['coal', 'charcoal', 'coal_block', 'coal_ore', 'deepslate_coal_ore'],
+                iron: ['iron_ingot', 'iron_nugget', 'raw_iron', 'iron_block', 'raw_iron_block', 'iron_ore', 'deepslate_iron_ore', 'iron_bars', 'iron_door', 'iron_trapdoor', 'chain', 'heavy_weighted_pressure_plate'],
+                copper: ['copper_ingot', 'raw_copper', 'copper_block', 'raw_copper_block', 'copper_ore', 'deepslate_copper_ore'],
+                gold: ['gold_ingot', 'gold_nugget', 'raw_gold', 'gold_block', 'raw_gold_block', 'gold_ore', 'deepslate_gold_ore', 'nether_gold_ore', 'light_weighted_pressure_plate'],
+                redstone: ['redstone', 'redstone_block', 'redstone_ore', 'deepslate_redstone_ore'],
+                emerald: ['emerald', 'emerald_block', 'emerald_ore', 'deepslate_emerald_ore'],
+                lapis: ['lapis_lazuli', 'lapis_block', 'lapis_ore', 'deepslate_lapis_ore'],
+                diamond: ['diamond', 'diamond_block', 'diamond_ore', 'deepslate_diamond_ore'],
+                netherite: ['netherite_ingot', 'netherite_scrap', 'netherite_block', 'ancient_debris', 'netherite_upgrade_smithing_template'],
+                obsidian: ['obsidian', 'crying_obsidian'],
+                quartz: ['quartz', 'quartz_block', 'quartz_bricks', 'quartz_pillar', 'quartz_slab', 'quartz_stairs', 'smooth_quartz', 'smooth_quartz_slab', 'smooth_quartz_stairs', 'chiseled_quartz_block', 'nether_quartz_ore'],
+                amethyst: ['amethyst_shard', 'amethyst_block', 'amethyst_cluster', 'large_amethyst_bud', 'medium_amethyst_bud', 'small_amethyst_bud']
+            };
+
+            // Define icons for each mineral
+            const mineralIcons = {
+                coal: 'coal',
+                iron: 'iron_ingot',
+                copper: 'copper_ingot',
+                gold: 'gold_ingot',
+                redstone: 'redstone',
+                emerald: 'emerald',
+                lapis: 'lapis_lazuli',
+                diamond: 'diamond',
+                netherite: 'netherite_ingot',
+                obsidian: 'obsidian',
+                quartz: 'quartz',
+                amethyst: 'amethyst_shard'
+            };
+
+            const order = mineralOrders[label];
+            if (order) {
+                chest.items = [...chest.items].sort((a, b) => {
+                    let indexA = order.indexOf(a.item);
+                    let indexB = order.indexOf(b.item);
+                    if (indexA === -1) indexA = 999;
+                    if (indexB === -1) indexB = 999;
+                    return indexA - indexB;
+                });
+            }
+
+            if (mineralIcons[label]) {
+                chest.icon = mineralIcons[label];
+            }
+        });
+    }
 });
 
 // Write back
