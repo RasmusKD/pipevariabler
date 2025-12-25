@@ -1429,31 +1429,13 @@
                     "label": "Oak",
                     "items": [
                         {
-                            "item": "oak_button"
-                        },
-                        {
-                            "item": "oak_door"
-                        },
-                        {
-                            "item": "oak_fence"
-                        },
-                        {
-                            "item": "oak_fence_gate"
-                        },
-                        {
-                            "item": "oak_hanging_sign"
-                        },
-                        {
                             "item": "oak_log"
                         },
                         {
+                            "item": "oak_wood"
+                        },
+                        {
                             "item": "oak_planks"
-                        },
-                        {
-                            "item": "oak_pressure_plate"
-                        },
-                        {
-                            "item": "oak_sign"
                         },
                         {
                             "item": "oak_slab"
@@ -1468,10 +1450,28 @@
                             "item": "stripped_oak_wood"
                         },
                         {
-                            "item": "oak_wood"
+                            "item": "oak_fence"
+                        },
+                        {
+                            "item": "oak_fence_gate"
+                        },
+                        {
+                            "item": "oak_door"
                         },
                         {
                             "item": "oak_trapdoor"
+                        },
+                        {
+                            "item": "oak_button"
+                        },
+                        {
+                            "item": "oak_pressure_plate"
+                        },
+                        {
+                            "item": "oak_sign"
+                        },
+                        {
+                            "item": "oak_hanging_sign"
                         }
                     ],
                     "icon": "oak_log",
@@ -1481,28 +1481,13 @@
                     "label": "Spruce",
                     "items": [
                         {
-                            "item": "spruce_button"
-                        },
-                        {
-                            "item": "spruce_door"
-                        },
-                        {
-                            "item": "spruce_fence"
-                        },
-                        {
-                            "item": "spruce_fence_gate"
-                        },
-                        {
                             "item": "spruce_log"
                         },
                         {
+                            "item": "spruce_wood"
+                        },
+                        {
                             "item": "spruce_planks"
-                        },
-                        {
-                            "item": "spruce_pressure_plate"
-                        },
-                        {
-                            "item": "spruce_sign"
                         },
                         {
                             "item": "spruce_slab"
@@ -1511,16 +1496,31 @@
                             "item": "spruce_stairs"
                         },
                         {
-                            "item": "spruce_trapdoor"
-                        },
-                        {
-                            "item": "spruce_wood"
-                        },
-                        {
                             "item": "stripped_spruce_log"
                         },
                         {
                             "item": "stripped_spruce_wood"
+                        },
+                        {
+                            "item": "spruce_fence"
+                        },
+                        {
+                            "item": "spruce_fence_gate"
+                        },
+                        {
+                            "item": "spruce_door"
+                        },
+                        {
+                            "item": "spruce_trapdoor"
+                        },
+                        {
+                            "item": "spruce_button"
+                        },
+                        {
+                            "item": "spruce_pressure_plate"
+                        },
+                        {
+                            "item": "spruce_sign"
                         },
                         {
                             "item": "spruce_hanging_sign"
@@ -1533,31 +1533,13 @@
                     "label": "Birch",
                     "items": [
                         {
-                            "item": "birch_button"
-                        },
-                        {
-                            "item": "birch_door"
-                        },
-                        {
-                            "item": "birch_fence"
-                        },
-                        {
-                            "item": "birch_fence_gate"
-                        },
-                        {
-                            "item": "birch_hanging_sign"
-                        },
-                        {
                             "item": "birch_log"
                         },
                         {
+                            "item": "birch_wood"
+                        },
+                        {
                             "item": "birch_planks"
-                        },
-                        {
-                            "item": "birch_pressure_plate"
-                        },
-                        {
-                            "item": "birch_sign"
                         },
                         {
                             "item": "birch_slab"
@@ -1566,16 +1548,34 @@
                             "item": "birch_stairs"
                         },
                         {
-                            "item": "birch_trapdoor"
-                        },
-                        {
-                            "item": "birch_wood"
-                        },
-                        {
                             "item": "stripped_birch_log"
                         },
                         {
                             "item": "stripped_birch_wood"
+                        },
+                        {
+                            "item": "birch_fence"
+                        },
+                        {
+                            "item": "birch_fence_gate"
+                        },
+                        {
+                            "item": "birch_door"
+                        },
+                        {
+                            "item": "birch_trapdoor"
+                        },
+                        {
+                            "item": "birch_button"
+                        },
+                        {
+                            "item": "birch_pressure_plate"
+                        },
+                        {
+                            "item": "birch_sign"
+                        },
+                        {
+                            "item": "birch_hanging_sign"
                         }
                     ],
                     "icon": "birch_log",
@@ -1585,31 +1585,13 @@
                     "label": "Jungle",
                     "items": [
                         {
-                            "item": "jungle_button"
-                        },
-                        {
-                            "item": "jungle_door"
-                        },
-                        {
-                            "item": "jungle_fence"
-                        },
-                        {
-                            "item": "jungle_fence_gate"
-                        },
-                        {
-                            "item": "jungle_hanging_sign"
-                        },
-                        {
                             "item": "jungle_log"
                         },
                         {
+                            "item": "jungle_wood"
+                        },
+                        {
                             "item": "jungle_planks"
-                        },
-                        {
-                            "item": "jungle_pressure_plate"
-                        },
-                        {
-                            "item": "jungle_sign"
                         },
                         {
                             "item": "jungle_slab"
@@ -1618,16 +1600,34 @@
                             "item": "jungle_stairs"
                         },
                         {
-                            "item": "jungle_trapdoor"
-                        },
-                        {
-                            "item": "jungle_wood"
-                        },
-                        {
                             "item": "stripped_jungle_log"
                         },
                         {
                             "item": "stripped_jungle_wood"
+                        },
+                        {
+                            "item": "jungle_fence"
+                        },
+                        {
+                            "item": "jungle_fence_gate"
+                        },
+                        {
+                            "item": "jungle_door"
+                        },
+                        {
+                            "item": "jungle_trapdoor"
+                        },
+                        {
+                            "item": "jungle_button"
+                        },
+                        {
+                            "item": "jungle_pressure_plate"
+                        },
+                        {
+                            "item": "jungle_sign"
+                        },
+                        {
+                            "item": "jungle_hanging_sign"
                         }
                     ],
                     "icon": "jungle_log",
@@ -1637,46 +1637,46 @@
                     "label": "Acacia",
                     "items": [
                         {
-                            "item": "acacia_button"
-                        },
-                        {
-                            "item": "acacia_fence"
-                        },
-                        {
-                            "item": "acacia_door"
-                        },
-                        {
-                            "item": "acacia_fence_gate"
-                        },
-                        {
-                            "item": "stripped_acacia_wood"
-                        },
-                        {
-                            "item": "stripped_acacia_log"
+                            "item": "acacia_log"
                         },
                         {
                             "item": "acacia_wood"
                         },
                         {
-                            "item": "acacia_trapdoor"
-                        },
-                        {
-                            "item": "acacia_stairs"
+                            "item": "acacia_planks"
                         },
                         {
                             "item": "acacia_slab"
                         },
                         {
-                            "item": "acacia_sign"
+                            "item": "acacia_stairs"
+                        },
+                        {
+                            "item": "stripped_acacia_log"
+                        },
+                        {
+                            "item": "stripped_acacia_wood"
+                        },
+                        {
+                            "item": "acacia_fence"
+                        },
+                        {
+                            "item": "acacia_fence_gate"
+                        },
+                        {
+                            "item": "acacia_door"
+                        },
+                        {
+                            "item": "acacia_trapdoor"
+                        },
+                        {
+                            "item": "acacia_button"
                         },
                         {
                             "item": "acacia_pressure_plate"
                         },
                         {
-                            "item": "acacia_planks"
-                        },
-                        {
-                            "item": "acacia_log"
+                            "item": "acacia_sign"
                         },
                         {
                             "item": "acacia_hanging_sign"
@@ -1689,31 +1689,13 @@
                     "label": "Dark oak",
                     "items": [
                         {
-                            "item": "dark_oak_button"
-                        },
-                        {
-                            "item": "dark_oak_door"
-                        },
-                        {
-                            "item": "dark_oak_fence"
-                        },
-                        {
-                            "item": "dark_oak_fence_gate"
-                        },
-                        {
-                            "item": "dark_oak_hanging_sign"
-                        },
-                        {
                             "item": "dark_oak_log"
                         },
                         {
+                            "item": "dark_oak_wood"
+                        },
+                        {
                             "item": "dark_oak_planks"
-                        },
-                        {
-                            "item": "dark_oak_pressure_plate"
-                        },
-                        {
-                            "item": "dark_oak_sign"
                         },
                         {
                             "item": "dark_oak_slab"
@@ -1722,16 +1704,34 @@
                             "item": "dark_oak_stairs"
                         },
                         {
-                            "item": "dark_oak_trapdoor"
-                        },
-                        {
-                            "item": "dark_oak_wood"
-                        },
-                        {
                             "item": "stripped_dark_oak_log"
                         },
                         {
                             "item": "stripped_dark_oak_wood"
+                        },
+                        {
+                            "item": "dark_oak_fence"
+                        },
+                        {
+                            "item": "dark_oak_fence_gate"
+                        },
+                        {
+                            "item": "dark_oak_door"
+                        },
+                        {
+                            "item": "dark_oak_trapdoor"
+                        },
+                        {
+                            "item": "dark_oak_button"
+                        },
+                        {
+                            "item": "dark_oak_pressure_plate"
+                        },
+                        {
+                            "item": "dark_oak_sign"
+                        },
+                        {
+                            "item": "dark_oak_hanging_sign"
                         }
                     ],
                     "icon": "dark_oak_log",
@@ -1741,49 +1741,49 @@
                     "label": "Mangrove",
                     "items": [
                         {
-                            "item": "stripped_mangrove_wood"
-                        },
-                        {
-                            "item": "stripped_mangrove_log"
+                            "item": "mangrove_log"
                         },
                         {
                             "item": "mangrove_wood"
                         },
                         {
-                            "item": "mangrove_trapdoor"
-                        },
-                        {
-                            "item": "mangrove_stairs"
+                            "item": "mangrove_planks"
                         },
                         {
                             "item": "mangrove_slab"
                         },
                         {
-                            "item": "mangrove_sign"
+                            "item": "mangrove_stairs"
                         },
                         {
-                            "item": "mangrove_pressure_plate"
+                            "item": "stripped_mangrove_log"
                         },
                         {
-                            "item": "mangrove_planks"
-                        },
-                        {
-                            "item": "mangrove_log"
-                        },
-                        {
-                            "item": "mangrove_hanging_sign"
-                        },
-                        {
-                            "item": "mangrove_fence_gate"
+                            "item": "stripped_mangrove_wood"
                         },
                         {
                             "item": "mangrove_fence"
                         },
                         {
+                            "item": "mangrove_fence_gate"
+                        },
+                        {
                             "item": "mangrove_door"
                         },
                         {
+                            "item": "mangrove_trapdoor"
+                        },
+                        {
                             "item": "mangrove_button"
+                        },
+                        {
+                            "item": "mangrove_pressure_plate"
+                        },
+                        {
+                            "item": "mangrove_sign"
+                        },
+                        {
+                            "item": "mangrove_hanging_sign"
                         }
                     ],
                     "icon": "mangrove_log",
@@ -1793,49 +1793,49 @@
                     "label": "Cherry",
                     "items": [
                         {
-                            "item": "stripped_cherry_wood"
-                        },
-                        {
-                            "item": "stripped_cherry_log"
+                            "item": "cherry_log"
                         },
                         {
                             "item": "cherry_wood"
                         },
                         {
-                            "item": "cherry_trapdoor"
-                        },
-                        {
-                            "item": "cherry_stairs"
-                        },
-                        {
-                            "item": "cherry_sign"
+                            "item": "cherry_planks"
                         },
                         {
                             "item": "cherry_slab"
                         },
                         {
-                            "item": "cherry_pressure_plate"
+                            "item": "cherry_stairs"
                         },
                         {
-                            "item": "cherry_planks"
+                            "item": "stripped_cherry_log"
                         },
                         {
-                            "item": "cherry_log"
-                        },
-                        {
-                            "item": "cherry_hanging_sign"
-                        },
-                        {
-                            "item": "cherry_fence_gate"
+                            "item": "stripped_cherry_wood"
                         },
                         {
                             "item": "cherry_fence"
                         },
                         {
+                            "item": "cherry_fence_gate"
+                        },
+                        {
                             "item": "cherry_door"
                         },
                         {
+                            "item": "cherry_trapdoor"
+                        },
+                        {
                             "item": "cherry_button"
+                        },
+                        {
+                            "item": "cherry_pressure_plate"
+                        },
+                        {
+                            "item": "cherry_sign"
+                        },
+                        {
+                            "item": "cherry_hanging_sign"
                         }
                     ],
                     "icon": "cherry_log",
@@ -1845,25 +1845,43 @@
                     "label": "Bamboo",
                     "items": [
                         {
-                            "item": "stripped_bamboo_block"
+                            "item": "bamboo_block"
                         },
                         {
-                            "item": "bamboo_trapdoor"
-                        },
-                        {
-                            "item": "bamboo_stairs"
+                            "item": "bamboo_planks"
                         },
                         {
                             "item": "bamboo_slab"
                         },
                         {
-                            "item": "bamboo_sign"
+                            "item": "bamboo_stairs"
+                        },
+                        {
+                            "item": "stripped_bamboo_block"
+                        },
+                        {
+                            "item": "bamboo_fence"
+                        },
+                        {
+                            "item": "bamboo_fence_gate"
+                        },
+                        {
+                            "item": "bamboo_door"
+                        },
+                        {
+                            "item": "bamboo_trapdoor"
+                        },
+                        {
+                            "item": "bamboo_button"
                         },
                         {
                             "item": "bamboo_pressure_plate"
                         },
                         {
-                            "item": "bamboo_planks"
+                            "item": "bamboo_sign"
+                        },
+                        {
+                            "item": "bamboo_hanging_sign"
                         },
                         {
                             "item": "bamboo_mosaic_stairs"
@@ -1873,24 +1891,6 @@
                         },
                         {
                             "item": "bamboo_mosaic_slab"
-                        },
-                        {
-                            "item": "bamboo_hanging_sign"
-                        },
-                        {
-                            "item": "bamboo_fence_gate"
-                        },
-                        {
-                            "item": "bamboo_fence"
-                        },
-                        {
-                            "item": "bamboo_door"
-                        },
-                        {
-                            "item": "bamboo_button"
-                        },
-                        {
-                            "item": "bamboo_block"
                         }
                     ],
                     "icon": "bamboo_block",
@@ -1900,49 +1900,49 @@
                     "label": "Crimson",
                     "items": [
                         {
+                            "item": "crimson_stem"
+                        },
+                        {
+                            "item": "crimson_hyphae"
+                        },
+                        {
+                            "item": "crimson_planks"
+                        },
+                        {
+                            "item": "crimson_slab"
+                        },
+                        {
+                            "item": "crimson_stairs"
+                        },
+                        {
                             "item": "stripped_crimson_stem"
                         },
                         {
                             "item": "stripped_crimson_hyphae"
                         },
                         {
-                            "item": "crimson_trapdoor"
-                        },
-                        {
-                            "item": "crimson_stem"
-                        },
-                        {
-                            "item": "crimson_stairs"
-                        },
-                        {
-                            "item": "crimson_slab"
-                        },
-                        {
-                            "item": "crimson_sign"
-                        },
-                        {
-                            "item": "crimson_pressure_plate"
-                        },
-                        {
-                            "item": "crimson_planks"
-                        },
-                        {
-                            "item": "crimson_hyphae"
-                        },
-                        {
-                            "item": "crimson_hanging_sign"
+                            "item": "crimson_fence"
                         },
                         {
                             "item": "crimson_fence_gate"
                         },
                         {
-                            "item": "crimson_fence"
-                        },
-                        {
                             "item": "crimson_door"
                         },
                         {
+                            "item": "crimson_trapdoor"
+                        },
+                        {
                             "item": "crimson_button"
+                        },
+                        {
+                            "item": "crimson_pressure_plate"
+                        },
+                        {
+                            "item": "crimson_sign"
+                        },
+                        {
+                            "item": "crimson_hanging_sign"
                         }
                     ],
                     "icon": "crimson_stem",
@@ -1952,25 +1952,7 @@
                     "label": "Warped",
                     "items": [
                         {
-                            "item": "stripped_warped_hyphae"
-                        },
-                        {
-                            "item": "stripped_warped_stem"
-                        },
-                        {
-                            "item": "warped_button"
-                        },
-                        {
-                            "item": "warped_door"
-                        },
-                        {
-                            "item": "warped_fence"
-                        },
-                        {
-                            "item": "warped_fence_gate"
-                        },
-                        {
-                            "item": "warped_hanging_sign"
+                            "item": "warped_stem"
                         },
                         {
                             "item": "warped_hyphae"
@@ -1979,25 +1961,43 @@
                             "item": "warped_planks"
                         },
                         {
+                            "item": "warped_slab"
+                        },
+                        {
+                            "item": "warped_stairs"
+                        },
+                        {
+                            "item": "stripped_warped_stem"
+                        },
+                        {
+                            "item": "stripped_warped_hyphae"
+                        },
+                        {
+                            "item": "warped_fence"
+                        },
+                        {
+                            "item": "warped_fence_gate"
+                        },
+                        {
+                            "item": "warped_door"
+                        },
+                        {
+                            "item": "warped_trapdoor"
+                        },
+                        {
+                            "item": "warped_button"
+                        },
+                        {
                             "item": "warped_pressure_plate"
                         },
                         {
                             "item": "warped_sign"
                         },
                         {
+                            "item": "warped_hanging_sign"
+                        },
+                        {
                             "item": "warped_wart_block"
-                        },
-                        {
-                            "item": "warped_trapdoor"
-                        },
-                        {
-                            "item": "warped_stem"
-                        },
-                        {
-                            "item": "warped_stairs"
-                        },
-                        {
-                            "item": "warped_slab"
                         }
                     ],
                     "icon": "warped_stem",
@@ -2014,19 +2014,19 @@
                             "item": "pale_oak_wood"
                         },
                         {
-                            "item": "stripped_pale_oak_log"
-                        },
-                        {
-                            "item": "stripped_pale_oak_wood"
-                        },
-                        {
                             "item": "pale_oak_planks"
+                        },
+                        {
+                            "item": "pale_oak_slab"
                         },
                         {
                             "item": "pale_oak_stairs"
                         },
                         {
-                            "item": "pale_oak_slab"
+                            "item": "stripped_pale_oak_log"
+                        },
+                        {
+                            "item": "stripped_pale_oak_wood"
                         },
                         {
                             "item": "pale_oak_fence"
@@ -2041,22 +2041,22 @@
                             "item": "pale_oak_trapdoor"
                         },
                         {
+                            "item": "pale_oak_button"
+                        },
+                        {
                             "item": "pale_oak_pressure_plate"
                         },
                         {
-                            "item": "pale_oak_button"
+                            "item": "pale_oak_sign"
+                        },
+                        {
+                            "item": "pale_oak_hanging_sign"
                         },
                         {
                             "item": "pale_oak_leaves"
                         },
                         {
                             "item": "pale_oak_sapling"
-                        },
-                        {
-                            "item": "pale_oak_hanging_sign"
-                        },
-                        {
-                            "item": "pale_oak_sign"
                         }
                     ],
                     "checked": false
