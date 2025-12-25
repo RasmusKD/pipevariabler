@@ -1,4 +1,4 @@
-﻿{
+{
     "tabs": [
         {
             "chests": [
@@ -730,6 +730,9 @@
                             "item": "white_candle"
                         },
                         {
+                            "item": "candle"
+                        },
+                        {
                             "item": "white_carpet"
                         },
                         {
@@ -754,22 +757,19 @@
                             "item": "white_terracotta"
                         },
                         {
-                            "item": "white_wool"
+                            "item": "terracotta"
                         },
                         {
-                            "item": "candle"
+                            "item": "white_wool"
                         },
                         {
                             "item": "glass"
                         },
                         {
                             "item": "glass_pane"
-                        },
-                        {
-                            "item": "terracotta"
                         }
                     ],
-                    "icon": "white_banner",
+                    "icon": "white_dye",
                     "checked": false
                 },
                 {
@@ -791,10 +791,10 @@
                             "item": "light_gray_concrete"
                         },
                         {
-                            "item": "light_gray_dye"
+                            "item": "light_gray_concrete_powder"
                         },
                         {
-                            "item": "light_gray_concrete_powder"
+                            "item": "light_gray_dye"
                         },
                         {
                             "item": "light_gray_glazed_terracotta"
@@ -812,7 +812,7 @@
                             "item": "light_gray_wool"
                         }
                     ],
-                    "icon": "light_gray_banner",
+                    "icon": "light_gray_dye",
                     "checked": false
                 },
                 {
@@ -855,17 +855,17 @@
                             "item": "gray_wool"
                         }
                     ],
-                    "icon": "gray_banner",
+                    "icon": "gray_dye",
                     "checked": false
                 },
                 {
                     "label": "Black",
                     "items": [
                         {
-                            "item": "black_bed"
+                            "item": "black_banner"
                         },
                         {
-                            "item": "black_banner"
+                            "item": "black_bed"
                         },
                         {
                             "item": "black_candle"
@@ -901,7 +901,7 @@
                             "item": "tinted_glass"
                         }
                     ],
-                    "icon": "black_bed",
+                    "icon": "black_dye",
                     "checked": false
                 },
                 {
@@ -944,7 +944,7 @@
                             "item": "brown_wool"
                         }
                     ],
-                    "icon": "brown_banner",
+                    "icon": "brown_dye",
                     "checked": false
                 },
                 {
@@ -987,7 +987,7 @@
                             "item": "red_wool"
                         }
                     ],
-                    "icon": "red_banner",
+                    "icon": "red_dye",
                     "checked": false
                 },
                 {
@@ -1030,7 +1030,7 @@
                             "item": "orange_wool"
                         }
                     ],
-                    "icon": "orange_banner",
+                    "icon": "orange_dye",
                     "checked": false
                 },
                 {
@@ -1073,14 +1073,35 @@
                             "item": "yellow_wool"
                         }
                     ],
-                    "icon": "yellow_banner",
+                    "icon": "yellow_dye",
                     "checked": false
                 },
                 {
                     "label": "Lime",
                     "items": [
                         {
-                            "item": "lime_wool"
+                            "item": "lime_banner"
+                        },
+                        {
+                            "item": "lime_bed"
+                        },
+                        {
+                            "item": "lime_candle"
+                        },
+                        {
+                            "item": "lime_carpet"
+                        },
+                        {
+                            "item": "lime_concrete"
+                        },
+                        {
+                            "item": "lime_concrete_powder"
+                        },
+                        {
+                            "item": "lime_dye"
+                        },
+                        {
+                            "item": "lime_glazed_terracotta"
                         },
                         {
                             "item": "lime_stained_glass"
@@ -1092,170 +1113,164 @@
                             "item": "lime_terracotta"
                         },
                         {
-                            "item": "lime_glazed_terracotta"
-                        },
-                        {
-                            "item": "lime_dye"
-                        },
-                        {
-                            "item": "lime_concrete_powder"
-                        },
-                        {
-                            "item": "lime_concrete"
-                        },
-                        {
-                            "item": "lime_carpet"
-                        },
-                        {
-                            "item": "lime_bed"
-                        },
-                        {
-                            "item": "lime_candle"
-                        },
-                        {
-                            "item": "lime_banner"
+                            "item": "lime_wool"
                         }
                     ],
-                    "icon": "lime_wool",
+                    "icon": "lime_dye",
                     "checked": false
                 },
                 {
                     "label": "Green",
                     "items": [
                         {
-                            "item": "green_wool"
-                        },
-                        {
-                            "item": "green_terracotta"
-                        },
-                        {
-                            "item": "green_stained_glass_pane"
-                        },
-                        {
-                            "item": "green_stained_glass"
-                        },
-                        {
-                            "item": "green_glazed_terracotta"
-                        },
-                        {
-                            "item": "green_dye"
-                        },
-                        {
-                            "item": "green_concrete_powder"
-                        },
-                        {
-                            "item": "green_concrete"
-                        },
-                        {
-                            "item": "green_carpet"
-                        },
-                        {
-                            "item": "green_candle"
+                            "item": "green_banner"
                         },
                         {
                             "item": "green_bed"
                         },
                         {
-                            "item": "green_banner"
+                            "item": "green_candle"
+                        },
+                        {
+                            "item": "green_carpet"
+                        },
+                        {
+                            "item": "green_concrete"
+                        },
+                        {
+                            "item": "green_concrete_powder"
+                        },
+                        {
+                            "item": "green_dye"
+                        },
+                        {
+                            "item": "green_glazed_terracotta"
+                        },
+                        {
+                            "item": "green_stained_glass"
+                        },
+                        {
+                            "item": "green_stained_glass_pane"
+                        },
+                        {
+                            "item": "green_terracotta"
+                        },
+                        {
+                            "item": "green_wool"
                         }
                     ],
-                    "icon": "green_wool",
+                    "icon": "green_dye",
                     "checked": false
                 },
                 {
                     "label": "Cyan",
                     "items": [
                         {
-                            "item": "cyan_wool"
-                        },
-                        {
-                            "item": "cyan_terracotta"
-                        },
-                        {
-                            "item": "cyan_stained_glass_pane"
-                        },
-                        {
-                            "item": "cyan_stained_glass"
-                        },
-                        {
-                            "item": "cyan_glazed_terracotta"
-                        },
-                        {
-                            "item": "cyan_dye"
-                        },
-                        {
-                            "item": "cyan_concrete_powder"
-                        },
-                        {
-                            "item": "cyan_concrete"
-                        },
-                        {
-                            "item": "cyan_carpet"
-                        },
-                        {
-                            "item": "cyan_candle"
+                            "item": "cyan_banner"
                         },
                         {
                             "item": "cyan_bed"
                         },
                         {
-                            "item": "cyan_banner"
+                            "item": "cyan_candle"
+                        },
+                        {
+                            "item": "cyan_carpet"
+                        },
+                        {
+                            "item": "cyan_concrete"
+                        },
+                        {
+                            "item": "cyan_concrete_powder"
+                        },
+                        {
+                            "item": "cyan_dye"
+                        },
+                        {
+                            "item": "cyan_glazed_terracotta"
+                        },
+                        {
+                            "item": "cyan_stained_glass"
+                        },
+                        {
+                            "item": "cyan_stained_glass_pane"
+                        },
+                        {
+                            "item": "cyan_terracotta"
+                        },
+                        {
+                            "item": "cyan_wool"
                         }
                     ],
-                    "icon": "cyan_wool",
+                    "icon": "cyan_dye",
                     "checked": false
                 },
                 {
                     "label": "Light blue",
                     "items": [
                         {
-                            "item": "light_blue_wool"
-                        },
-                        {
-                            "item": "light_blue_terracotta"
-                        },
-                        {
-                            "item": "light_blue_stained_glass_pane"
-                        },
-                        {
-                            "item": "light_blue_stained_glass"
-                        },
-                        {
-                            "item": "light_blue_glazed_terracotta"
-                        },
-                        {
-                            "item": "light_blue_dye"
-                        },
-                        {
-                            "item": "light_blue_concrete_powder"
-                        },
-                        {
-                            "item": "light_blue_concrete"
-                        },
-                        {
-                            "item": "light_blue_carpet"
-                        },
-                        {
-                            "item": "light_blue_candle"
+                            "item": "light_blue_banner"
                         },
                         {
                             "item": "light_blue_bed"
                         },
                         {
-                            "item": "light_blue_banner"
+                            "item": "light_blue_candle"
+                        },
+                        {
+                            "item": "light_blue_carpet"
+                        },
+                        {
+                            "item": "light_blue_concrete"
+                        },
+                        {
+                            "item": "light_blue_concrete_powder"
+                        },
+                        {
+                            "item": "light_blue_dye"
+                        },
+                        {
+                            "item": "light_blue_glazed_terracotta"
+                        },
+                        {
+                            "item": "light_blue_stained_glass"
+                        },
+                        {
+                            "item": "light_blue_stained_glass_pane"
+                        },
+                        {
+                            "item": "light_blue_terracotta"
+                        },
+                        {
+                            "item": "light_blue_wool"
                         }
                     ],
-                    "icon": "light_blue_wool",
+                    "icon": "light_blue_dye",
                     "checked": false
                 },
                 {
                     "label": "Blue",
                     "items": [
                         {
-                            "item": "blue_dye"
+                            "item": "blue_banner"
+                        },
+                        {
+                            "item": "blue_bed"
+                        },
+                        {
+                            "item": "blue_candle"
+                        },
+                        {
+                            "item": "blue_carpet"
+                        },
+                        {
+                            "item": "blue_concrete"
                         },
                         {
                             "item": "blue_concrete_powder"
+                        },
+                        {
+                            "item": "blue_dye"
                         },
                         {
                             "item": "blue_glazed_terracotta"
@@ -1271,21 +1286,6 @@
                         },
                         {
                             "item": "blue_wool"
-                        },
-                        {
-                            "item": "blue_concrete"
-                        },
-                        {
-                            "item": "blue_carpet"
-                        },
-                        {
-                            "item": "blue_candle"
-                        },
-                        {
-                            "item": "blue_bed"
-                        },
-                        {
-                            "item": "blue_banner"
                         }
                     ],
                     "icon": "blue_dye",
@@ -1331,93 +1331,93 @@
                             "item": "purple_wool"
                         }
                     ],
-                    "icon": "purple_banner",
+                    "icon": "purple_dye",
                     "checked": false
                 },
                 {
                     "label": "Magenta",
                     "items": [
                         {
-                            "item": "magenta_wool"
-                        },
-                        {
-                            "item": "magenta_terracotta"
-                        },
-                        {
-                            "item": "magenta_stained_glass_pane"
-                        },
-                        {
-                            "item": "magenta_stained_glass"
-                        },
-                        {
-                            "item": "magenta_glazed_terracotta"
-                        },
-                        {
-                            "item": "magenta_dye"
-                        },
-                        {
-                            "item": "magenta_concrete_powder"
-                        },
-                        {
-                            "item": "magenta_concrete"
-                        },
-                        {
-                            "item": "magenta_carpet"
-                        },
-                        {
-                            "item": "magenta_candle"
+                            "item": "magenta_banner"
                         },
                         {
                             "item": "magenta_bed"
                         },
                         {
-                            "item": "magenta_banner"
+                            "item": "magenta_candle"
+                        },
+                        {
+                            "item": "magenta_carpet"
+                        },
+                        {
+                            "item": "magenta_concrete"
+                        },
+                        {
+                            "item": "magenta_concrete_powder"
+                        },
+                        {
+                            "item": "magenta_dye"
+                        },
+                        {
+                            "item": "magenta_glazed_terracotta"
+                        },
+                        {
+                            "item": "magenta_stained_glass"
+                        },
+                        {
+                            "item": "magenta_stained_glass_pane"
+                        },
+                        {
+                            "item": "magenta_terracotta"
+                        },
+                        {
+                            "item": "magenta_wool"
                         }
                     ],
-                    "icon": "magenta_wool",
+                    "icon": "magenta_dye",
                     "checked": false
                 },
                 {
                     "label": "Pink",
                     "items": [
                         {
-                            "item": "pink_wool"
-                        },
-                        {
-                            "item": "pink_terracotta"
-                        },
-                        {
-                            "item": "pink_stained_glass_pane"
-                        },
-                        {
-                            "item": "pink_stained_glass"
-                        },
-                        {
-                            "item": "pink_glazed_terracotta"
-                        },
-                        {
-                            "item": "pink_dye"
-                        },
-                        {
-                            "item": "pink_concrete_powder"
-                        },
-                        {
-                            "item": "pink_concrete"
-                        },
-                        {
-                            "item": "pink_carpet"
-                        },
-                        {
-                            "item": "pink_candle"
+                            "item": "pink_banner"
                         },
                         {
                             "item": "pink_bed"
                         },
                         {
-                            "item": "pink_banner"
+                            "item": "pink_candle"
+                        },
+                        {
+                            "item": "pink_carpet"
+                        },
+                        {
+                            "item": "pink_concrete"
+                        },
+                        {
+                            "item": "pink_concrete_powder"
+                        },
+                        {
+                            "item": "pink_dye"
+                        },
+                        {
+                            "item": "pink_glazed_terracotta"
+                        },
+                        {
+                            "item": "pink_stained_glass"
+                        },
+                        {
+                            "item": "pink_stained_glass_pane"
+                        },
+                        {
+                            "item": "pink_terracotta"
+                        },
+                        {
+                            "item": "pink_wool"
                         }
                     ],
-                    "icon": "pink_wool",
+                    "icon": "pink_dye",
                     "checked": false
                 }
             ],
@@ -1426,7 +1426,7 @@
         {
             "chests": [
                 {
-                    "label": "oak",
+                    "label": "Oak",
                     "items": [
                         {
                             "item": "oak_button"
@@ -1474,11 +1474,11 @@
                             "item": "oak_trapdoor"
                         }
                     ],
-                    "icon": "oak_button",
+                    "icon": "oak_log",
                     "checked": false
                 },
                 {
-                    "label": "spruce",
+                    "label": "Spruce",
                     "items": [
                         {
                             "item": "spruce_button"
@@ -1526,11 +1526,11 @@
                             "item": "spruce_hanging_sign"
                         }
                     ],
-                    "icon": "spruce_button",
+                    "icon": "spruce_log",
                     "checked": false
                 },
                 {
-                    "label": "birch",
+                    "label": "Birch",
                     "items": [
                         {
                             "item": "birch_button"
@@ -1578,11 +1578,11 @@
                             "item": "stripped_birch_wood"
                         }
                     ],
-                    "icon": "birch_button",
+                    "icon": "birch_log",
                     "checked": false
                 },
                 {
-                    "label": "jungle",
+                    "label": "Jungle",
                     "items": [
                         {
                             "item": "jungle_button"
@@ -1630,11 +1630,11 @@
                             "item": "stripped_jungle_wood"
                         }
                     ],
-                    "icon": "jungle_button",
+                    "icon": "jungle_log",
                     "checked": false
                 },
                 {
-                    "label": "acacia",
+                    "label": "Acacia",
                     "items": [
                         {
                             "item": "acacia_button"
@@ -1682,11 +1682,11 @@
                             "item": "acacia_hanging_sign"
                         }
                     ],
-                    "icon": "acacia_button",
+                    "icon": "acacia_log",
                     "checked": false
                 },
                 {
-                    "label": "dark oak",
+                    "label": "Dark oak",
                     "items": [
                         {
                             "item": "dark_oak_button"
@@ -1734,11 +1734,11 @@
                             "item": "stripped_dark_oak_wood"
                         }
                     ],
-                    "icon": "dark_oak_button",
+                    "icon": "dark_oak_log",
                     "checked": false
                 },
                 {
-                    "label": "mangrove",
+                    "label": "Mangrove",
                     "items": [
                         {
                             "item": "stripped_mangrove_wood"
@@ -1786,11 +1786,11 @@
                             "item": "mangrove_button"
                         }
                     ],
-                    "icon": "stripped_mangrove_wood",
+                    "icon": "mangrove_log",
                     "checked": false
                 },
                 {
-                    "label": "cherry",
+                    "label": "Cherry",
                     "items": [
                         {
                             "item": "stripped_cherry_wood"
@@ -1838,11 +1838,11 @@
                             "item": "cherry_button"
                         }
                     ],
-                    "icon": "stripped_cherry_wood",
+                    "icon": "cherry_log",
                     "checked": false
                 },
                 {
-                    "label": "bamboo",
+                    "label": "Bamboo",
                     "items": [
                         {
                             "item": "stripped_bamboo_block"
@@ -1893,11 +1893,11 @@
                             "item": "bamboo_block"
                         }
                     ],
-                    "icon": "stripped_bamboo_block",
+                    "icon": "bamboo_block",
                     "checked": false
                 },
                 {
-                    "label": "crimson",
+                    "label": "Crimson",
                     "items": [
                         {
                             "item": "stripped_crimson_stem"
@@ -1945,11 +1945,11 @@
                             "item": "crimson_button"
                         }
                     ],
-                    "icon": "stripped_crimson_stem",
+                    "icon": "crimson_stem",
                     "checked": false
                 },
                 {
-                    "label": "warped",
+                    "label": "Warped",
                     "items": [
                         {
                             "item": "stripped_warped_hyphae"
@@ -2000,7 +2000,7 @@
                             "item": "warped_slab"
                         }
                     ],
-                    "icon": "stripped_warped_hyphae",
+                    "icon": "warped_stem",
                     "checked": false
                 },
                 {
@@ -4975,7 +4975,7 @@
                     "checked": false
                 }
             ],
-            "name": "Items \u0026 Tools"
+            "name": "Items & Tools"
         }
     ],
     "name": "Ivers Kisterum"
