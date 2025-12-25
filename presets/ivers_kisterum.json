@@ -6,10 +6,10 @@
                     "label": "Coal",
                     "items": [
                         {
-                            "item": "charcoal"
+                            "item": "coal"
                         },
                         {
-                            "item": "coal"
+                            "item": "charcoal"
                         },
                         {
                             "item": "coal_block"
@@ -21,26 +21,14 @@
                             "item": "deepslate_coal_ore"
                         }
                     ],
-                    "icon": "charcoal",
+                    "icon": "coal",
                     "checked": false
                 },
                 {
                     "label": "Iron",
                     "items": [
                         {
-                            "item": "deepslate_iron_ore"
-                        },
-                        {
-                            "item": "iron_block"
-                        },
-                        {
-                            "item": "iron_bars"
-                        },
-                        {
                             "item": "iron_ingot"
-                        },
-                        {
-                            "item": "iron_ore"
                         },
                         {
                             "item": "iron_nugget"
@@ -49,13 +37,25 @@
                             "item": "raw_iron"
                         },
                         {
+                            "item": "iron_block"
+                        },
+                        {
                             "item": "raw_iron_block"
                         },
                         {
-                            "item": "iron_trapdoor"
+                            "item": "iron_ore"
+                        },
+                        {
+                            "item": "deepslate_iron_ore"
+                        },
+                        {
+                            "item": "iron_bars"
                         },
                         {
                             "item": "iron_door"
+                        },
+                        {
+                            "item": "iron_trapdoor"
                         },
                         {
                             "item": "chain"
@@ -64,43 +64,37 @@
                             "item": "heavy_weighted_pressure_plate"
                         }
                     ],
-                    "icon": "deepslate_iron_ore",
+                    "icon": "iron_ingot",
                     "checked": false
                 },
                 {
                     "label": "Copper",
                     "items": [
                         {
+                            "item": "copper_ingot"
+                        },
+                        {
+                            "item": "raw_copper"
+                        },
+                        {
                             "item": "copper_block"
                         },
                         {
-                            "item": "copper_ingot"
+                            "item": "raw_copper_block"
                         },
                         {
                             "item": "copper_ore"
                         },
                         {
                             "item": "deepslate_copper_ore"
-                        },
-                        {
-                            "item": "raw_copper_block"
-                        },
-                        {
-                            "item": "raw_copper"
                         }
                     ],
-                    "icon": "copper_block",
+                    "icon": "copper_ingot",
                     "checked": false
                 },
                 {
                     "label": "Gold",
                     "items": [
-                        {
-                            "item": "deepslate_gold_ore"
-                        },
-                        {
-                            "item": "gold_block"
-                        },
                         {
                             "item": "gold_ingot"
                         },
@@ -108,30 +102,33 @@
                             "item": "gold_nugget"
                         },
                         {
-                            "item": "gold_ore"
-                        },
-                        {
-                            "item": "nether_gold_ore"
-                        },
-                        {
                             "item": "raw_gold"
+                        },
+                        {
+                            "item": "gold_block"
                         },
                         {
                             "item": "raw_gold_block"
                         },
                         {
+                            "item": "gold_ore"
+                        },
+                        {
+                            "item": "deepslate_gold_ore"
+                        },
+                        {
+                            "item": "nether_gold_ore"
+                        },
+                        {
                             "item": "light_weighted_pressure_plate"
                         }
                     ],
-                    "icon": "deepslate_gold_ore",
+                    "icon": "gold_ingot",
                     "checked": false
                 },
                 {
                     "label": "Redstone",
                     "items": [
-                        {
-                            "item": "deepslate_redstone_ore"
-                        },
                         {
                             "item": "redstone"
                         },
@@ -140,17 +137,17 @@
                         },
                         {
                             "item": "redstone_ore"
+                        },
+                        {
+                            "item": "deepslate_redstone_ore"
                         }
                     ],
-                    "icon": "deepslate_redstone_ore",
+                    "icon": "redstone",
                     "checked": false
                 },
                 {
                     "label": "Emerald",
                     "items": [
-                        {
-                            "item": "deepslate_emerald_ore"
-                        },
                         {
                             "item": "emerald"
                         },
@@ -159,36 +156,36 @@
                         },
                         {
                             "item": "emerald_ore"
+                        },
+                        {
+                            "item": "deepslate_emerald_ore"
                         }
                     ],
-                    "icon": "deepslate_emerald_ore",
+                    "icon": "emerald",
                     "checked": false
                 },
                 {
                     "label": "Lapis",
                     "items": [
                         {
-                            "item": "deepslate_lapis_ore"
+                            "item": "lapis_lazuli"
                         },
                         {
-                            "item": "lapis_lazuli"
+                            "item": "lapis_block"
                         },
                         {
                             "item": "lapis_ore"
                         },
                         {
-                            "item": "lapis_block"
+                            "item": "deepslate_lapis_ore"
                         }
                     ],
-                    "icon": "deepslate_lapis_ore",
+                    "icon": "lapis_lazuli",
                     "checked": false
                 },
                 {
                     "label": "Diamond",
                     "items": [
-                        {
-                            "item": "deepslate_diamond_ore"
-                        },
                         {
                             "item": "diamond"
                         },
@@ -197,55 +194,52 @@
                         },
                         {
                             "item": "diamond_ore"
+                        },
+                        {
+                            "item": "deepslate_diamond_ore"
                         }
                     ],
-                    "icon": "deepslate_diamond_ore",
+                    "icon": "diamond",
                     "checked": false
                 },
                 {
                     "label": "Netherite",
                     "items": [
                         {
-                            "item": "netherite_upgrade_smithing_template"
+                            "item": "netherite_ingot"
                         },
                         {
                             "item": "netherite_scrap"
-                        },
-                        {
-                            "item": "netherite_ingot"
                         },
                         {
                             "item": "netherite_block"
                         },
                         {
                             "item": "ancient_debris"
+                        },
+                        {
+                            "item": "netherite_upgrade_smithing_template"
                         }
                     ],
-                    "icon": "netherite_upgrade_smithing_template",
+                    "icon": "netherite_ingot",
                     "checked": false
                 },
                 {
                     "label": "Obsidian",
                     "items": [
                         {
-                            "item": "crying_obsidian"
+                            "item": "obsidian"
                         },
                         {
-                            "item": "obsidian"
+                            "item": "crying_obsidian"
                         }
                     ],
-                    "icon": "crying_obsidian",
+                    "icon": "obsidian",
                     "checked": false
                 },
                 {
                     "label": "Quartz",
                     "items": [
-                        {
-                            "item": "chiseled_quartz_block"
-                        },
-                        {
-                            "item": "nether_quartz_ore"
-                        },
                         {
                             "item": "quartz"
                         },
@@ -272,34 +266,40 @@
                         },
                         {
                             "item": "smooth_quartz_stairs"
+                        },
+                        {
+                            "item": "chiseled_quartz_block"
+                        },
+                        {
+                            "item": "nether_quartz_ore"
                         }
                     ],
-                    "icon": "chiseled_quartz_block",
+                    "icon": "quartz",
                     "checked": false
                 },
                 {
                     "label": "Amethyst",
                     "items": [
                         {
-                            "item": "small_amethyst_bud"
-                        },
-                        {
-                            "item": "medium_amethyst_bud"
-                        },
-                        {
-                            "item": "large_amethyst_bud"
-                        },
-                        {
                             "item": "amethyst_shard"
+                        },
+                        {
+                            "item": "amethyst_block"
                         },
                         {
                             "item": "amethyst_cluster"
                         },
                         {
-                            "item": "amethyst_block"
+                            "item": "large_amethyst_bud"
+                        },
+                        {
+                            "item": "medium_amethyst_bud"
+                        },
+                        {
+                            "item": "small_amethyst_bud"
                         }
                     ],
-                    "icon": "small_amethyst_bud",
+                    "icon": "amethyst_shard",
                     "checked": false
                 }
             ],
