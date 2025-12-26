@@ -42,12 +42,17 @@ const SortableTab: React.FC<SortableTabProps> = ({ tabId, isActive, isEditing, o
     };
 
     const hoverTimeout = React.useRef<NodeJS.Timeout | null>(null);
+    const { over } = useDndContext();
+
+    // Check if we are over this tab (either the sortable ID or the droppable ID)
+    const isOverTab = over && (over.id === `tab-${tabId}` || over.id === `tab-drop-${tabId}`);
 
     // Switch tab after hovering for TAB_SWITCH_DELAY ms (when dragging items)
     React.useEffect(() => {
         // Only switch tab if dragging an item/chest (not another tab)
         const isDraggingTab = active?.id?.toString().startsWith('tab-');
-        if (isOver && active && !isActive && !isEditing && !isDraggingTab) {
+
+        if (isOverTab && active && !isActive && !isEditing && !isDraggingTab) {
             hoverTimeout.current = setTimeout(() => {
                 onSwitchTab(tabId);
             }, TAB_SWITCH_DELAY);
@@ -58,9 +63,9 @@ const SortableTab: React.FC<SortableTabProps> = ({ tabId, isActive, isEditing, o
                 hoverTimeout.current = null;
             }
         };
-    }, [isOver, active, isActive, isEditing, tabId, onSwitchTab]);
+    }, [isOverTab, active, isActive, isEditing, tabId, onSwitchTab]);
 
-    const showHighlight = isOver && !!active && !isEditing && !active?.id?.toString().startsWith('tab-');
+    const showHighlight = !!isOverTab && !!active && !isEditing && !active?.id?.toString().startsWith('tab-');
 
     const style = {
         transform: CSS.Transform.toString(transform),

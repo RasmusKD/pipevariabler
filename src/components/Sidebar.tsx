@@ -4,17 +4,7 @@ import { FaTimes, FaTh, FaBars, FaSearch } from 'react-icons/fa';
 import ItemComponent from '../ItemComponent';
 import { DraggableSource } from '../dnd/Draggable';
 import { Item } from '../types';
-import { useView, useSelection } from '../context/AppContext';
-
-interface SidebarProps {
-    searchTerm: string;
-    setSearchTerm: (term: string) => void;
-    itemsToShow: Item[];
-    chestItemsMap: Map<string, { chestId: number; displayIndex: number }[]>;
-    handleChestClick: (chestId: number, itemName?: string) => void;
-    listHeight: number;
-    listContainerRef: React.RefObject<HTMLDivElement | null>;
-}
+import { useView, useSelection, useSearch, useData, useLayout } from '../context/AppContext';
 
 // Props passed to rowComponent via rowProps
 interface RowData {
@@ -52,18 +42,13 @@ const Row = ({ index, style, itemsToShow, chestItemsMap, selectedItems, handleIt
     );
 };
 
-const Sidebar: React.FC<SidebarProps> = ({
-    searchTerm,
-    setSearchTerm,
-    itemsToShow,
-    chestItemsMap,
-    handleChestClick,
-    listHeight,
-    listContainerRef,
-}) => {
-    // Use context for view and selection state
+const Sidebar: React.FC = () => {
+    // Use context for state
     const { showAll, setShowAll, isGridView, setIsGridView } = useView();
     const { selectedItems, handleItemSelect } = useSelection();
+    const { searchTerm, setSearchTerm } = useSearch();
+    const { itemsToShow, chestItemsMap, handleChestClick } = useData();
+    const { listHeight, listContainerRef } = useLayout();
 
     const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value);
     const handleClearSearch = () => setSearchTerm('');

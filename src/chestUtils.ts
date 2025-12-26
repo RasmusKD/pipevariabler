@@ -90,7 +90,7 @@ export const findItem = (id: string | number, items: Item[], chests: Chest[]) =>
  */
 export type UnifiedItem =
     | { type: 'sidebar'; item: Item }
-    | { type: 'chest'; item: Item; sourceChestId: number };
+    | { type: 'chest'; item: Item; sourceChestId: number; sourceTabId: number };
 
 export const gatherSelectedItems = (
     activeIdStr: string,
@@ -114,7 +114,7 @@ export const gatherSelectedItems = (
             for (const chest of tab.chests) {
                 const chestItem = chest.items.find(i => i.uid === uid);
                 if (chestItem) {
-                    unifiedItems.push({ type: 'chest', item: chestItem, sourceChestId: chest.id });
+                    unifiedItems.push({ type: 'chest', item: chestItem, sourceChestId: chest.id, sourceTabId: tab.id });
                     return; // Stop searching once found
                 }
             }

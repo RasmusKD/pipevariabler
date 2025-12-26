@@ -22,6 +22,7 @@ interface ChestComponentProps {
   isPlaceholder?: boolean;
   selectedItems?: Set<string>;
   onItemSelect?: (uid: string, ctrlKey: boolean, isClick?: boolean) => void;
+  sidebarCloneId: string | null;
 }
 
 // Drop zone component for items inside a chest (no visual highlight - outer chest handles that)
@@ -80,6 +81,7 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
   isPlaceholder,
   selectedItems,
   onItemSelect,
+  sidebarCloneId,
 }) => {
   const { over, active } = useDndContext();
 
@@ -292,6 +294,7 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
                   <SortableItem
                     key={item.uid || `${item.item}-${itemIndex}`}
                     id={item.uid || item.item}
+                    style={sidebarCloneId === item.uid ? { opacity: 0.4 } : undefined}
                   >
                     <ItemComponent
                       item={item}
@@ -311,6 +314,7 @@ const ChestComponent: React.FC<ChestComponentProps> = memo(({
                   <SortableItem
                     key={item.uid || `${item.item}-${i}`}
                     id={item.uid || item.item}
+                    style={sidebarCloneId === item.uid ? { opacity: 0.4 } : undefined}
                   >
                     <ItemComponent
                       item={item}

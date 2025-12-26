@@ -2,39 +2,25 @@ import React, { memo } from 'react';
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import ChestComponent from '../ChestComponent';
 import AddChestDropZone from './AddChestDropZone';
-import { Chest, Item } from '../types';
-import { useView, useSelection } from '../context/AppContext';
+import { useView, useSelection, useChestsContext, useLayout, useSettings } from '../context/AppContext';
 
-interface ChestGridProps {
-    displayChests: Chest[];
-    profileVersion: number;
-    globalChestOffset: number;
-    incomingChest: Chest | null;
-    gridContainerRef: React.RefObject<HTMLDivElement | null>;
-
-    // Chest handlers
-    confirmDeleteChest: (id: number) => void;
-    updateChestLabel: (id: number, label: string) => void;
-    updateChestIcon: (id: number, icon: string) => void;
-    removeItemFromChest: (chestId: number, item: Item) => void;
-    addChest: () => void;
-}
-
-const ChestGrid: React.FC<ChestGridProps> = ({
-    displayChests,
-    profileVersion,
-    globalChestOffset,
-    incomingChest,
-    gridContainerRef,
-    confirmDeleteChest,
-    updateChestLabel,
-    updateChestIcon,
-    removeItemFromChest,
-    addChest,
-}) => {
+const ChestGrid: React.FC = () => {
     // Use context for view and selection state
     const { chestGridView } = useView();
     const { selectedItems, handleItemSelect } = useSelection();
+    const {
+        displayChests,
+        globalChestOffset,
+        incomingChest,
+        addChest,
+        confirmDeleteChest,
+        updateChestLabel,
+        updateChestIcon,
+        removeItemFromChest,
+        sidebarCloneId
+    } = useChestsContext();
+    const { gridContainerRef } = useLayout();
+    const { profileVersion } = useSettings();
 
     return (
         <div ref={gridContainerRef} className="grid-cols-auto-fit dark-theme overflow-x-hidden">
@@ -52,6 +38,7 @@ const ChestGrid: React.FC<ChestGridProps> = ({
                         isPlaceholder={incomingChest?.id === chest.id}
                         selectedItems={selectedItems}
                         onItemSelect={handleItemSelect}
+                        sidebarCloneId={sidebarCloneId}
                     />
                 ))}
             </SortableContext>

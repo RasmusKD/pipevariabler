@@ -3,16 +3,13 @@ import { FaEdit, FaTimes, FaPlus, FaTh, FaBars, FaUndo, FaRedo } from 'react-ico
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import SettingsDropdown from './SettingsDropdown';
 import SortableTab from './SortableTab';
-import { useProfile, useTabs, useSettings, useView } from '../context/AppContext';
+import { useProfile, useTabs, useSettings, useView, useLayout } from '../context/AppContext';
 
-interface TabBarProps {
-    tabScrollRef: React.RefObject<HTMLDivElement | null>;
-}
-
-const TabBar: React.FC<TabBarProps> = ({ tabScrollRef }) => {
+const TabBar: React.FC = () => {
     // Use context hooks instead of props
     const { profileName, setProfileName, isEditingProfileName, setIsEditingProfileName } = useProfile();
     const { tabs, activeTabId, setActiveTabId, isEditingTabName, setIsEditingTabName, updateTabName, addTab, moveTab, removeTab } = useTabs();
+    const { tabScrollRef } = useLayout();
 
     // Tab IDs for sortable context
     const tabIds = useMemo(() => tabs.map(tab => `tab-${tab.id}`), [tabs]);

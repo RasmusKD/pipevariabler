@@ -16,7 +16,8 @@ import {
     findItem,
     gatherSelectedItems,
     canAddItemToChest,
-    cloneItemWithNewUid
+    cloneItemWithNewUid,
+    generateItemUid
 } from '../chestUtils';
 import { DRAG_ACTIVATION_DISTANCE } from '../constants';
 
@@ -56,7 +57,16 @@ export const useDragController = ({
 
     // Track if we're dragging an item (string id) vs chest (number id)
     // This ref persists through the render cycle so the DragOverlay animation can check it
+    // Track if we're dragging an item (string id) vs chest (number id)
+    // This ref persists through the render cycle so the DragOverlay animation can check it
     const dragSourceIsItemRef = useRef<boolean>(false);
+
+    // Store initial state for drag cancel / undo logic
+    const initialTabsStateRef = useRef<Tab[] | null>(null);
+    const initialActiveTabIdRef = useRef<number | null>(null);
+
+    // We also track the "cloned" item ID if we dragged from sidebar, so we can remove it if cancelled
+    const sidebarCloneIdRef = useRef<string | null>(null);
 
     const chests = useMemo(() => activeTab?.chests || [], [activeTab?.chests]);
 
@@ -76,7 +86,12 @@ export const useDragController = ({
         setActiveItem(findItem(event.active.id, items, chests) as any);
         // Track if this is an item drag (string id) for animation purposes
         dragSourceIsItemRef.current = typeof event.active.id === 'string';
-    }, [items, chests]);
+
+        // Save initial state for cancel/undo
+        initialTabsStateRef.current = tabs;
+        initialActiveTabIdRef.current = activeTabId;
+        sidebarCloneIdRef.current = null; // Reset
+    }, [items, chests, tabs, activeTabId]);
 
     const handleDragOver = useCallback((event: DragOverEvent) => {
         const { active, over } = event;
@@ -84,19 +99,197 @@ export const useDragController = ({
 
         if (!overId || active.id === overId) return;
 
-        const item = findItem(active.id, items, chests);
-        if (!item || !('uid' in item)) return; // Don't drag chests into chests
-
         const overIdStr = String(overId);
+        const activeIdStr = String(active.id);
 
         // Check if dragging over a tab
         if (overIdStr.startsWith('tab-drop-')) {
             const tabId = over.data.current?.tabId;
             if (tabId && tabId !== activeTabId) {
-                // Tab switching is handled by DroppableTab component via timeout
+                // Tab switching handled by DroppableTab
+            }
+            return;
+        }
+
+        // Identify target chest and index
+        let targetChestId: number | null = null;
+        let targetIndex = -1;
+
+        // Case A: Dropped on drop zone inside chest
+        if (over.data.current?.chestId) {
+            targetChestId = over.data.current.chestId;
+            const c = chests.find(x => x.id === targetChestId);
+            targetIndex = c?.items.length || 0;
+        }
+        // Case B: Dropped on specific item (external/sidebar)
+        else if (overIdStr.startsWith('item-drop-')) {
+            const tid = overIdStr.replace('item-drop-', '');
+            const c = chests.find(x => x.items.some(i => i.uid === tid));
+            if (c) {
+                targetChestId = c.id;
+                targetIndex = c.items.findIndex(i => i.uid === tid);
             }
         }
-    }, [items, chests, activeTabId]);
+        // Case C: Dropped on SortableItem directly
+        else {
+            const c = chests.find(x => x.items.some(i => i.uid === overIdStr));
+            if (c) {
+                targetChestId = c.id;
+                targetIndex = c.items.findIndex(i => i.uid === overIdStr);
+            } else {
+                // Check if over a chest directly
+                const directChest = chests.find(x => x.id === over.id);
+                if (directChest) {
+                    targetChestId = directChest.id;
+                    targetIndex = directChest.items.length;
+                }
+            }
+        }
+
+        if (targetChestId === null) return;
+
+        const targetChest = chests.find(c => c.id === targetChestId);
+        if (!targetChest) return;
+
+        // Find source chest of the ACTIVE item (if any)
+        // If dragged from Sidebar, sourceChest is undefined.
+        // If dragged from another chest, sourceChest is defined.
+        // NOTE: If we already cloned the sidebar item into a chest, active.id (sidebar ID) won't match the clone UID.
+        // So we check if activeId matches or if we have a clone.
+        let sourceChest = chests.find(c => c.items.some(i => i.uid === activeIdStr));
+
+        // If not found by ID, maybe it's the Sidebar item we already cloned?
+        if (!sourceChest && sidebarCloneIdRef.current) {
+            sourceChest = chests.find(c => c.items.some(i => i.uid === sidebarCloneIdRef.current));
+        }
+
+        // 1. Sidebar -> Chest (Initial Clone) OR Cross-Tab -> Chest
+        if (!sourceChest) {
+            // Check if it's a sidebar drag
+            const fromSidebar = sidebarCloneIdRef.current || (!sidebarCloneIdRef.current && findItem(activeIdStr, items, []));
+
+            if (fromSidebar) {
+                // It is a fresh drag from sidebar
+                // Ensure we have a clone ID
+                if (!sidebarCloneIdRef.current) {
+                    sidebarCloneIdRef.current = generateItemUid();
+                }
+
+                const cloneId = sidebarCloneIdRef.current!;
+                const itemData = findItem(activeIdStr, items, []); // Find from sidebar items
+                if (!itemData || !('item' in itemData)) return; // Should be an Item
+
+                // Check if target chest already has this item
+                if (!canAddItemToChest(targetChest, itemData)) {
+                    return;
+                }
+
+                // Create clone item
+                const newItem: Item = { ...itemData, uid: cloneId };
+
+                // Insert into target chest
+                const newChests = chests.map(c => {
+                    if (c.id === targetChestId) {
+                        const newItems = [...c.items];
+                        // Clamp index
+                        const idx = Math.min(Math.max(0, targetIndex), newItems.length);
+                        newItems.splice(idx, 0, newItem);
+                        return { ...c, items: newItems };
+                    }
+                    return c;
+                });
+                updateChests(newChests);
+                return;
+            } else {
+                // Not in current chests, and not in sidebar... must be in ANOTHER TAB
+                // Find the item in global tabs
+                let foundItem: Item | null = null;
+                for (const t of tabs) {
+                    if (t.id === activeTabId) continue; // Already checked current chests
+                    for (const c of t.chests) {
+                        const i = c.items.find(x => x.uid === activeIdStr);
+                        if (i) {
+                            foundItem = i;
+                            break;
+                        }
+                    }
+                    if (foundItem) break;
+                }
+
+                if (foundItem) {
+                    // We found the item in another tab.
+                    // We want to visually move it to THIS chest in THIS tab.
+                    // We use the SAME UID because we are moving the actual item.
+
+                    // Check uniqueness/capacity if needed (though usually moving same item is fine)
+                    if (!canAddItemToChest(targetChest, foundItem)) return;
+
+                    const newChests = chests.map(c => {
+                        if (c.id === targetChestId) {
+                            const newItems = [...c.items];
+                            // Avoid duplicates if handleDragOver fires multiple times?
+                            // No, active.id is filtered out usually by SortableContext... 
+                            // BUT since it's from another tab, it's NOT in the list yet.
+                            // We need to check if we already added it?
+                            // Actually, handleDragOver runs repeatedly. 
+                            // If we add it to state, next render it WILL be in current chests (found in sourceChest).
+                            // So this block only runs ONCE when entering the tab/chest.
+                            // Once added, "sourceChest" will be found in line 159 next time.
+
+                            const idx = Math.min(Math.max(0, targetIndex), newItems.length);
+                            newItems.splice(idx, 0, foundItem);
+                            return { ...c, items: newItems };
+                        }
+                        return c;
+                    });
+                    updateChests(newChests);
+                    return;
+                }
+            }
+            return;
+        }
+
+        // 2. Move between chests (or within chest if using custom logic, though SortableContext handles same-container)
+        // If we are here, the item is already in `sourceChest` (whether real or clone).
+        // Item UID in chest is either activeIdStr (real) or sidebarCloneIdRef.current (clone).
+        const itemUid = sourceChest.items.find(i => i.uid === activeIdStr)?.uid || sidebarCloneIdRef.current;
+        if (!itemUid) return;
+
+        if (sourceChest.id !== targetChestId) {
+            // Moving to DIFFERENT chest
+            const itemToMove = sourceChest.items.find(i => i.uid === itemUid);
+            if (!itemToMove) return;
+
+            // Prepare new chests state
+            const newChests = chests.map(c => {
+                // Remove from source (always happen if it's a move)
+                if (c.id === sourceChest!.id) {
+                    return { ...c, items: c.items.filter(i => i.uid !== itemUid) };
+                }
+                // Add to target ONLY if unique
+                if (c.id === targetChestId) {
+                    // Check uniqueness
+                    if (canAddItemToChest(c, itemToMove)) {
+                        const newItems = [...c.items];
+                        const idx = Math.min(Math.max(0, targetIndex), newItems.length);
+                        newItems.splice(idx, 0, itemToMove);
+                        return { ...c, items: newItems };
+                    }
+                    // If duplicate, simply return c (without adding), effectively merging/deleting the moved item
+                    return c;
+                }
+                return c;
+            });
+            updateChests(newChests);
+        } else {
+            // Same chest - Reorder handled by dnd-kit SortableContext generally, 
+            // but if we want strictly state-based (since we are modifying state for others), we can do it here too.
+            // However, mixing SortableContext reorder and manual setChests can be glitchy.
+            // If we rely on SortableContext for same-container, we do nothing here.
+            // Let's rely on SortableContext for same-container to avoid fighting.
+        }
+
+    }, [items, chests, activeTabId, updateChests]);
 
     const handleDragEnd = useCallback((event: DragEndEvent) => {
         const { active, over } = event;
@@ -317,15 +510,46 @@ export const useDragController = ({
                 return;
             }
 
-            // General Move Logic
-            const targetChest = chests.find(c => c.id === targetChestId)!;
+            // Check if the item was already added to target during dragOver (cross-tab case)
+            // In this case, the item is already in the current chests (target), we just need to remove from source (other tabs)
+            const targetChest = chests.find(c => c.id === targetChestId);
+            const itemAlreadyInTarget = targetChest?.items.some(i => i.uid === activeIdStr);
+
+            if (itemAlreadyInTarget && unifiedItems.length === 1 && unifiedItems[0].type === 'chest') {
+                // Cross-tab move: item was added during dragOver
+                // We only need to remove it from the source tab (which is NOT the current tab)
+                const sourceTabId = unifiedItems[0].sourceTabId;
+                if (sourceTabId && sourceTabId !== activeTabId) {
+                    const newTabs = tabs.map(tab => {
+                        if (tab.id === sourceTabId) {
+                            return {
+                                ...tab,
+                                chests: tab.chests.map(chest => ({
+                                    ...chest,
+                                    items: chest.items.filter(i => i.uid !== activeIdStr)
+                                }))
+                            };
+                        }
+                        return tab;
+                    });
+                    setTabs(newTabs);
+                    setSelectedItems(new Set());
+                    setActiveId(null);
+                    setActiveItem(null);
+                    return;
+                }
+            }
+
+            // General Move Logic (sidebar -> chest, or normal same-tab moves)
             const validItemsToAdd: Item[] = [];
 
-            let tempTargetItems = [...targetChest.items];
+            let tempTargetItems = [...(targetChest?.items || [])];
             const sourceUidsToRemove = new Set<string>();
 
             for (const uItem of unifiedItems) {
                 if (uItem.type === 'chest' && uItem.sourceChestId === targetChestId) {
+                    // Moving within same chest (handled by reorder logic mostly, but if we have mixed source/target?)
+                    // Filter it out for temp check
                     tempTargetItems = tempTargetItems.filter(i => i.uid !== uItem.item.uid);
                 }
 
@@ -333,14 +557,13 @@ export const useDragController = ({
                     ? cloneItemWithNewUid(uItem.item)
                     : uItem.item;
 
-                // If it's a move (from chest), we want to remove it from source REGARDLESS of whether we add it to target.
-                // (Unless target is same as source, which is handled in reorder block above or handled by 'tempTargetItems' filtering).
-
+                // ALWAYS Mark for removal from source if it's a move (Chest -> Chest)
+                // This implements the "Merge" behavior where rejected duplicates are just consumed.
                 if (uItem.type === 'chest') {
                     sourceUidsToRemove.add(uItem.item.uid);
                 }
 
-                if (canAddItemToChest({ ...targetChest, items: tempTargetItems }, itemToAdd)) {
+                if (canAddItemToChest({ ...targetChest!, items: tempTargetItems }, itemToAdd)) {
                     validItemsToAdd.push(itemToAdd);
                     tempTargetItems.push(itemToAdd);
                 }
@@ -431,6 +654,19 @@ export const useDragController = ({
         }),
     };
 
+    const handleDragCancel = useCallback(() => {
+        setActiveId(null);
+        setActiveItem(null);
+        if (initialTabsStateRef.current) {
+            setTabs(initialTabsStateRef.current);
+            // Also restore specific active tab if needed, though usually tabs state covers it
+            if (initialActiveTabIdRef.current !== null) {
+                setActiveTabId(initialActiveTabIdRef.current);
+            }
+        }
+        sidebarCloneIdRef.current = null;
+    }, [setTabs, setActiveTabId]);
+
     return {
         sensors,
         activeId,
@@ -438,8 +674,10 @@ export const useDragController = ({
         handleDragStart,
         handleDragOver,
         handleDragEnd,
+        handleDragCancel,
         handleItemSelect,
         dropAnimation,
-        dragSourceIsItemRef
+        dragSourceIsItemRef,
+        sidebarCloneId: sidebarCloneIdRef.current
     };
 };
