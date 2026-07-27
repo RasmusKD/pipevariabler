@@ -1,0 +1,471 @@
+// App store - central state management
+import { createContext, createEffect, useContext, type JSX } from 'solid-js';
+import { createStore, produce, unwrap } from 'solid-js/store';
+import { CHEST_ROW_HEIGHT, MAX_UNDO_STEPS, STORAGE_KEYS } from '../constants';
+import { createSidebarItems, dedupeByVariable, displayName, processItems } from '../lib/items';
+import { consumeSharedTabsFromUrl } from '../lib/profile-codec';
+import type { Chest, ChestHeight, Item, Tab } from '../types';
+
+export type AppState = {
+    /** The full item catalog shown in the sidebar */
+    items: Item[];
+    tabs: Tab[];
+    activeTabId: number;
+    /** Selected item uids (sidebar and chest items share one selection) */
+    selectedItems: Set<string>;
+    chestGridView: boolean;
+    sidebarGridView: boolean;
+    chestHeight: ChestHeight;
+    deleteChestModalVisible: boolean;
+    chestToDelete: number | null;
+    newProfileModalVisible: boolean;
+    undoStack: Tab[][];
+    redoStack: Tab[][];
+};
+
+// ===== Ingestion =====
+
+type RawChest = Partial<Omit<Chest, 'items'>> & { items?: Partial<Item>[] };
+type RawTab = Partial<Omit<Tab, 'chests'>> & { chests?: RawChest[] };
+
+/**
+ * Single hardened ingestion point for tabs from localStorage, imports,
+ * presets and shared URLs. Re-sequences tab/chest ids from 1 so duplicate or
+ * missing ids can never enter the store, and regenerates every item uid so no
+ * two chests can share one.
+ */
+const normalizeTabs = (rawTabs: RawTab[]): Tab[] => {
+    let chestId = 1;
+    return rawTabs.map((tab, tabIndex) => ({
+        id: tabIndex + 1,
+        name: tab.name || `Tab ${tabIndex + 1}`,
+        chests: (tab.chests ?? []).map((chest) => ({
+            id: chestId++,
+            label: chest.label || 'Barrel',
+            icon: (chest.icon || 'barrel').replace('.png', ''),
+            checked: chest.checked ?? false,
+            items: processItems(chest.items ?? []),
+        })),
+    }));
+};
+
+const DEFAULT_TABS: RawTab[] = [{ name: 'Default', chests: [] }];
+
+const loadInitialTabs = (): Tab[] => {
+    // A shared profile in the URL (?p=...) wins over the locally saved state
+    const sharedTabs = consumeSharedTabsFromUrl();
+    if (sharedTabs) return normalizeTabs(sharedTabs);
+
+    try {
+        const saved = localStorage.getItem(STORAGE_KEYS.tabs);
+        const parsed: unknown = saved ? JSON.parse(saved) : null;
+        if (Array.isArray(parsed) && parsed.length > 0) return normalizeTabs(parsed);
+    } catch {
+        // Corrupt saved state - fall through to the default
+    }
+    return normalizeTabs(DEFAULT_TABS);
+};
+
+const createInitialState = (): AppState => {
+    const tabs = loadInitialTabs();
+    return {
+        items: createSidebarItems(),
+        tabs,
+        activeTabId: tabs[0].id,
+        selectedItems: new Set<string>(),
+        chestGridView: localStorage.getItem(STORAGE_KEYS.chestGridView) === 'true',
+        sidebarGridView: localStorage.getItem(STORAGE_KEYS.sidebarGridView) === 'true',
+        chestHeight: ((saved) => (saved && saved in CHEST_ROW_HEIGHT ? saved as ChestHeight : 'medium'))(
+            localStorage.getItem(STORAGE_KEYS.chestHeight),
+        ),
+        deleteChestModalVisible: false,
+        chestToDelete: null,
+        newProfileModalVisible: false,
+        undoStack: [],
+        redoStack: [],
+    };
+};
+
+// ===== Store =====
+
+export function createAppStore() {
+    const [state, setState] = createStore<AppState>(createInitialState());
+
+    // ----- Derived -----
+    const activeTab = () => state.tabs.find((t) => t.id === state.activeTabId);
+    const chests = () => activeTab()?.chests ?? [];
+
+    // ----- Internal helpers -----
+    const snapshotTabs = (): Tab[] => structuredClone(unwrap(state.tabs));
+
+    /** Record the current (or a pre-captured) tabs state as an undo step */
+    const pushUndo = (tabs: Tab[] = snapshotTabs()) => {
+        setState('undoStack', (stack) => [...stack.slice(-(MAX_UNDO_STEPS - 1)), tabs]);
+        setState('redoStack', []);
+    };
+
+    /** Chests have globally unique ids, so a chest can be found across all tabs */
+    const findChestPath = (chestId: number): { tabIndex: number; chestIndex: number } | null => {
+        for (let tabIndex = 0; tabIndex < state.tabs.length; tabIndex++) {
+            const chestIndex = state.tabs[tabIndex].chests.findIndex((c) => c.id === chestId);
+            if (chestIndex !== -1) return { tabIndex, chestIndex };
+        }
+        return null;
+    };
+
+    const activeTabIndex = () => state.tabs.findIndex((t) => t.id === state.activeTabId);
+
+    /** Keep activeTabId valid after undo/redo/replace */
+    const ensureValidActiveTab = () => {
+        if (!state.tabs.some((t) => t.id === state.activeTabId)) {
+            setState('activeTabId', state.tabs[0]?.id ?? 1);
+        }
+    };
+
+    // ----- Tab actions -----
+    const setActiveTabId = (tabId: number) => setState('activeTabId', tabId);
+
+    const addTab = () => {
+        const newId = Math.max(...state.tabs.map((t) => t.id), 0) + 1;
+        pushUndo();
+        setState('tabs', produce((tabs) => tabs.push({ id: newId, name: `Tab ${newId}`, chests: [] })));
+        setActiveTabId(newId);
+    };
+
+    const removeTab = (tabId: number) => {
+        if (state.tabs.length <= 1) return;
+        pushUndo();
+        setState('tabs', (tabs) => tabs.filter((t) => t.id !== tabId));
+        ensureValidActiveTab();
+    };
+
+    const renameTab = (tabId: number, name: string) => {
+        setState('tabs', (t) => t.id === tabId, 'name', name);
+    };
+
+    const moveTab = (fromIndex: number, toIndex: number) => {
+        if (fromIndex === toIndex) return;
+        pushUndo();
+        setState('tabs', produce((tabs) => {
+            const [moved] = tabs.splice(fromIndex, 1);
+            tabs.splice(toIndex, 0, moved);
+        }));
+    };
+
+    // ----- Chest actions -----
+    const addChest = (chest: Chest) => {
+        const tabIndex = activeTabIndex();
+        if (tabIndex === -1) return;
+        pushUndo();
+        setState('tabs', tabIndex, 'chests', produce((chests) => chests.push(chest)));
+    };
+
+    const moveChest = (fromIndex: number, toIndex: number) => {
+        if (fromIndex === toIndex) return;
+        const tabIndex = activeTabIndex();
+        if (tabIndex === -1) return;
+        pushUndo();
+        setState('tabs', tabIndex, 'chests', produce((chests) => {
+            const [moved] = chests.splice(fromIndex, 1);
+            chests.splice(toIndex, 0, moved);
+        }));
+    };
+
+    const moveChestToTab = (chestId: number, targetTabId: number) => {
+        const path = findChestPath(chestId);
+        const targetTabIndex = state.tabs.findIndex((t) => t.id === targetTabId);
+        if (!path || targetTabIndex === -1 || path.tabIndex === targetTabIndex) return;
+
+        pushUndo();
+        const chest = unwrap(state.tabs[path.tabIndex].chests[path.chestIndex]);
+        setState('tabs', path.tabIndex, 'chests', (chests) => chests.filter((c) => c.id !== chestId));
+        setState('tabs', targetTabIndex, 'chests', produce((chests) => chests.push(chest)));
+        setActiveTabId(targetTabId);
+    };
+
+    /** Shallow-merge a patch into one chest (label, icon, checked, ...) */
+    const updateChest = (chestId: number, patch: Partial<Chest>) => {
+        const path = findChestPath(chestId);
+        if (!path) return;
+        pushUndo();
+        setState('tabs', path.tabIndex, 'chests', path.chestIndex, patch);
+    };
+
+    const getNextChestId = (): number => {
+        const allChests = state.tabs.flatMap((t) => t.chests);
+        return Math.max(...allChests.map((c) => c.id), 0) + 1;
+    };
+
+    // Delete chest - ask for confirmation when it still holds items
+    // (skipConfirm, e.g. via Shift-click, bypasses the modal)
+    const deleteChest = (chestId: number, skipConfirm = false) => {
+        const path = findChestPath(chestId);
+        if (!path) return;
+        if (!skipConfirm && state.tabs[path.tabIndex].chests[path.chestIndex].items.length > 0) {
+            setState({ chestToDelete: chestId, deleteChestModalVisible: true });
+        } else {
+            removeChestDirect(chestId);
+        }
+    };
+
+    const removeChestDirect = (chestId: number) => {
+        const path = findChestPath(chestId);
+        if (!path) return;
+        pushUndo();
+        setState('tabs', path.tabIndex, 'chests', (chests) => chests.filter((c) => c.id !== chestId));
+    };
+
+    const confirmDeleteChest = () => {
+        if (state.chestToDelete !== null) removeChestDirect(state.chestToDelete);
+        setState({ deleteChestModalVisible: false, chestToDelete: null });
+    };
+
+    const cancelDeleteChest = () => {
+        setState({ deleteChestModalVisible: false, chestToDelete: null });
+    };
+
+    // ----- Chest item actions (all atomic: one undo step each) -----
+
+    /**
+     * Move (or copy, when sourceChestId is null) items into a chest.
+     * Items whose variable already exists in the target are skipped.
+     */
+    const moveItemsToChest = (options: {
+        items: Item[];
+        sourceChestId: number | null;
+        targetChestId: number;
+        insertIndex?: number;
+    }) => {
+        const { items, sourceChestId, targetChestId, insertIndex } = options;
+        const targetPath = findChestPath(targetChestId);
+        if (!targetPath || items.length === 0) return;
+
+        pushUndo();
+
+        if (sourceChestId !== null && sourceChestId !== targetChestId) {
+            const uids = new Set(items.map((i) => i.uid));
+            const sourcePath = findChestPath(sourceChestId);
+            if (sourcePath) {
+                setState('tabs', sourcePath.tabIndex, 'chests', sourcePath.chestIndex, 'items',
+                    (current) => current.filter((item) => !uids.has(item.uid)));
+            }
+        }
+
+        setState('tabs', targetPath.tabIndex, 'chests', targetPath.chestIndex, 'items', (current) => {
+            const result = [...current];
+            let insertAt = insertIndex ?? result.length;
+            for (const item of items) {
+                if (result.some((i) => i.variable === item.variable)) continue;
+                result.splice(insertAt++, 0, { ...item, uid: crypto.randomUUID() });
+            }
+            return result;
+        });
+    };
+
+    /** Create a new chest on the active tab from dragged items */
+    const createChestFromItems = (items: Item[], sourceChestId: number | null) => {
+        const newItems = dedupeByVariable(items);
+        if (newItems.length === 0) return;
+
+        pushUndo();
+
+        if (sourceChestId !== null) {
+            const uids = new Set(items.map((i) => i.uid));
+            const sourcePath = findChestPath(sourceChestId);
+            if (sourcePath) {
+                setState('tabs', sourcePath.tabIndex, 'chests', sourcePath.chestIndex, 'items',
+                    (current) => current.filter((item) => !uids.has(item.uid)));
+            }
+        }
+
+        const tabIndex = activeTabIndex();
+        if (tabIndex === -1) return;
+        const first = newItems[0];
+        setState('tabs', tabIndex, 'chests', produce((chests) => chests.push({
+            id: getNextChestId(),
+            label: displayName(first.item),
+            icon: first.item,
+            items: newItems,
+            checked: false,
+        })));
+    };
+
+    const removeItemFromChest = (chestId: number, itemUid: string) => {
+        const path = findChestPath(chestId);
+        if (!path) return;
+        pushUndo();
+        setState('tabs', path.tabIndex, 'chests', path.chestIndex, 'items',
+            (current) => current.filter((item) => item.uid !== itemUid));
+    };
+
+    const reorderChestItems = (chestId: number, fromIndex: number, toIndex: number) => {
+        if (fromIndex === toIndex) return;
+        const path = findChestPath(chestId);
+        if (!path) return;
+        pushUndo();
+        setState('tabs', path.tabIndex, 'chests', path.chestIndex, 'items', produce((items) => {
+            const [moved] = items.splice(fromIndex, 1);
+            items.splice(toIndex, 0, moved);
+        }));
+    };
+
+    // ----- Selection -----
+    const setSelectedItems = (items: Set<string>) => setState('selectedItems', items);
+    const clearSelection = () => setState('selectedItems', new Set<string>());
+
+    const toggleItemSelection = (uid: string, ctrlKey: boolean, isClick = false) => {
+        // Sets aren't tracked granularly by Solid stores - always replace the Set
+        const next = new Set(state.selectedItems);
+
+        if (ctrlKey) {
+            // Ctrl toggles on pointerdown only; the trailing click must not re-toggle
+            if (isClick) return;
+            if (next.has(uid)) next.delete(uid);
+            else next.add(uid);
+        } else if (!next.has(uid)) {
+            next.clear();
+            next.add(uid);
+        } else if (isClick) {
+            // Click on an already-selected item collapses a multi-selection to it.
+            // On pointerdown the selection is kept so multi-drag still works.
+            next.clear();
+            next.add(uid);
+        } else {
+            return;
+        }
+
+        setState('selectedItems', next);
+    };
+
+    // ----- View toggles -----
+    const setChestGridView = (isGrid: boolean) => {
+        setState('chestGridView', isGrid);
+        localStorage.setItem(STORAGE_KEYS.chestGridView, String(isGrid));
+    };
+    const setSidebarGridView = (isGrid: boolean) => {
+        setState('sidebarGridView', isGrid);
+        localStorage.setItem(STORAGE_KEYS.sidebarGridView, String(isGrid));
+    };
+    const setChestHeight = (height: ChestHeight) => {
+        setState('chestHeight', height);
+        localStorage.setItem(STORAGE_KEYS.chestHeight, height);
+    };
+
+    // ----- Undo / redo -----
+    const undo = () => {
+        if (state.undoStack.length === 0) return;
+        const previous = state.undoStack[state.undoStack.length - 1];
+        setState('redoStack', (stack) => [...stack, snapshotTabs()]);
+        setState('undoStack', (stack) => stack.slice(0, -1));
+        setState('tabs', structuredClone(unwrap(previous)));
+        ensureValidActiveTab();
+    };
+
+    const redo = () => {
+        if (state.redoStack.length === 0) return;
+        const next = state.redoStack[state.redoStack.length - 1];
+        setState('undoStack', (stack) => [...stack, snapshotTabs()]);
+        setState('redoStack', (stack) => stack.slice(0, -1));
+        setState('tabs', structuredClone(unwrap(next)));
+        ensureValidActiveTab();
+    };
+
+    // ----- Profiles / presets -----
+
+    /** Replace the whole workspace (file import, code import, preset) */
+    const replaceTabs = (rawTabs: RawTab[]) => {
+        pushUndo();
+        const tabs = normalizeTabs(rawTabs);
+        setState('tabs', tabs);
+        setState('activeTabId', tabs[0]?.id ?? 1);
+        clearSelection();
+    };
+
+    const loadPreset = async (presetName: string) => {
+        try {
+            const response = await fetch(`${import.meta.env.BASE_URL}presets/${presetName}.json`);
+            if (!response.ok) throw new Error(`Preset request failed: ${response.status}`);
+            const preset: { tabs?: RawTab[]; chests?: RawChest[] } = await response.json();
+
+            if (preset.tabs) replaceTabs(preset.tabs);
+            else if (preset.chests) replaceTabs([{ name: 'Tab 1', chests: preset.chests }]);
+        } catch (error) {
+            console.error('Error loading preset:', error);
+            alert('Fejl ved indlæsning af skabelon');
+        }
+    };
+
+    // New profile - wipe everything
+    const showNewProfileModal = () => setState('newProfileModalVisible', true);
+    const cancelNewProfile = () => setState('newProfileModalVisible', false);
+    const confirmNewProfile = () => {
+        localStorage.removeItem(STORAGE_KEYS.tabs);
+        window.location.reload();
+    };
+
+    // ----- Persistence -----
+    createEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.tabs, JSON.stringify(state.tabs));
+    });
+
+    return {
+        state,
+        // Derived
+        activeTab,
+        chests,
+        // Tabs
+        setActiveTabId,
+        addTab,
+        removeTab,
+        renameTab,
+        moveTab,
+        // Chests
+        addChest,
+        moveChest,
+        moveChestToTab,
+        updateChest,
+        deleteChest,
+        confirmDeleteChest,
+        cancelDeleteChest,
+        getNextChestId,
+        // Chest items
+        moveItemsToChest,
+        createChestFromItems,
+        removeItemFromChest,
+        reorderChestItems,
+        // Selection
+        setSelectedItems,
+        clearSelection,
+        toggleItemSelection,
+        // Views
+        setChestGridView,
+        setSidebarGridView,
+        setChestHeight,
+        // History
+        undo,
+        redo,
+        // Profiles
+        replaceTabs,
+        loadPreset,
+        showNewProfileModal,
+        confirmNewProfile,
+        cancelNewProfile,
+    };
+}
+
+export type AppStore = ReturnType<typeof createAppStore>;
+
+// ===== Provider & hook =====
+
+const AppContext = createContext<AppStore>();
+
+export function AppProvider(props: { children: JSX.Element }) {
+    const store = createAppStore();
+    return <AppContext.Provider value={store}>{props.children}</AppContext.Provider>;
+}
+
+export function useApp(): AppStore {
+    const context = useContext(AppContext);
+    if (!context) throw new Error('useApp must be used within AppProvider');
+    return context;
+}

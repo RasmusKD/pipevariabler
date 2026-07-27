@@ -26,6 +26,8 @@
     "resolve-url-loader": "^5.0.0",
     "sass": "^1.97.1",
     "sass-loader": "^16.0.6",
+    "solid-dnd-directive": "^0.2.0",
+    "solid-icons": "^1.1.0",
     "typescript": "^5.9.3",
     "web-vitals": "^5.1.0"
   },
@@ -34,8 +36,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "predeploy": "npm --prefix solid-version run build",
+    "deploy": "gh-pages -d solid-version/build"
   },
   "browserslist": {
     "production": [
