@@ -23,16 +23,34 @@ const AppShell: Component = () => {
     onDragStart(handlers.onDragStart);
     onDragEnd(handlers.onDragEnd);
 
-    // Undo/redo keyboard shortcuts
+    // Keyboard shortcuts: undo/redo, Ctrl+F -> søgefeltet, Delete -> fjern markerede
     onMount(() => {
+        const isTyping = () => {
+            const el = document.activeElement;
+            return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement ||
+                (el instanceof HTMLElement && el.isContentEditable);
+        };
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (!(e.ctrlKey || e.metaKey) || e.shiftKey) return;
-            if (e.key === 'z') {
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+                if (e.key === 'z') {
+                    e.preventDefault();
+                    app.undo();
+                } else if (e.key === 'y') {
+                    e.preventDefault();
+                    app.redo();
+                } else if (e.key === 'f') {
+                    e.preventDefault();
+                    const search = document.getElementById('sidebar-search');
+                    if (search instanceof HTMLInputElement) {
+                        search.focus();
+                        search.select();
+                    }
+                }
+                return;
+            }
+            if (e.key === 'Delete' && !isTyping()) {
                 e.preventDefault();
-                app.undo();
-            } else if (e.key === 'y') {
-                e.preventDefault();
-                app.redo();
+                app.removeSelectedItems();
             }
         };
         window.addEventListener('keydown', handleKeyDown);

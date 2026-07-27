@@ -18,7 +18,11 @@ export const STORAGE_KEYS = {
     chestGridView: 'pipeVariablerChestGridView',
     sidebarGridView: 'pipeVariablerSidebarGridView',
     chestHeight: 'pipeVariablerChestHeight',
+    backups: 'pipeVariablerBackups',
 } as const;
+
+/** Rolling profile backups kept in localStorage */
+export const MAX_PROFILE_BACKUPS = 5;
 
 import type { ChestHeight } from './types';
 

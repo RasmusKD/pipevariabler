@@ -163,10 +163,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
                     <FaSolidMagnifyingGlass size={14} />
                 </div>
                 <input
+                    id="sidebar-search"
                     type="text"
                     spellcheck={false}
                     value={searchTerm()}
-                    placeholder="Søg..."
+                    placeholder="Søg... (Ctrl+F)"
                     class="border pl-9 pr-16 py-2 w-full bg-neutral-800 border-neutral-700 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     onInput={(e) => setSearchTerm(e.currentTarget.value)}
                 />

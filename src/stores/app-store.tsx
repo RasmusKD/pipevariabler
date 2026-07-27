@@ -1,7 +1,7 @@
 // App store - central state management
-import { createContext, createEffect, useContext, type JSX } from 'solid-js';
+import { createContext, createEffect, createSignal, useContext, type JSX } from 'solid-js';
 import { createStore, produce, unwrap } from 'solid-js/store';
-import { CHEST_ROW_HEIGHT, MAX_UNDO_STEPS, STORAGE_KEYS } from '../constants';
+import { CHEST_ROW_HEIGHT, MAX_PROFILE_BACKUPS, MAX_UNDO_STEPS, STORAGE_KEYS } from '../constants';
 import { createSidebarItems, dedupeByVariable, displayName, processItems } from '../lib/items';
 import { consumeSharedTabsFromUrl } from '../lib/profile-codec';
 import type { Chest, ChestHeight, Item, Tab } from '../types';
@@ -92,10 +92,25 @@ const createInitialState = (): AppState => {
     };
 };
 
+// ===== Backups =====
+
+export type ProfileBackup = { timestampMs: number; tabs: Tab[] };
+
+const readBackups = (): ProfileBackup[] => {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEYS.backups);
+        const parsed: unknown = raw ? JSON.parse(raw) : null;
+        return Array.isArray(parsed) ? (parsed as ProfileBackup[]) : [];
+    } catch {
+        return [];
+    }
+};
+
 // ===== Store =====
 
 export function createAppStore() {
     const [state, setState] = createStore<AppState>(createInitialState());
+    const [backups, setBackups] = createSignal<ProfileBackup[]>(readBackups());
 
     // ----- Derived -----
     const activeTab = () => state.tabs.find((t) => t.id === state.activeTabId);
@@ -319,6 +334,24 @@ export function createAppStore() {
     const setSelectedItems = (items: Set<string>) => setState('selectedItems', items);
     const clearSelection = () => setState('selectedItems', new Set<string>());
 
+    /** Delete-key: remove every selected item that lives in a chest */
+    const removeSelectedItems = () => {
+        const uids = state.selectedItems;
+        if (uids.size === 0) return;
+        const hasChestItems = state.tabs.some((t) =>
+            t.chests.some((c) => c.items.some((item) => uids.has(item.uid))));
+        if (!hasChestItems) return;
+        pushUndo();
+        setState('tabs', produce((tabs) => {
+            for (const tab of tabs) {
+                for (const chest of tab.chests) {
+                    chest.items = chest.items.filter((item) => !uids.has(item.uid));
+                }
+            }
+        }));
+        clearSelection();
+    };
+
     const toggleItemSelection = (uid: string, ctrlKey: boolean, isClick = false) => {
         // Sets aren't tracked granularly by Solid stores - always replace the Set
         const next = new Set(state.selectedItems);
@@ -381,10 +414,35 @@ export function createAppStore() {
         ensureValidActiveTab();
     };
 
+    // ----- Backups -----
+
+    /** Snapshot the current profile to the rolling backup list (skips empty/unchanged) */
+    const saveBackup = () => {
+        if (!state.tabs.some((t) => t.chests.length > 0)) return;
+        const json = JSON.stringify(unwrap(state.tabs));
+        const current = readBackups();
+        if (current[0] && JSON.stringify(current[0].tabs) === json) return;
+        const next: ProfileBackup[] = [
+            { timestampMs: Date.now(), tabs: JSON.parse(json) as Tab[] },
+            ...current,
+        ].slice(0, MAX_PROFILE_BACKUPS);
+        localStorage.setItem(STORAGE_KEYS.backups, JSON.stringify(next));
+        setBackups(next);
+    };
+
+    const restoreBackup = (timestampMs: number) => {
+        const backup = backups().find((b) => b.timestampMs === timestampMs);
+        if (backup) replaceTabs(backup.tabs);
+    };
+
+    // Session-start restore point of whatever was loaded
+    saveBackup();
+
     // ----- Profiles / presets -----
 
     /** Replace the whole workspace (file import, code import, preset) */
     const replaceTabs = (rawTabs: RawTab[]) => {
+        saveBackup(); // last line of defense against a bad import
         pushUndo();
         const tabs = normalizeTabs(rawTabs);
         setState('tabs', tabs);
@@ -410,6 +468,7 @@ export function createAppStore() {
     const showNewProfileModal = () => setState('newProfileModalVisible', true);
     const cancelNewProfile = () => setState('newProfileModalVisible', false);
     const confirmNewProfile = () => {
+        saveBackup();
         localStorage.removeItem(STORAGE_KEYS.tabs);
         window.location.reload();
     };
@@ -459,6 +518,7 @@ export function createAppStore() {
         setSelectedItems,
         clearSelection,
         toggleItemSelection,
+        removeSelectedItems,
         // Search
         setSearchTerm,
         toggleHighlightChestMatches,
@@ -472,6 +532,8 @@ export function createAppStore() {
         // Profiles
         replaceTabs,
         loadPreset,
+        backups,
+        restoreBackup,
         showNewProfileModal,
         confirmNewProfile,
         cancelNewProfile,
