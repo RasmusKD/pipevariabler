@@ -139,7 +139,14 @@ const Chest: Component<ChestProps> = (props) => {
                             isSelected={app.state.selectedItems.has(item.uid)}
                             isChestDragActive={props.isChestDragActive}
                             onSelect={app.toggleItemSelection}
-                            onRemove={() => app.removeItemFromChest(props.chest.id, item.uid)}
+                            onRemove={() => {
+                                // X på et multi-markeret item fjerner hele markeringen
+                                if (app.state.selectedItems.has(item.uid) && app.state.selectedItems.size > 1) {
+                                    app.removeSelectedItems();
+                                } else {
+                                    app.removeItemFromChest(props.chest.id, item.uid);
+                                }
+                            }}
                         />
                     </>
                 )}
