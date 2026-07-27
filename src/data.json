@@ -4631,6 +4631,11 @@
       "image": "wooden_sword.png"
     },
     {
+      "item": "wooden_spear",
+      "variable": "%v1913%",
+      "image": "wooden_spear.png"
+    },
+    {
       "item": "wooden_shovel",
       "variable": "%v269%",
       "image": "wooden_shovel.png"
@@ -4651,14 +4656,14 @@
       "image": "wooden_hoe.png"
     },
     {
-      "item": "wooden_spear",
-      "variable": "%v1913%",
-      "image": "wooden_spear.png"
-    },
-    {
       "item": "stone_sword",
       "variable": "%v272%",
       "image": "stone_sword.png"
+    },
+    {
+      "item": "stone_spear",
+      "variable": "%v1909%",
+      "image": "stone_spear.png"
     },
     {
       "item": "stone_shovel",
@@ -4679,11 +4684,6 @@
       "item": "stone_hoe",
       "variable": "%v291%",
       "image": "stone_hoe.png"
-    },
-    {
-      "item": "stone_spear",
-      "variable": "%v1909%",
-      "image": "stone_spear.png"
     },
     {
       "item": "leather_helmet",
@@ -4731,6 +4731,11 @@
       "image": "iron_sword.png"
     },
     {
+      "item": "iron_spear",
+      "variable": "%v1906%",
+      "image": "iron_spear.png"
+    },
+    {
       "item": "iron_shovel",
       "variable": "%v256%",
       "image": "iron_shovel.png"
@@ -4749,11 +4754,6 @@
       "item": "iron_hoe",
       "variable": "%v292%",
       "image": "iron_hoe.png"
-    },
-    {
-      "item": "iron_spear",
-      "variable": "%v1906%",
-      "image": "iron_spear.png"
     },
     {
       "item": "iron_helmet",
@@ -4781,6 +4781,11 @@
       "image": "golden_sword.png"
     },
     {
+      "item": "golden_spear",
+      "variable": "%v1904%",
+      "image": "golden_spear.png"
+    },
+    {
       "item": "golden_shovel",
       "variable": "%v284%",
       "image": "golden_shovel.png"
@@ -4799,11 +4804,6 @@
       "item": "golden_hoe",
       "variable": "%v294%",
       "image": "golden_hoe.png"
-    },
-    {
-      "item": "golden_spear",
-      "variable": "%v1904%",
-      "image": "golden_spear.png"
     },
     {
       "item": "golden_helmet",
@@ -4831,6 +4831,11 @@
       "image": "diamond_sword.png"
     },
     {
+      "item": "diamond_spear",
+      "variable": "%v1902%",
+      "image": "diamond_spear.png"
+    },
+    {
       "item": "diamond_shovel",
       "variable": "%v277%",
       "image": "diamond_shovel.png"
@@ -4849,11 +4854,6 @@
       "item": "diamond_hoe",
       "variable": "%v293%",
       "image": "diamond_hoe.png"
-    },
-    {
-      "item": "diamond_spear",
-      "variable": "%v1902%",
-      "image": "diamond_spear.png"
     },
     {
       "item": "diamond_helmet",
@@ -4881,6 +4881,11 @@
       "image": "netherite_sword.png"
     },
     {
+      "item": "netherite_spear",
+      "variable": "%v1134%",
+      "image": "netherite_spear.png"
+    },
+    {
       "item": "netherite_shovel",
       "variable": "%v1133%",
       "image": "netherite_shovel.png"
@@ -4899,11 +4904,6 @@
       "item": "netherite_hoe",
       "variable": "%v1126%",
       "image": "netherite_hoe.png"
-    },
-    {
-      "item": "netherite_spear",
-      "variable": "%v1134%",
-      "image": "netherite_spear.png"
     },
     {
       "item": "netherite_helmet",
@@ -4931,6 +4931,11 @@
       "image": "copper_sword.png"
     },
     {
+      "item": "copper_spear",
+      "variable": "%v923%",
+      "image": "copper_spear.png"
+    },
+    {
       "item": "copper_shovel",
       "variable": "%v922%",
       "image": "copper_shovel.png"
@@ -4949,11 +4954,6 @@
       "item": "copper_hoe",
       "variable": "%v913%",
       "image": "copper_hoe.png"
-    },
-    {
-      "item": "copper_spear",
-      "variable": "%v923%",
-      "image": "copper_spear.png"
     },
     {
       "item": "copper_helmet",

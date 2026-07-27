@@ -74,6 +74,9 @@
               "item": "copper_ingot"
             },
             {
+              "item": "copper_nugget"
+            },
+            {
               "item": "raw_copper"
             },
             {
@@ -100,9 +103,6 @@
             },
             {
               "item": "gold_nugget"
-            },
-            {
-              "item": "copper_nugget"
             },
             {
               "item": "raw_gold"
@@ -4371,6 +4371,34 @@
           "checked": false
         },
         {
+          "label": "Spyd",
+          "icon": "netherite_spear",
+          "checked": false,
+          "items": [
+            {
+              "item": "wooden_spear"
+            },
+            {
+              "item": "stone_spear"
+            },
+            {
+              "item": "iron_spear"
+            },
+            {
+              "item": "golden_spear"
+            },
+            {
+              "item": "diamond_spear"
+            },
+            {
+              "item": "netherite_spear"
+            },
+            {
+              "item": "copper_spear"
+            }
+          ]
+        },
+        {
           "label": "bows",
           "items": [
             {
@@ -5342,34 +5370,6 @@
           ],
           "icon": "sniffer_egg",
           "checked": false
-        },
-        {
-          "label": "Spyd",
-          "icon": "netherite_spear",
-          "checked": false,
-          "items": [
-            {
-              "item": "wooden_spear"
-            },
-            {
-              "item": "stone_spear"
-            },
-            {
-              "item": "iron_spear"
-            },
-            {
-              "item": "golden_spear"
-            },
-            {
-              "item": "diamond_spear"
-            },
-            {
-              "item": "netherite_spear"
-            },
-            {
-              "item": "copper_spear"
-            }
-          ]
         }
       ],
       "name": "Items & Tools"
