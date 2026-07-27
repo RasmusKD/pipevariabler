@@ -22,13 +22,19 @@ type ChestProps = {
     dragHandle?: JSX.HTMLAttributes<HTMLDivElement>;
     /** True while a chest is being dragged (disables item pointer events) */
     isChestDragActive?: boolean;
+    /**
+     * Render-only mode for the drag overlay. MUST skip all dnd registrations:
+     * a preview with live droppables/draggables shares ids with the real chest
+     * and unregisters the real ones when the overlay unmounts.
+     */
+    preview?: boolean;
 };
 
 const Chest: Component<ChestProps> = (props) => {
     const app = useApp();
     const drag = useDrag();
     const [dndState] = useDragDropContext()!;
-    const droppable = createDroppable(chestZoneId(props.chest.id));
+    const droppable = props.preview ? undefined : createDroppable(chestZoneId(props.chest.id));
 
     const view = (): ChestItemView => (props.gridView ? 'grid' : 'list');
     const label = () => props.chest.label || 'Barrel';
@@ -38,7 +44,7 @@ const Chest: Component<ChestProps> = (props) => {
     const [copied, setCopied] = createSignal(false);
 
     // ----- Insertion placeholder tracking -----
-    createEffect(() => {
+    if (!props.preview) createEffect(() => {
         const { droppableId, draggableId } = dndState.active;
         if (typeof draggableId !== 'string' || !draggableId) return; // only item drags
 
@@ -95,6 +101,7 @@ const Chest: Component<ChestProps> = (props) => {
     // Highlight while an item drag hovers anything belonging to this chest -
     // but only when the drop would actually change something
     const isOver = () => {
+        if (!droppable) return false;
         const { draggableId, droppableId } = dndState.active;
         if (typeof draggableId !== 'string') return false;
         if (!wouldAcceptDrop()) return false;
@@ -136,6 +143,7 @@ const Chest: Component<ChestProps> = (props) => {
                             item={item}
                             index={index()}
                             view={itemView}
+                            preview={props.preview}
                             isSelected={app.state.selectedItems.has(item.uid)}
                             isChestDragActive={props.isChestDragActive}
                             onSelect={app.toggleItemSelection}
@@ -278,7 +286,7 @@ const Chest: Component<ChestProps> = (props) => {
 
             {/* Items drop zone - the droppable ref sits here to bound the zone */}
             <div
-                ref={droppable.ref}
+                ref={droppable?.ref}
                 class={`mt-3 p-2 w-full flex-1 rounded-lg bg-neutral-900/50 border-2 transition-colors ${props.chest.items.length > 0 ? 'border-transparent' : 'border-dashed border-neutral-700'}`}
                 style={{ 'overflow-y': 'auto', 'overflow-x': 'hidden', 'min-height': '110px' }}
             >

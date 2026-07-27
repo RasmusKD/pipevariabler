@@ -20,30 +20,56 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
     };
 
     /**
-     * Collect every selected item for a multi-drag. Sidebar items are cloned
-     * (they get fresh uids when they land in a chest); chest items move as-is.
+     * Collect every selected item for a multi-drag, sorted by VISUAL order
+     * (chest items by tab/chest/slot, then sidebar items by catalog order) so
+     * the drop - and the generated command - matches what the user sees.
+     * Sidebar items are cloned; chest items move as-is.
      */
     const gatherSelectedItems = (dragUid: string) => {
-        const items: Item[] = [];
+        const entries: { item: Item; sortKey: [number, number, number]; isGrabbed: boolean }[] = [];
         let sourceChestId: number | null = null;
 
         for (const uid of app.state.selectedItems) {
-            const sidebarItem = app.state.items.find((i) => i.uid === uid);
-            if (sidebarItem) {
-                items.push(cloneItemWithNewUid(sidebarItem));
+            const sidebarIndex = app.state.items.findIndex((i) => i.uid === uid);
+            if (sidebarIndex !== -1) {
+                entries.push({
+                    item: cloneItemWithNewUid(app.state.items[sidebarIndex]),
+                    sortKey: [Number.MAX_SAFE_INTEGER, 0, sidebarIndex],
+                    isGrabbed: uid === dragUid,
+                });
                 continue;
             }
-            const found = findChestContaining(uid);
-            if (found) {
-                items.push(found.chest.items[found.itemIndex]);
-                if (uid === dragUid) sourceChestId = found.chest.id;
+            for (let tabIndex = 0; tabIndex < app.state.tabs.length; tabIndex++) {
+                const tab = app.state.tabs[tabIndex];
+                let found = false;
+                for (let chestIndex = 0; chestIndex < tab.chests.length; chestIndex++) {
+                    const itemIndex = tab.chests[chestIndex].items.findIndex((i) => i.uid === uid);
+                    if (itemIndex !== -1) {
+                        entries.push({
+                            item: tab.chests[chestIndex].items[itemIndex],
+                            sortKey: [tabIndex, chestIndex, itemIndex],
+                            isGrabbed: uid === dragUid,
+                        });
+                        if (uid === dragUid) sourceChestId = tab.chests[chestIndex].id;
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) break;
             }
         }
 
-        return { items, sourceChestId };
+        entries.sort((a, b) =>
+            a.sortKey[0] - b.sortKey[0] || a.sortKey[1] - b.sortKey[1] || a.sortKey[2] - b.sortKey[2]);
+        return {
+            items: entries.map((e) => e.item),
+            sourceChestId,
+            grabbedItem: entries.find((e) => e.isGrabbed)?.item ?? null,
+        };
     };
 
     const onDragStart: DragEventHandler = ({ draggable }) => {
+        app.beginUndoBatch(); // ét drag = ét undo-trin, uanset hvor mange actions det udløser
         if (isChestDragId(draggable.id)) return; // chest drags live in solid-dnd's context
         const uid = draggable.id as string;
         const isMultiSelect = app.state.selectedItems.has(uid) && app.state.selectedItems.size > 1;
@@ -51,8 +77,8 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
         const sidebarItem = app.state.items.find((i) => i.uid === uid);
         if (sidebarItem) {
             if (isMultiSelect) {
-                const { items, sourceChestId } = gatherSelectedItems(uid);
-                drag.startDrag(items[0] ?? cloneItemWithNewUid(sidebarItem), items, sourceChestId);
+                const { items, sourceChestId, grabbedItem } = gatherSelectedItems(uid);
+                drag.startDrag(grabbedItem ?? items[0] ?? cloneItemWithNewUid(sidebarItem), items, sourceChestId);
             } else {
                 const cloned = cloneItemWithNewUid(sidebarItem);
                 drag.startDrag(cloned, [cloned], null);
@@ -108,8 +134,8 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
         const sourceChestId = drag.sourceChestId();
         if (draggedItems.length === 0) return;
 
-        const moveTo = (targetChestId: number, insertIndex?: number) => {
-            app.moveItemsToChest({ items: draggedItems, targetChestId, insertIndex });
+        const moveTo = (targetChestId: number, insertBeforeUid?: string) => {
+            app.moveItemsToChest({ items: draggedItems, targetChestId, insertBeforeUid });
             app.clearSelection();
         };
 
@@ -119,14 +145,15 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
                 const found = findChestContaining(target.uid);
                 if (!found) return;
                 const dragIndex = found.chest.items.findIndex((i) => i.uid === dragUid);
-                if (dragIndex !== -1) {
-                    // Reorder within the same chest
+                if (dragIndex !== -1 && draggedItems.length === 1) {
+                    // Reorder within the same chest (kun ét item - flere
+                    // trukne items skal flyttes, ikke bare omrokeres)
                     if (dragIndex !== found.itemIndex) {
                         app.reorderChestItems(found.chest.id, dragIndex, found.itemIndex);
                     }
                 } else {
-                    // Insert into another chest at the hovered item's position
-                    moveTo(found.chest.id, found.itemIndex);
+                    // Insert at the hovered item's position
+                    moveTo(found.chest.id, target.uid);
                 }
                 return;
             }
@@ -163,6 +190,7 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
             else handleItemDrop(draggable.id as string, droppable.id);
         } finally {
             drag.endDrag();
+            app.endUndoBatch();
         }
     };
 

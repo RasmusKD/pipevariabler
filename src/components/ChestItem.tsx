@@ -20,6 +20,9 @@ type ChestItemProps = {
     isSelected: boolean;
     /** True while a chest is being dragged - items must not swallow pointer events */
     isChestDragActive?: boolean;
+    /** Render-only (drag overlay) - MUST NOT register draggables/droppables,
+     * their ids collide with the real items and unregister them on unmount */
+    preview?: boolean;
     onSelect: SelectHandler;
     onRemove: () => void;
 };
@@ -29,24 +32,26 @@ const SELECTED_CLASS = 'ring-2 ring-inset ring-blue-500 bg-blue-500/20';
 const ChestItem: Component<ChestItemProps> = (props) => {
     const drag = useDrag();
     const dndContext = useDragDropContext();
-    const draggable = createDraggable(props.item.uid);
-    const droppable = createDroppable(props.item.uid);
+    const draggable = props.preview ? undefined : createDraggable(props.item.uid);
+    const droppable = props.preview ? undefined : createDroppable(props.item.uid);
 
     const isBeingDragged = () =>
-        drag.isDragging() && drag.draggedItems().some((i) => i.uid === props.item.uid);
+        !props.preview && drag.isDragging() && drag.draggedItems().some((i) => i.uid === props.item.uid);
 
     // Only register the droppable outside chest drags, so a dragged chest's
     // sortable can be detected through the items
-    const setRef = (el: HTMLElement) => {
+    const setRef = draggable && droppable ? (el: HTMLElement) => {
         draggable.ref(el);
         if (!isChestDragId(dndContext?.[0]?.active.draggableId)) droppable.ref(el);
-    };
+    } : undefined;
 
-    const handlers = createSelectAndDragHandlers({
-        uid: () => props.item.uid,
-        dragActivators: () => draggable.dragActivators,
-        onSelect: (...args) => props.onSelect(...args),
-    });
+    const handlers = props.preview
+        ? { onPointerDown: undefined, onClick: undefined }
+        : createSelectAndDragHandlers({
+            uid: () => props.item.uid,
+            dragActivators: () => draggable!.dragActivators,
+            onSelect: (...args) => props.onSelect(...args),
+        });
 
     const interactionStyle = () => ({
         'user-select': 'none' as const,

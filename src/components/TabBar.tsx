@@ -230,7 +230,12 @@ const TabBar: Component = () => {
 
             {/* Sortable tabs (cross-tab drops are handled by TabDropOverlay) */}
             <div class="min-w-0 overflow-hidden">
-                <DragDropProvider onDragOver={handleDragOver} collisionDetector={closestCenter}>
+                <DragDropProvider
+                    onDragStart={() => app.beginUndoBatch()}
+                    onDragEnd={() => app.endUndoBatch()}
+                    onDragOver={handleDragOver}
+                    collisionDetector={closestCenter}
+                >
                     <DragDropSensors>
                         <div
                             onWheel={(e) => {

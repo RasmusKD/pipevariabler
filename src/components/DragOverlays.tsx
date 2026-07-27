@@ -108,7 +108,7 @@ const ChestDragOverlay: Component = () => {
                         opacity: 0.95,
                     }}
                 >
-                    <Chest chest={active().chest} index={active().index} gridView={app.state.chestGridView} />
+                    <Chest chest={active().chest} index={active().index} gridView={app.state.chestGridView} preview />
                 </div>
             )}
         </Show>

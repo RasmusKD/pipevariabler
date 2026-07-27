@@ -139,10 +139,33 @@ export function createAppStore() {
     // ----- Internal helpers -----
     const snapshotTabs = (): Tab[] => structuredClone(unwrap(state.tabs));
 
-    /** Record the current (or a pre-captured) tabs state as an undo step */
-    const pushUndo = (tabs: Tab[] = snapshotTabs()) => {
+    const pushUndoRaw = (tabs: Tab[]) => {
         setState('undoStack', (stack) => [...stack.slice(-(MAX_UNDO_STEPS - 1)), tabs]);
         setState('redoStack', []);
+    };
+
+    // Undo batching: a drag fires many store actions (live tab reorder, dwell
+    // tab-switch, the drop itself) but must be ONE undo step. While a batch is
+    // open, individual pushUndo calls are suppressed; the batch pushes the
+    // pre-drag snapshot once at the end, only if something actually changed.
+    let undoBatchDepth = 0;
+    let undoBatchSnapshot: Tab[] | null = null;
+    const beginUndoBatch = () => {
+        if (undoBatchDepth++ === 0) undoBatchSnapshot = snapshotTabs();
+    };
+    const endUndoBatch = () => {
+        if (--undoBatchDepth > 0) return;
+        const snapshot = undoBatchSnapshot;
+        undoBatchSnapshot = null;
+        if (snapshot && JSON.stringify(snapshot) !== JSON.stringify(unwrap(state.tabs))) {
+            pushUndoRaw(snapshot);
+        }
+    };
+
+    /** Record the current (or a pre-captured) tabs state as an undo step */
+    const pushUndo = (tabs: Tab[] = snapshotTabs()) => {
+        if (undoBatchDepth > 0) return; // the open batch owns the undo step
+        pushUndoRaw(tabs);
     };
 
     /** Chests have globally unique ids, so a chest can be found across all tabs */
@@ -283,25 +306,41 @@ export function createAppStore() {
     /**
      * Move items into a chest. Chest items are removed from wherever they came
      * from (a multi-select can span several chests); sidebar clones exist
-     * nowhere and are just added. Duplicate variables in the target are skipped.
+     * nowhere and are just added. Items whose variable already sits in the
+     * target (and isn't itself part of the drag) are rejected up front - a
+     * rejected item is NEVER removed from its source, so a "duplicate" drop
+     * can't silently delete anything.
      */
     const moveItemsToChest = (options: {
         items: Item[];
         targetChestId: number;
-        insertIndex?: number;
+        /** Insert before this item - resolved AFTER source removal so the position matches the drop preview */
+        insertBeforeUid?: string;
     }) => {
-        const { items, targetChestId, insertIndex } = options;
+        const { items, targetChestId, insertBeforeUid } = options;
         const targetPath = findChestPath(targetChestId);
         if (!targetPath || items.length === 0) return;
 
+        const draggedUids = new Set(items.map((i) => i.uid));
+        const targetChest = state.tabs[targetPath.tabIndex].chests[targetPath.chestIndex];
+        const existingVariables = new Set(
+            targetChest.items.filter((i) => !draggedUids.has(i.uid)).map((i) => i.variable),
+        );
+        const accepted = items.filter((item) => {
+            if (existingVariables.has(item.variable)) return false;
+            existingVariables.add(item.variable);
+            return true;
+        });
+        if (accepted.length === 0) return;
+
         pushUndo();
-        removeUidsFromAllChests(new Set(items.map((i) => i.uid)));
+        removeUidsFromAllChests(new Set(accepted.map((i) => i.uid)));
 
         setState('tabs', targetPath.tabIndex, 'chests', targetPath.chestIndex, 'items', (current) => {
             const result = [...current];
-            let insertAt = Math.min(insertIndex ?? result.length, result.length);
-            for (const item of items) {
-                if (result.some((i) => i.variable === item.variable)) continue;
+            const targetIndex = insertBeforeUid ? result.findIndex((i) => i.uid === insertBeforeUid) : -1;
+            let insertAt = targetIndex === -1 ? result.length : targetIndex;
+            for (const item of accepted) {
                 result.splice(insertAt++, 0, { ...item, uid: crypto.randomUUID() });
             }
             return result;
@@ -311,13 +350,12 @@ export function createAppStore() {
     /** Create a new chest on the active tab from dragged items */
     const createChestFromItems = (items: Item[]) => {
         const newItems = dedupeByVariable(items);
-        if (newItems.length === 0) return;
+        const tabIndex = activeTabIndex();
+        if (newItems.length === 0 || tabIndex === -1) return;
 
         pushUndo();
-        removeUidsFromAllChests(new Set(items.map((i) => i.uid)));
-
-        const tabIndex = activeTabIndex();
-        if (tabIndex === -1) return;
+        // Only the items that actually end up in the new chest leave their source
+        removeUidsFromAllChests(new Set(newItems.map((i) => i.uid)));
         const first = newItems[0];
         setState('tabs', tabIndex, 'chests', produce((chests) => chests.push({
             id: getNextChestId(),
@@ -369,15 +407,26 @@ export function createAppStore() {
         clearSelection();
     };
 
+    // Ctrl-selection: ADD happens on pointerdown (so the new item is part of an
+    // immediate drag), REMOVE happens on the trailing click (so ctrl+press on a
+    // selected item followed by a drag doesn't kick it out of the selection).
+    let ctrlAddedOnPointerDown: string | null = null;
     const toggleItemSelection = (uid: string, ctrlKey: boolean, isClick = false) => {
         // Sets aren't tracked granularly by Solid stores - always replace the Set
         const next = new Set(state.selectedItems);
 
         if (ctrlKey) {
-            // Ctrl toggles on pointerdown only; the trailing click must not re-toggle
-            if (isClick) return;
-            if (next.has(uid)) next.delete(uid);
-            else next.add(uid);
+            if (isClick) {
+                const justAdded = ctrlAddedOnPointerDown === uid;
+                ctrlAddedOnPointerDown = null;
+                if (justAdded || !next.has(uid)) return;
+                next.delete(uid);
+                setState('selectedItems', next);
+                return;
+            }
+            if (next.has(uid)) return; // deselect sker foerst på click
+            ctrlAddedOnPointerDown = uid;
+            next.add(uid);
         } else if (!next.has(uid)) {
             next.clear();
             next.add(uid);
@@ -546,6 +595,8 @@ export function createAppStore() {
         // History
         undo,
         redo,
+        beginUndoBatch,
+        endUndoBatch,
         // Profiles
         replaceTabs,
         loadPreset,
