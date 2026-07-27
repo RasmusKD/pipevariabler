@@ -265,9 +265,26 @@ const SettingsDropdown: Component = () => {
                         />
                     </div>
 
-                    <SectionHeader label="Backups" withBorderTop />
+                    <SectionHeader label="Handlinger" withBorderTop />
                     <div class="p-1">
-                        <Show
+                        {/* Undo/redo keep the menu open so they can be clicked repeatedly */}
+                        <MenuItem
+                            icon={<FaSolidArrowRotateLeft class="text-amber-400" />}
+                            label="Fortryd"
+                            description="Fortryd seneste ændring"
+                            onClick={app.undo}
+                            disabled={app.state.undoStack.length === 0}
+                            trailing={<kbd class="text-xs text-neutral-500 bg-neutral-800 px-1.5 py-0.5 rounded">Ctrl+Z</kbd>}
+                        />
+                        <MenuItem
+                            icon={<FaSolidArrowRotateRight class="text-amber-400" />}
+                            label="Gentag"
+                            description="Gentag den fortrudte ændring"
+                            onClick={app.redo}
+                            disabled={app.state.redoStack.length === 0}
+                            trailing={<kbd class="text-xs text-neutral-500 bg-neutral-800 px-1.5 py-0.5 rounded">Ctrl+Y</kbd>}
+                        />
+                                                                <Show
                             when={app.backups().length > 0}
                             fallback={<div class="px-3 py-2 text-xs text-neutral-500">Ingen backups endnu</div>}
                         >
@@ -289,27 +306,6 @@ const SettingsDropdown: Component = () => {
                                 }}
                             </For>
                         </Show>
-                    </div>
-
-                    <SectionHeader label="Handlinger" withBorderTop />
-                    <div class="p-1">
-                        {/* Undo/redo keep the menu open so they can be clicked repeatedly */}
-                        <MenuItem
-                            icon={<FaSolidArrowRotateLeft class="text-amber-400" />}
-                            label="Fortryd"
-                            description="Fortryd seneste ændring"
-                            onClick={app.undo}
-                            disabled={app.state.undoStack.length === 0}
-                            trailing={<kbd class="text-xs text-neutral-500 bg-neutral-800 px-1.5 py-0.5 rounded">Ctrl+Z</kbd>}
-                        />
-                        <MenuItem
-                            icon={<FaSolidArrowRotateRight class="text-amber-400" />}
-                            label="Gentag"
-                            description="Gentag den fortrudte ændring"
-                            onClick={app.redo}
-                            disabled={app.state.redoStack.length === 0}
-                            trailing={<kbd class="text-xs text-neutral-500 bg-neutral-800 px-1.5 py-0.5 rounded">Ctrl+Y</kbd>}
-                        />
                     </div>
 
                     <div class="px-3 py-2 text-xs text-neutral-500 border-t border-neutral-800 text-center">
