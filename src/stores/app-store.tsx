@@ -96,11 +96,31 @@ const createInitialState = (): AppState => {
 
 export type ProfileBackup = { timestampMs: number; tabs: Tab[] };
 
+/**
+ * Content fingerprint that ignores item uids - they are regenerated on every
+ * load, so raw JSON comparison would see every session as "changed" and fill
+ * the backup list with identical entries.
+ */
+const backupFingerprint = (tabs: Tab[]) => JSON.stringify(tabs.map((tab) => ({
+    n: tab.name,
+    c: tab.chests.map((chest) => ({
+        l: chest.label, i: chest.icon, k: chest.checked,
+        it: chest.items.map((item) => item.item),
+    })),
+})));
+
 const readBackups = (): ProfileBackup[] => {
     try {
         const raw = localStorage.getItem(STORAGE_KEYS.backups);
         const parsed: unknown = raw ? JSON.parse(raw) : null;
-        return Array.isArray(parsed) ? (parsed as ProfileBackup[]) : [];
+        const backups = Array.isArray(parsed) ? (parsed as ProfileBackup[]) : [];
+        // Collapse runs of identical backups (from before fingerprint dedupe)
+        const deduped = backups.filter((b, i) =>
+            i === 0 || backupFingerprint(b.tabs) !== backupFingerprint(backups[i - 1].tabs));
+        if (deduped.length !== backups.length) {
+            localStorage.setItem(STORAGE_KEYS.backups, JSON.stringify(deduped));
+        }
+        return deduped;
     } catch {
         return [];
     }
@@ -419,11 +439,11 @@ export function createAppStore() {
     /** Snapshot the current profile to the rolling backup list (skips empty/unchanged) */
     const saveBackup = () => {
         if (!state.tabs.some((t) => t.chests.length > 0)) return;
-        const json = JSON.stringify(unwrap(state.tabs));
+        const tabs = structuredClone(unwrap(state.tabs));
         const current = readBackups();
-        if (current[0] && JSON.stringify(current[0].tabs) === json) return;
+        if (current[0] && backupFingerprint(current[0].tabs) === backupFingerprint(tabs)) return;
         const next: ProfileBackup[] = [
-            { timestampMs: Date.now(), tabs: JSON.parse(json) as Tab[] },
+            { timestampMs: Date.now(), tabs },
             ...current,
         ].slice(0, MAX_PROFILE_BACKUPS);
         localStorage.setItem(STORAGE_KEYS.backups, JSON.stringify(next));
