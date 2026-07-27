@@ -164,6 +164,7 @@ const SettingsDropdown: Component = () => {
     };
 
     const [importModalVisible, setImportModalVisible] = createSignal(false);
+    const [backupsOpen, setBackupsOpen] = createSignal(false);
 
     const handleImportCode = (code: string) => {
         setImportModalVisible(false);
@@ -284,27 +285,43 @@ const SettingsDropdown: Component = () => {
                             disabled={app.state.redoStack.length === 0}
                             trailing={<kbd class="text-xs text-neutral-500 bg-neutral-800 px-1.5 py-0.5 rounded">Ctrl+Y</kbd>}
                         />
-                                                                <Show
-                            when={app.backups().length > 0}
-                            fallback={<div class="px-3 py-2 text-xs text-neutral-500">Ingen backups endnu</div>}
-                        >
-                            <For each={app.backups()}>
-                                {(backup) => {
-                                    const chestCount = backup.tabs.reduce((n, t) => n + t.chests.length, 0);
-                                    const when = new Date(backup.timestampMs).toLocaleString('da-DK', {
-                                        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-                                    });
-                                    return (
-                                        <MenuItem
-                                            icon={<FaSolidClockRotateLeft class="text-sky-400" />}
-                                            label={when}
-                                            description={`Gendan denne backup (${chestCount} kister). Din nuværende profil gemmes som backup først.`}
-                                            onClick={action(() => app.restoreBackup(backup.timestampMs))}
-                                            trailing={<span class="text-xs text-neutral-500">{chestCount} kister</span>}
-                                        />
-                                    );
-                                }}
-                            </For>
+                        {/* Backups: foldet sammen bag ét punkt */}
+                        <MenuItem
+                            icon={<FaSolidClockRotateLeft class="text-sky-400" />}
+                            label="Backups"
+                            description="Gendan et tidligere snapshot af profilen. Din nuværende profil gemmes som backup først."
+                            onClick={() => setBackupsOpen(!backupsOpen())}
+                            trailing={
+                                <span class="flex items-center gap-1 text-xs text-neutral-500">
+                                    {app.backups().length}
+                                    <FaSolidCaretDown class={`transition-transform ${backupsOpen() ? 'rotate-180' : ''}`} />
+                                </span>
+                            }
+                        />
+                        <Show when={backupsOpen()}>
+                            <Show
+                                when={app.backups().length > 0}
+                                fallback={<div class="pl-10 pr-3 py-1.5 text-xs text-neutral-500">Ingen backups endnu</div>}
+                            >
+                                <For each={app.backups()}>
+                                    {(backup) => {
+                                        const chestCount = backup.tabs.reduce((n, t) => n + t.chests.length, 0);
+                                        const when = new Date(backup.timestampMs).toLocaleString('da-DK', {
+                                            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                                        });
+                                        return (
+                                            <button
+                                                class="w-full flex items-center gap-2 pl-10 pr-3 py-1.5 text-xs rounded-md text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
+                                                onClick={action(() => app.restoreBackup(backup.timestampMs))}
+                                                title="Gendan denne backup"
+                                            >
+                                                <span>{when}</span>
+                                                <span class="ml-auto text-neutral-500">{chestCount} kister</span>
+                                            </button>
+                                        );
+                                    }}
+                                </For>
+                            </Show>
                         </Show>
                     </div>
 
