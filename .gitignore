@@ -21,7 +21,3 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# solid-version
-solid-version/node_modules
-solid-version/build

@@ -80,9 +80,9 @@ Alle item-ikoner kommer fra [mc.nerothe.com](https://mc.nerothe.com/) (64x64, pr
 
 **Sådan opdateres ikonerne** (fx til en ny Minecraft-version):
 1. Hent ikon-pakken (zip) fra [mc.nerothe.com](https://mc.nerothe.com/)
-2. Filerne hedder `minecraft_<item>.png` - fjern `minecraft_`-prefixet og kopiér dem til `solid-version/public/assets/images/icons/`
-3. Tilføj de nye items i `solid-version/src/data.json` ved siden af relaterede items (listen er kurateret: kun survival-items, creative-menu rækkefølge)
-4. Kør `node scripts/generate-sprites.cjs` fra `solid-version/`
+2. Filerne hedder `minecraft_<item>.png` - fjern `minecraft_`-prefixet og kopiér dem til `public/assets/images/icons/`
+3. Tilføj de nye items i `src/data.json` ved siden af relaterede items (listen er kurateret: kun survival-items, creative-menu rækkefølge)
+4. Kør `node scripts/generate-sprites.cjs` fra roden
 5. Kør `ffmpeg -y -i public/assets/images/spritesheet.png -lossless 1 -compression_level 6 public/assets/images/spritesheet.webp`
 
-Se også kommentaren i `solid-version/scripts/generate-sprites.cjs`.
+Se også kommentaren i `scripts/generate-sprites.cjs`.
