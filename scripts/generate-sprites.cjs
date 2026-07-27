@@ -16,9 +16,11 @@
  *   3. Add the new items to src/data.json ({item, variable, image}) next to
  *      related items - the list is curated: survival-only, grouped in families
  *   4. Run:  node scripts/generate-sprites.cjs
- *   5. Run:  ffmpeg -y -i public/assets/images/spritesheet.png -lossless 1 -compression_level 6 public/assets/images/spritesheet.webp
+ *      (converts to webp automatically via ffmpeg - the app LOADS THE WEBP,
+ *       so the sheet is broken until that step has run)
  */
 
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const Spritesmith = require('spritesmith');
@@ -68,4 +70,15 @@ Spritesmith.run({ src: iconPaths }, (err, result) => {
 
     fs.writeFileSync(OUTPUT_MAP, JSON.stringify(spriteMap, null, 2));
     console.log(`Sprite: ${result.properties.width}x${result.properties.height}, ${Object.keys(spriteMap).length - 1} icons`);
+
+    // The app loads the WEBP - regenerating png+map without it breaks every icon
+    const webpPath = OUTPUT_SPRITE.replace(/\.png$/, '.webp');
+    try {
+        execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', OUTPUT_SPRITE,
+            '-lossless', '1', '-compression_level', '6', webpPath]);
+        console.log(`Webp saved to: ${webpPath}`);
+    } catch {
+        console.error('ADVARSEL: ffmpeg fejlede/mangler - spritesheet.webp er IKKE opdateret og ikonerne vil vise forkert!');
+        process.exit(1);
+    }
 });
