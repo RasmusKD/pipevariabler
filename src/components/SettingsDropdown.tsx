@@ -175,38 +175,38 @@ const SettingsDropdown: Component = () => {
                     <div class="p-1">
                         <MenuItem
                             icon={<FaSolidFileImport class="text-blue-400" />}
-                            label="Importer Profil"
+                            label="Importér profil"
                             description="Indlæs en profil fra en JSON-fil (erstatter alt)"
                             onClick={() => fileInputRef?.click()}
                         />
                         <MenuItem
                             icon={<FaSolidFileExport class="text-green-400" />}
-                            label="Eksporter Profil"
+                            label="Eksportér profil"
                             description="Gem hele profilen som en JSON-fil"
                             onClick={action(handleExport)}
                         />
                         <MenuItem
                             icon={<FaSolidShare class="text-teal-400" />}
-                            label="Del Profil (URL)"
+                            label="Del profil (URL)"
                             description="Kopiér et link der åbner denne profil direkte"
                             onClick={action(handleShare)}
                         />
                         <MenuItem
                             icon={<FaSolidClipboard class="text-orange-400" />}
-                            label="Kopier Kode"
+                            label="Kopiér kode"
                             description="Kopiér profilen som en kompakt kode til deling"
                             onClick={action(handleCopyCode)}
                         />
                         <MenuItem
                             icon={<FaSolidPaste class="text-pink-400" />}
-                            label="Importer Kode"
+                            label="Importér kode"
                             description="Indsæt en delt kode og erstat profilen"
                             onClick={action(() => setImportModalVisible(true))}
                         />
                         <MenuItem
                             icon={<FaSolidUserPlus class="text-purple-400" />}
-                            label="Ny Profil"
-                            description="Slet alt nuværende data og start forfra"
+                            label="Ny profil"
+                            description="Slet al nuværende data og start forfra"
                             onClick={action(app.showNewProfileModal)}
                         />
                     </div>
@@ -265,8 +265,8 @@ const SettingsDropdown: Component = () => {
 
             <Show when={importModalVisible()}>
                 <InputModal
-                    title="Importer Kode"
-                    message="Indsæt en delt profil-kode. Den erstatter alt nuværende data."
+                    title="Importér kode"
+                    message="Indsæt en delt profil-kode. Den erstatter al nuværende data."
                     placeholder="Indsæt kode..."
                     onSubmit={handleImportCode}
                     onCancel={() => setImportModalVisible(false)}

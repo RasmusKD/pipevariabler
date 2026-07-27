@@ -251,7 +251,7 @@ const TabBar: Component = () => {
                                 type="button"
                                 class="flex-shrink-0 px-2 py-1 text-sm rounded border-2 border-dashed border-neutral-700 text-neutral-400 hover:border-neutral-600 hover:text-white transition-colors"
                                 onClick={() => app.addTab()}
-                                title="Tilføj nyt tab"
+                                title="Tilføj ny tab"
                             >
                                 <FaSolidPlus size={12} />
                             </button>

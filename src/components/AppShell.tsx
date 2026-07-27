@@ -79,7 +79,7 @@ const AppShell: Component = () => {
                 <ConfirmationModal
                     onConfirm={app.confirmDeleteChest}
                     onCancel={app.cancelDeleteChest}
-                    title="Bekræft Sletning"
+                    title="Bekræft sletning"
                     message="Er du sikker på, at du vil slette denne kiste? Den er ikke tom."
                     variant="danger"
                     confirmText="Slet"
@@ -91,10 +91,10 @@ const AppShell: Component = () => {
                 <ConfirmationModal
                     onConfirm={app.confirmNewProfile}
                     onCancel={app.cancelNewProfile}
-                    title="Ny Profil"
-                    message="Er du sikker på at du vil oprette en ny profil? Dette vil slette alt nuværende data."
+                    title="Ny profil"
+                    message="Er du sikker på, at du vil oprette en ny profil? Dette vil slette al nuværende data."
                     variant="warning"
-                    confirmText="Opret Ny"
+                    confirmText="Opret ny"
                     cancelText="Annuller"
                 />
             </Show>
