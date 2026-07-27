@@ -13,6 +13,10 @@ export type AppState = {
     activeTabId: number;
     /** Selected item uids (sidebar and chest items share one selection) */
     selectedItems: Set<string>;
+    /** Sidebar search term - shared so chests can highlight matches */
+    searchTerm: string;
+    /** When on, chests containing search matches get a highlight ring */
+    highlightChestMatches: boolean;
     chestGridView: boolean;
     sidebarGridView: boolean;
     chestHeight: ChestHeight;
@@ -73,6 +77,8 @@ const createInitialState = (): AppState => {
         tabs,
         activeTabId: tabs[0].id,
         selectedItems: new Set<string>(),
+        searchTerm: '',
+        highlightChestMatches: false,
         chestGridView: localStorage.getItem(STORAGE_KEYS.chestGridView) === 'true',
         sidebarGridView: localStorage.getItem(STORAGE_KEYS.sidebarGridView) === 'true',
         chestHeight: ((saved) => (saved && saved in CHEST_ROW_HEIGHT ? saved as ChestHeight : 'medium'))(
@@ -337,6 +343,11 @@ export function createAppStore() {
         setState('selectedItems', next);
     };
 
+    // ----- Search -----
+    const setSearchTerm = (term: string) => setState('searchTerm', term);
+    const toggleHighlightChestMatches = () =>
+        setState('highlightChestMatches', (on) => !on);
+
     // ----- View toggles -----
     const setChestGridView = (isGrid: boolean) => {
         setState('chestGridView', isGrid);
@@ -404,9 +415,20 @@ export function createAppStore() {
     };
 
     // ----- Persistence -----
+    // Debounced: rapid mutations (drags, undo-spam) only hit localStorage once
+    let persistTimer: ReturnType<typeof setTimeout> | null = null;
+    let pendingJson: string | null = null;
+    const flushPersist = () => {
+        if (pendingJson === null) return;
+        localStorage.setItem(STORAGE_KEYS.tabs, pendingJson);
+        pendingJson = null;
+    };
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.tabs, JSON.stringify(state.tabs));
+        pendingJson = JSON.stringify(state.tabs);
+        if (persistTimer) clearTimeout(persistTimer);
+        persistTimer = setTimeout(flushPersist, 300);
     });
+    window.addEventListener('beforeunload', flushPersist);
 
     return {
         state,
@@ -437,6 +459,9 @@ export function createAppStore() {
         setSelectedItems,
         clearSelection,
         toggleItemSelection,
+        // Search
+        setSearchTerm,
+        toggleHighlightChestMatches,
         // Views
         setChestGridView,
         setSidebarGridView,

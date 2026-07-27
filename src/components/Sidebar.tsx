@@ -1,7 +1,7 @@
 // Sidebar - the searchable item catalog; every entry is draggable into chests
 import { createDraggable } from '@thisbeyond/solid-dnd';
 import {
-    FaSolidBars, FaSolidMagnifyingGlass, FaSolidTableCellsLarge, FaSolidXmark,
+    FaSolidBars, FaSolidBoxOpen, FaSolidMagnifyingGlass, FaSolidTableCellsLarge, FaSolidXmark,
 } from 'solid-icons/fa';
 import { createMemo, createSignal, For, Show, type Component } from 'solid-js';
 import { createSelectAndDragHandlers, type SelectHandler } from '../dnd/activators';
@@ -107,7 +107,10 @@ type SidebarProps = {
 const Sidebar: Component<SidebarProps> = (props) => {
     const app = useApp();
     const [showAll, setShowAll] = createSignal(true);
-    const [searchTerm, setSearchTerm] = createSignal('');
+
+    // Search lives in the store so chests can highlight matches
+    const searchTerm = () => app.state.searchTerm;
+    const setSearchTerm = (term: string) => app.setSearchTerm(term);
 
     const isGridView = () => app.state.sidebarGridView;
 
@@ -164,18 +167,29 @@ const Sidebar: Component<SidebarProps> = (props) => {
                     spellcheck={false}
                     value={searchTerm()}
                     placeholder="Søg..."
-                    class="border pl-9 pr-10 py-2 w-full bg-neutral-800 border-neutral-700 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    class="border pl-9 pr-16 py-2 w-full bg-neutral-800 border-neutral-700 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     onInput={(e) => setSearchTerm(e.currentTarget.value)}
                 />
                 <Show when={searchTerm()}>
                     <button
-                        class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-200 transition-colors"
+                        class="absolute right-9 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-200 transition-colors"
                         onClick={() => setSearchTerm('')}
                         aria-label="Ryd søgning"
                     >
                         <FaSolidXmark size={14} />
                     </button>
                 </Show>
+                {/* Toggle: highlight chests containing search matches */}
+                <button
+                    class={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors ${app.state.highlightChestMatches
+                        ? 'text-amber-400 bg-amber-400/10'
+                        : 'text-neutral-500 hover:text-neutral-300'}`}
+                    onClick={() => app.toggleHighlightChestMatches()}
+                    aria-pressed={app.state.highlightChestMatches}
+                    title="Fremhæv kister der indeholder søge-matches"
+                >
+                    <FaSolidBoxOpen size={14} />
+                </button>
             </div>
 
             {/* Header + view toggles */}

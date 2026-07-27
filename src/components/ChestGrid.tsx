@@ -4,7 +4,8 @@ import {
     createDroppable, createSortable, SortableProvider, useDragDropContext,
 } from '@thisbeyond/solid-dnd';
 import { FaSolidPlus } from 'solid-icons/fa';
-import { createMemo, For, Show, type Component } from 'solid-js';
+import { createEffect, createMemo, createSignal, For, Show, type Component } from 'solid-js';
+
 import { CHEST_ROW_HEIGHT } from '../constants';
 import { ADD_CHEST_ZONE_ID, isChestDragId } from '../dnd/ids';
 import { useApp } from '../stores/app-store';
@@ -83,6 +84,20 @@ const ChestGrid: Component = () => {
         () => drag.isDragging() || isChestDragId(dndContext?.[0].active.draggableId),
     );
 
+    // Tabs that have been active at some point during the current drag.
+    // They must STAY mounted until the drag ends (removing droppables/draggables
+    // mid-drag breaks solid-dnd), but tabs the drag never visited don't need to
+    // mount at all - mounting everything at drag start froze big profiles.
+    const [dragVisitedTabIds, setDragVisitedTabIds] = createSignal(new Set<number>());
+    createEffect(() => {
+        if (isAnyDrag()) {
+            const activeId = app.state.activeTabId;
+            setDragVisitedTabIds((prev) => (prev.has(activeId) ? prev : new Set(prev).add(activeId)));
+        } else {
+            setDragVisitedTabIds((prev) => (prev.size ? new Set<number>() : prev));
+        }
+    });
+
     const handleAddChest = () => {
         app.addChest({
             id: app.getNextChestId(),
@@ -100,7 +115,11 @@ const ChestGrid: Component = () => {
                 const chestIds = createMemo(() => tab.chests.map((chest) => chest.id));
 
                 return (
-                    <div
+                    // Only the active tab is mounted - plus tabs the current drag
+                    // has visited (they mount lazily when the drag switches to
+                    // them and must not unmount before it ends)
+                    <Show when={isActive() || (isAnyDrag() && dragVisitedTabIds().has(tab.id))}>
+                        <div
                         class="grid-cols-auto-fit dark-theme overflow-x-hidden min-h-full"
                         style={{
                             gap: 0, // chests carry their own margin
@@ -129,7 +148,8 @@ const ChestGrid: Component = () => {
                         <Show when={isActive()}>
                             <AddChestDropZone onAddChest={handleAddChest} />
                         </Show>
-                    </div>
+                        </div>
+                    </Show>
                 );
             }}
         </For>

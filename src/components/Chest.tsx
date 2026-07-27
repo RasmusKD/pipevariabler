@@ -81,6 +81,17 @@ const Chest: Component<ChestProps> = (props) => {
     const pct = () => Math.min(100, Math.round((cmdLength() / CMD_LIMIT) * 100));
     const isOverLimit = () => cmdLength() > CMD_LIMIT;
 
+    // Amber ring when the sidebar search matches an item in this chest
+    // (opt-in via the toggle next to the search field)
+    const matchesSearch = createMemo(() => {
+        if (!app.state.highlightChestMatches) return false;
+        const term = app.state.searchTerm.toLowerCase();
+        if (!term) return false;
+        return props.chest.items.some(
+            (item) => item.item.toLowerCase().includes(term) || item.variable.toLowerCase().includes(term),
+        );
+    });
+
     // Highlight while an item drag hovers anything belonging to this chest -
     // but only when the drop would actually change something
     const isOver = () => {
@@ -142,7 +153,9 @@ const Chest: Component<ChestProps> = (props) => {
     return (
         <div
             data-chest-id={props.chest.id}
-            class={`relative flex flex-col border rounded-2xl bg-neutral-900/80 border-neutral-800 p-3 shadow-sm hover:shadow-md transition ${isOver() ? 'ring-2 ring-inset ring-blue-500 border-transparent' : ''}`}
+            class={`relative flex flex-col border rounded-2xl bg-neutral-900/80 border-neutral-800 p-3 shadow-sm hover:shadow-md transition ${isOver()
+                ? 'ring-2 ring-inset ring-blue-500 border-transparent'
+                : matchesSearch() ? 'ring-2 ring-inset ring-amber-400 border-transparent' : ''}`}
             style={{ height: '100%' }}
         >
             {/* Header - drag handle for chest reordering */}

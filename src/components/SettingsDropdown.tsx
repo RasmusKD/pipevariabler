@@ -2,12 +2,13 @@
 import {
     FaSolidArrowRotateLeft, FaSolidArrowRotateRight, FaSolidBook, FaSolidCaretDown,
     FaSolidCircleInfo, FaSolidClipboard, FaSolidFileExport, FaSolidFileImport, FaSolidGear,
-    FaSolidPaste, FaSolidShare, FaSolidUserPlus,
+    FaSolidPaste, FaSolidShare, FaSolidTerminal, FaSolidUserPlus,
 } from 'solid-icons/fa';
 import {
     createSignal, onCleanup, onMount, Show, type Component, type JSX,
 } from 'solid-js';
 import { APP_VERSION } from '../constants';
+import { buildCommand } from '../lib/items';
 import { buildShareUrl, decodeTabs, encodeTabs } from '../lib/profile-codec';
 import { useApp } from '../stores/app-store';
 import type { ChestHeight, Tab } from '../types';
@@ -121,6 +122,23 @@ const SettingsDropdown: Component = () => {
         reader.readAsText(file);
     };
 
+    // Alle kisters kommandoer som tekstliste - globalt nummereret som i UI'et
+    const handleExportCommands = () => {
+        const lines: string[] = [];
+        let chestNumber = 1;
+        for (const tab of app.state.tabs) {
+            if (tab.chests.length === 0) continue;
+            lines.push(`=== ${tab.name} ===`);
+            for (const chest of tab.chests) {
+                const command = buildCommand(chest.items);
+                lines.push(`#${chestNumber++} ${chest.label}: ${command || '(tom)'}`);
+            }
+            lines.push('');
+        }
+        navigator.clipboard.writeText(lines.join('\n').trimEnd());
+        alert(`Kommandoer for ${chestNumber - 1} kister kopieret til udklipsholderen!`);
+    };
+
     const handleShare = () => {
         try {
             navigator.clipboard.writeText(buildShareUrl(app.state.tabs));
@@ -184,6 +202,12 @@ const SettingsDropdown: Component = () => {
                             label="Eksportér profil"
                             description="Gem hele profilen som en JSON-fil"
                             onClick={action(handleExport)}
+                        />
+                        <MenuItem
+                            icon={<FaSolidTerminal class="text-lime-400" />}
+                            label="Eksportér kommandoer"
+                            description="Kopiér alle kisters /signedit-kommandoer som tekstliste"
+                            onClick={action(handleExportCommands)}
                         />
                         <MenuItem
                             icon={<FaSolidShare class="text-teal-400" />}

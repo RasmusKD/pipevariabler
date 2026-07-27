@@ -67,6 +67,8 @@ const SortableTab: Component<{
     isEditing: boolean;
     rangeText: string;
     canRemove: boolean;
+    /** Sidebar search (highlight mode) matches an item in this tab */
+    hasSearchMatch: boolean;
     onActivate: () => void;
     onStartEdit: () => void;
     onRemove: () => void;
@@ -90,7 +92,7 @@ const SortableTab: Component<{
                         type="button"
                         class={`flex-shrink-0 px-3 py-1 text-sm rounded border-b-2 transition-colors flex items-center gap-1 ${props.isActive
                             ? 'bg-neutral-800 border-blue-400 text-white'
-                            : 'bg-neutral-900 border-transparent text-neutral-300 hover:text-white hover:bg-neutral-800'}`}
+                            : 'bg-neutral-900 border-transparent text-neutral-300 hover:text-white hover:bg-neutral-800'} ${props.hasSearchMatch ? 'ring-1 ring-inset ring-amber-400' : ''}`}
                         onClick={() => {
                             if (!sortable.isActiveDraggable) props.onActivate();
                         }}
@@ -154,6 +156,19 @@ const TabBar: Component = () => {
     const [editingTabId, setEditingTabId] = createSignal<number | null>(null);
 
     const tabSortableIds = createMemo(() => app.state.tabs.map((tab) => tabSortableId(tab.id)));
+
+    // Tabs med søge-matches (kun i highlight-mode) - viser hvor kisterne bor,
+    // siden inaktive tabs ikke er rendered
+    const tabsWithSearchMatch = createMemo(() => {
+        if (!app.state.highlightChestMatches) return new Set<number>();
+        const term = app.state.searchTerm.toLowerCase();
+        if (!term) return new Set<number>();
+        return new Set(app.state.tabs
+            .filter((tab) => tab.chests.some((chest) => chest.items.some(
+                (item) => item.item.toLowerCase().includes(term) || item.variable.toLowerCase().includes(term),
+            )))
+            .map((tab) => tab.id));
+    });
 
     // "(3-7)" - the global chest numbers a tab covers
     const getTabRange = (tabIndex: number) => {
@@ -235,6 +250,7 @@ const TabBar: Component = () => {
                                             tabId={tab.id}
                                             tabName={tab.name}
                                             isActive={app.state.activeTabId === tab.id}
+                                            hasSearchMatch={tabsWithSearchMatch().has(tab.id)}
                                             isEditing={editingTabId() === tab.id}
                                             rangeText={getTabRange(tabIndex())}
                                             canRemove={app.state.tabs.length > 1}
@@ -266,6 +282,17 @@ const TabBar: Component = () => {
 
             {/* Right-side actions */}
             <div class="flex items-center gap-2">
+                {/* Fremdrift: faerdig-markerede kister på tvaers af alle tabs */}
+                <Show when={app.state.tabs.some((t) => t.chests.length > 0)}>
+                    <span
+                        class="text-sm text-neutral-400 select-none"
+                        title="Kister markeret som færdige"
+                    >
+                        {app.state.tabs.reduce((n, t) => n + t.chests.filter((c) => c.checked).length, 0)}
+                        /
+                        {app.state.tabs.reduce((n, t) => n + t.chests.length, 0)} færdige
+                    </span>
+                </Show>
                 <div class="flex items-center gap-1">
                     <HistoryButton
                         icon="undo"

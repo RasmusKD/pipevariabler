@@ -54,6 +54,17 @@ const ChestIconPicker: Component<ChestIconPickerProps> = (props) => {
         return ITEM_CATALOG.filter((entry) => entry.item.toLowerCase().includes(term));
     });
 
+    // Render icons in chunks - creating all ~1400 at once makes opening laggy
+    const CHUNK_SIZE = 180;
+    const [renderLimit, setRenderLimit] = createSignal(CHUNK_SIZE);
+    const visibleIcons = createMemo(() => filteredIcons().slice(0, renderLimit()));
+    const handleScroll = (e: Event) => {
+        const el = e.currentTarget as HTMLElement;
+        if (el.scrollTop + el.clientHeight > el.scrollHeight - 200) {
+            setRenderLimit((limit) => Math.min(limit + CHUNK_SIZE, filteredIcons().length));
+        }
+    };
+
     return (
         <div class="relative" ref={iconButtonRef}>
             <div
@@ -86,7 +97,10 @@ const ChestIconPicker: Component<ChestIconPickerProps> = (props) => {
                                 placeholder="Søg..."
                                 class="w-full bg-neutral-800 border border-neutral-700 rounded-lg pl-9 pr-10 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 value={searchTerm()}
-                                onInput={(e) => setSearchTerm(e.currentTarget.value)}
+                                onInput={(e) => {
+                                    setSearchTerm(e.currentTarget.value);
+                                    setRenderLimit(CHUNK_SIZE);
+                                }}
                                 autofocus
                             />
                             <Show when={searchTerm()}>
@@ -99,8 +113,8 @@ const ChestIconPicker: Component<ChestIconPickerProps> = (props) => {
                                 </button>
                             </Show>
                         </div>
-                        <div class="flex-1 overflow-y-auto grid grid-cols-6 gap-2 pr-1">
-                            <For each={filteredIcons()}>
+                        <div class="flex-1 overflow-y-auto grid grid-cols-6 gap-2 pr-1" onScroll={handleScroll}>
+                            <For each={visibleIcons()}>
                                 {(entry) => (
                                     <div
                                         class="cursor-pointer hover:bg-neutral-800 rounded flex justify-center items-center"
