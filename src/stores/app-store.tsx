@@ -267,34 +267,39 @@ export function createAppStore() {
 
     // ----- Chest item actions (all atomic: one undo step each) -----
 
+    /** Remove the given uids from every chest they live in (multi-select can span chests) */
+    const removeUidsFromAllChests = (uids: Set<string>) => {
+        setState('tabs', produce((tabs) => {
+            for (const tab of tabs) {
+                for (const chest of tab.chests) {
+                    if (chest.items.some((item) => uids.has(item.uid))) {
+                        chest.items = chest.items.filter((item) => !uids.has(item.uid));
+                    }
+                }
+            }
+        }));
+    };
+
     /**
-     * Move (or copy, when sourceChestId is null) items into a chest.
-     * Items whose variable already exists in the target are skipped.
+     * Move items into a chest. Chest items are removed from wherever they came
+     * from (a multi-select can span several chests); sidebar clones exist
+     * nowhere and are just added. Duplicate variables in the target are skipped.
      */
     const moveItemsToChest = (options: {
         items: Item[];
-        sourceChestId: number | null;
         targetChestId: number;
         insertIndex?: number;
     }) => {
-        const { items, sourceChestId, targetChestId, insertIndex } = options;
+        const { items, targetChestId, insertIndex } = options;
         const targetPath = findChestPath(targetChestId);
         if (!targetPath || items.length === 0) return;
 
         pushUndo();
-
-        if (sourceChestId !== null && sourceChestId !== targetChestId) {
-            const uids = new Set(items.map((i) => i.uid));
-            const sourcePath = findChestPath(sourceChestId);
-            if (sourcePath) {
-                setState('tabs', sourcePath.tabIndex, 'chests', sourcePath.chestIndex, 'items',
-                    (current) => current.filter((item) => !uids.has(item.uid)));
-            }
-        }
+        removeUidsFromAllChests(new Set(items.map((i) => i.uid)));
 
         setState('tabs', targetPath.tabIndex, 'chests', targetPath.chestIndex, 'items', (current) => {
             const result = [...current];
-            let insertAt = insertIndex ?? result.length;
+            let insertAt = Math.min(insertIndex ?? result.length, result.length);
             for (const item of items) {
                 if (result.some((i) => i.variable === item.variable)) continue;
                 result.splice(insertAt++, 0, { ...item, uid: crypto.randomUUID() });
@@ -304,20 +309,12 @@ export function createAppStore() {
     };
 
     /** Create a new chest on the active tab from dragged items */
-    const createChestFromItems = (items: Item[], sourceChestId: number | null) => {
+    const createChestFromItems = (items: Item[]) => {
         const newItems = dedupeByVariable(items);
         if (newItems.length === 0) return;
 
         pushUndo();
-
-        if (sourceChestId !== null) {
-            const uids = new Set(items.map((i) => i.uid));
-            const sourcePath = findChestPath(sourceChestId);
-            if (sourcePath) {
-                setState('tabs', sourcePath.tabIndex, 'chests', sourcePath.chestIndex, 'items',
-                    (current) => current.filter((item) => !uids.has(item.uid)));
-            }
-        }
+        removeUidsFromAllChests(new Set(items.map((i) => i.uid)));
 
         const tabIndex = activeTabIndex();
         if (tabIndex === -1) return;

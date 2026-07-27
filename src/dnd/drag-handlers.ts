@@ -109,7 +109,7 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
         if (draggedItems.length === 0) return;
 
         const moveTo = (targetChestId: number, insertIndex?: number) => {
-            app.moveItemsToChest({ items: draggedItems, sourceChestId, targetChestId, insertIndex });
+            app.moveItemsToChest({ items: draggedItems, targetChestId, insertIndex });
             app.clearSelection();
         };
 
@@ -145,7 +145,7 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
                 return;
             }
             case 'add-chest-zone':
-                app.createChestFromItems(draggedItems, sourceChestId);
+                app.createChestFromItems(draggedItems);
                 app.clearSelection();
                 return;
             case 'tab-zone':
