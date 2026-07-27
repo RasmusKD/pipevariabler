@@ -31,6 +31,13 @@ const AppShell: Component = () => {
                 (el instanceof HTMLElement && el.isContentEditable);
         };
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Før ctrl-genvejene: Delete skal også virke mens Ctrl stadig
+            // holdes nede efter et Ctrl+klik-multiselect
+            if (e.key === 'Delete' && !isTyping()) {
+                e.preventDefault();
+                app.removeSelectedItems();
+                return;
+            }
             if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
                 if (e.key === 'z') {
                     e.preventDefault();
@@ -46,11 +53,6 @@ const AppShell: Component = () => {
                         search.select();
                     }
                 }
-                return;
-            }
-            if (e.key === 'Delete' && !isTyping()) {
-                e.preventDefault();
-                app.removeSelectedItems();
             }
         };
         window.addEventListener('keydown', handleKeyDown);
