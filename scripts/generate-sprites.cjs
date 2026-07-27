@@ -14,7 +14,7 @@
  *   2. The files are named "minecraft_<item>.png" - strip the "minecraft_" prefix
  *      and copy them into public/assets/images/icons/ (overwrite existing)
  *   3. Add the new items to src/data.json ({item, variable, image}) next to
- *      related items - the list is curated, survival-only, creative-menu order
+ *      related items - the list is curated: survival-only, grouped in families
  *   4. Run:  node scripts/generate-sprites.cjs
  *   5. Run:  ffmpeg -y -i public/assets/images/spritesheet.png -lossless 1 -compression_level 6 public/assets/images/spritesheet.webp
  */
