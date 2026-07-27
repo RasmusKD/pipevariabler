@@ -167,7 +167,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
                     type="text"
                     spellcheck={false}
                     value={searchTerm()}
-                    placeholder="Søg... (Ctrl+F)"
+                    placeholder="Søg..."
                     class="border pl-9 pr-16 py-2 w-full bg-neutral-800 border-neutral-700 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     onInput={(e) => setSearchTerm(e.currentTarget.value)}
                 />
