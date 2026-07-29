@@ -105,7 +105,15 @@ const ChestGrid: Component = () => {
             setDragVisitedTabIds((prev) => (prev.size ? new Set<number>() : prev));
         }
     });
-    const isLiteTab = (tabId: number) => isAnyDrag() && dragOriginTabId() !== tabId;
+    const isLiteTab = (tabId: number) => {
+        if (!isAnyDrag()) return false;
+        const originTabId = dragOriginTabId();
+        // Drag just started and the origin isn't stamped yet (the effect runs
+        // after render) - treating the transient as "lite" would unmount and
+        // remount every interactive item on the active tab at every drag start
+        if (originTabId === null) return false;
+        return tabId !== originTabId;
+    };
 
     const handleAddChest = () => {
         app.addChest({
@@ -122,6 +130,12 @@ const ChestGrid: Component = () => {
             {(tab) => {
                 const isActive = () => app.state.activeTabId === tab.id;
                 const chestIds = createMemo(() => tab.chests.map((chest) => chest.id));
+                // MEMOIZED so renderItem only re-runs on a real true/false flip:
+                // isLiteTab reads isAnyDrag(), and an unmemoized read here would
+                // remount every item at drag start/end - each remount re-registers
+                // with solid-dnd, which recomputes ALL layouts per registration
+                // (quadratic: ~225k getBoundingClientRect on a full profile)
+                const liteItems = createMemo(() => isLiteTab(tab.id));
 
                 return (
                     // Only the active tab is mounted - plus tabs the current drag
@@ -149,7 +163,7 @@ const ChestGrid: Component = () => {
                                         chest={chest}
                                         index={index()}
                                         gridView={app.state.chestGridView}
-                                        liteItems={isLiteTab(tab.id)}
+                                        liteItems={liteItems()}
                                     />
                                 )}
                             </For>
