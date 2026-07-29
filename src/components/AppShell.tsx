@@ -17,11 +17,11 @@ import TabDropOverlay from './TabDropOverlay';
 const AppShell: Component = () => {
     const app = useApp();
     const drag = useDrag();
-    const [, { onDragStart, onDragOver, onDragEnd, recomputeLayouts }] = useDragDropContext()!;
+    const [, { onDragStart, onDragMove, onDragEnd }] = useDragDropContext()!;
 
-    const handlers = createDragHandlers(app, drag, { recomputeLayouts });
+    const handlers = createDragHandlers(app, drag);
     onDragStart(handlers.onDragStart);
-    onDragOver(handlers.onDragOver);
+    onDragMove(handlers.onDragMove);
     onDragEnd(handlers.onDragEnd);
 
     // Keyboard shortcuts: undo/redo, Ctrl+F -> søgefeltet, Delete -> fjern markerede

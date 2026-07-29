@@ -150,6 +150,7 @@ const ChestGrid: Component = () => {
                     // them and must not unmount before it ends)
                     <Show when={isActive() || (isAnyDrag() && dragVisitedTabIds().has(tab.id))}>
                         <div
+                        data-active-grid={isActive() ? '' : undefined}
                         class="grid-cols-auto-fit dark-theme overflow-x-hidden min-h-full"
                         style={{
                             gap: 0, // chests carry their own margin

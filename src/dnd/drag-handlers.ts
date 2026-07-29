@@ -7,12 +7,9 @@ import type { AppStore } from '../stores/app-store';
 import type { DragStore } from '../stores/drag-store';
 import type { Item } from '../types';
 import { assertNever, classifyDropTarget, isChestDragId } from './ids';
+import { pointerPosition } from './pointer';
 
-export const createDragHandlers = (
-    app: AppStore,
-    drag: DragStore,
-    dnd: { recomputeLayouts: () => void },
-) => {
+export const createDragHandlers = (app: AppStore, drag: DragStore) => {
     const findChestContaining = (itemUid: string) => {
         for (const tab of app.state.tabs) {
             for (const chest of tab.chests) {
@@ -101,60 +98,48 @@ export const createDragHandlers = (
         }
     };
 
-    /** Reorder within the active tab: move the dragged chest to another chest's slot */
-    const reorderChestTo = (dragChestId: number, dropChestId: number): boolean => {
-        if (dragChestId === dropChestId) return false;
-        const chests = app.chests();
-        const fromIndex = chests.findIndex((c) => c.id === dragChestId);
-        const toIndex = chests.findIndex((c) => c.id === dropChestId);
-        if (fromIndex === -1 || toIndex === -1) return false;
-        app.moveChest(fromIndex, toIndex);
-        return true;
-    };
-
     /**
-     * Chests reorder LIVE while dragging over them (same pattern as the tabs).
-     * solid-dnd's transform-based sort preview is built for 1-D lists and falls
-     * apart in a multi-row grid; instant reordering re-lays the grid instead.
-     * Undo-batching collapses all live moves into one step.
+     * LIVE chest reordering, driven by cursor GEOMETRY instead of droppable
+     * hover: the insertion index is "how many other chests come before the
+     * cursor in reading order" (rows fully above the cursor, plus chests on
+     * the cursor's row whose center is left of it). This makes first and last
+     * positions trivially reachable (cursor before the first chest / past the
+     * last or over empty grid space) and never depends on solid-dnd's cached
+     * layouts. The dragged chest's own hidden slot IS the live preview, and
+     * undo-batching collapses all moves into one step.
      */
-    const onDragOver: DragEventHandler = ({ draggable, droppable }) => {
-        if (!droppable || !isChestDragId(draggable.id)) return;
-        const target = classifyDropTarget(droppable.id);
-        let targetChestId: number | null = null;
-        if (target.kind === 'chest-sortable' || target.kind === 'chest-zone') {
-            targetChestId = target.chestId;
-        } else if (target.kind === 'item') {
-            targetChestId = findChestContaining(target.uid)?.chest.id ?? null;
+    const onDragMove: DragEventHandler = ({ draggable }) => {
+        if (!isChestDragId(draggable.id)) return;
+        const grid = document.querySelector('[data-active-grid]');
+        if (!grid) return;
+        const gridRect = grid.getBoundingClientRect();
+        const { x, y } = pointerPosition;
+        // Outside the grid (tab zones, sidebar): leave the order as-is
+        if (x < gridRect.left || x > gridRect.right || y < gridRect.top || y > gridRect.bottom) return;
+
+        const chests = app.chests();
+        const fromIndex = chests.findIndex((c) => c.id === draggable.id);
+        if (fromIndex === -1) return;
+
+        let insertionIndex = 0;
+        for (const chest of chests) {
+            if (chest.id === draggable.id) continue;
+            const el = document.querySelector(`[data-chest-id="${chest.id}"]`);
+            if (!el) continue;
+            const rect = el.getBoundingClientRect();
+            if (rect.bottom < y) insertionIndex++; // hele raekken er over cursoren
+            else if (rect.top <= y && y <= rect.bottom && rect.left + rect.width / 2 < x) insertionIndex++;
         }
-        if (targetChestId !== null && reorderChestTo(draggable.id, targetChestId)) {
-            // The grid re-laid out but solid-dnd's collision layouts are cached
-            // from drag start - without a remeasure every hover after the first
-            // reorder hits the chest that USED to sit in that slot (off-by-one)
-            dnd.recomputeLayouts();
-        }
+
+        if (insertionIndex !== fromIndex) app.moveChest(fromIndex, insertionIndex);
     };
 
+    // Reordering happens live in onDragMove - at drop time only the tab-zone
+    // case still needs handling (drop directly on a tab before the dwell fires)
     const handleChestDrop = (chestId: number, dropId: string | number) => {
         const target = classifyDropTarget(dropId);
-        switch (target.kind) {
-            case 'tab-zone':
-                // The hover auto-switch usually moved the chest already
-                if (target.tabId !== app.state.activeTabId) app.moveChestToTab(chestId, target.tabId);
-                return;
-            case 'chest-sortable':
-            case 'chest-zone':
-                reorderChestTo(chestId, target.chestId);
-                return;
-            case 'item': {
-                const found = findChestContaining(target.uid);
-                if (found) reorderChestTo(chestId, found.chest.id);
-                return;
-            }
-            case 'add-chest-zone':
-                return;
-            default:
-                return assertNever(target);
+        if (target.kind === 'tab-zone' && target.tabId !== app.state.activeTabId) {
+            app.moveChestToTab(chestId, target.tabId);
         }
     };
 
@@ -223,5 +208,5 @@ export const createDragHandlers = (
         }
     };
 
-    return { onDragStart, onDragOver, onDragEnd };
+    return { onDragStart, onDragMove, onDragEnd };
 };
