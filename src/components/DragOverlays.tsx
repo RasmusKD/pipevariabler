@@ -9,7 +9,6 @@ import { isChestDragId } from '../dnd/ids';
 import { pointerPosition } from '../dnd/pointer';
 import { useApp } from '../stores/app-store';
 import { useDrag } from '../stores/drag-store';
-import Chest from './Chest';
 import SpriteIcon from './SpriteIcon';
 
 /** Track the cursor while `isActive` holds; snaps to the cursor when it turns on */
@@ -59,7 +58,13 @@ const ItemDragOverlay: Component = () => {
     );
 };
 
-/** Dragged chest: full chest preview offset to where it was grabbed */
+/**
+ * Dragged chest: a DOM CLONE of the real chest, offset to where it was
+ * grabbed. A clone (rather than rendering a live <Chest>) is deliberate:
+ * a live component would register draggables/droppables with the same ids as
+ * the real chest and unregister the real ones when the overlay unmounts.
+ * The clone is inert markup - that bug class is impossible.
+ */
 const ChestDragOverlay: Component = () => {
     const app = useApp();
     const dndContext = useDragDropContext();
@@ -67,6 +72,7 @@ const ChestDragOverlay: Component = () => {
     // Measured from the grabbed chest - grid cells are minmax(330px, 1fr), so
     // the real width varies with the viewport
     const [dragSize, setDragSize] = createSignal({ width: 330, height: 268 });
+    const [previewHtml, setPreviewHtml] = createSignal('');
 
     const isChestDrag = createMemo(() => isChestDragId(dndContext?.[0]?.active.draggableId));
     const pos = createCursorPosition(isChestDrag);
@@ -95,22 +101,34 @@ const ChestDragOverlay: Component = () => {
         }
     });
 
+    // (Re)clone the chest markup - re-runs when the chest's position/tab
+    // changes mid-drag so the #n badge stays current
+    createEffect(() => {
+        const active = activeChest();
+        if (!active) {
+            setPreviewHtml('');
+            return;
+        }
+        void active.index; // track position changes
+        // The wrapper matches first; the INNER chest div is the visual card
+        const wrapper = document.querySelector(`[data-chest-id="${active.chest.id}"]`);
+        const card = wrapper?.querySelector(`[data-chest-id="${active.chest.id}"]`) ?? wrapper;
+        setPreviewHtml(card?.outerHTML ?? '');
+    });
+
     return (
         <Show when={activeChest()}>
-            {(active) => (
-                <div
-                    class="pointer-events-none fixed z-[9999]"
-                    style={{
-                        left: `${pos().x - dragOffset().x}px`,
-                        top: `${pos().y - dragOffset().y}px`,
-                        width: `${dragSize().width}px`,
-                        height: `${dragSize().height}px`,
-                        opacity: 0.95,
-                    }}
-                >
-                    <Chest chest={active().chest} index={active().index} gridView={app.state.chestGridView} preview />
-                </div>
-            )}
+            <div
+                class="pointer-events-none fixed z-[9999]"
+                style={{
+                    left: `${pos().x - dragOffset().x}px`,
+                    top: `${pos().y - dragOffset().y}px`,
+                    width: `${dragSize().width}px`,
+                    height: `${dragSize().height}px`,
+                    opacity: 0.95,
+                }}
+                innerHTML={previewHtml()}
+            />
         </Show>
     );
 };
