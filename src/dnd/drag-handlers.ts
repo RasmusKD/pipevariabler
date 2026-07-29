@@ -8,7 +8,11 @@ import type { DragStore } from '../stores/drag-store';
 import type { Item } from '../types';
 import { assertNever, classifyDropTarget, isChestDragId } from './ids';
 
-export const createDragHandlers = (app: AppStore, drag: DragStore) => {
+export const createDragHandlers = (
+    app: AppStore,
+    drag: DragStore,
+    dnd: { recomputeLayouts: () => void },
+) => {
     const findChestContaining = (itemUid: string) => {
         for (const tab of app.state.tabs) {
             for (const chest of tab.chests) {
@@ -98,12 +102,14 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
     };
 
     /** Reorder within the active tab: move the dragged chest to another chest's slot */
-    const reorderChestTo = (dragChestId: number, dropChestId: number) => {
-        if (dragChestId === dropChestId) return;
+    const reorderChestTo = (dragChestId: number, dropChestId: number): boolean => {
+        if (dragChestId === dropChestId) return false;
         const chests = app.chests();
         const fromIndex = chests.findIndex((c) => c.id === dragChestId);
         const toIndex = chests.findIndex((c) => c.id === dropChestId);
-        if (fromIndex !== -1 && toIndex !== -1) app.moveChest(fromIndex, toIndex);
+        if (fromIndex === -1 || toIndex === -1) return false;
+        app.moveChest(fromIndex, toIndex);
+        return true;
     };
 
     /**
@@ -121,7 +127,12 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
         } else if (target.kind === 'item') {
             targetChestId = findChestContaining(target.uid)?.chest.id ?? null;
         }
-        if (targetChestId !== null) reorderChestTo(draggable.id, targetChestId);
+        if (targetChestId !== null && reorderChestTo(draggable.id, targetChestId)) {
+            // The grid re-laid out but solid-dnd's collision layouts are cached
+            // from drag start - without a remeasure every hover after the first
+            // reorder hits the chest that USED to sit in that slot (off-by-one)
+            dnd.recomputeLayouts();
+        }
     };
 
     const handleChestDrop = (chestId: number, dropId: string | number) => {

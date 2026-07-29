@@ -17,9 +17,9 @@ import TabDropOverlay from './TabDropOverlay';
 const AppShell: Component = () => {
     const app = useApp();
     const drag = useDrag();
-    const [, { onDragStart, onDragOver, onDragEnd }] = useDragDropContext()!;
+    const [, { onDragStart, onDragOver, onDragEnd, recomputeLayouts }] = useDragDropContext()!;
 
-    const handlers = createDragHandlers(app, drag);
+    const handlers = createDragHandlers(app, drag, { recomputeLayouts });
     onDragStart(handlers.onDragStart);
     onDragOver(handlers.onDragOver);
     onDragEnd(handlers.onDragEnd);
