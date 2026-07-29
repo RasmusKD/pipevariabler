@@ -286,7 +286,7 @@ const Chest: Component<ChestProps> = (props) => {
 
             {/* Items drop zone - the droppable ref sits here to bound the zone */}
             <div
-                ref={droppable?.ref}
+                ref={(el) => droppable?.ref(el)}
                 class={`mt-3 p-2 w-full flex-1 rounded-lg bg-neutral-900/50 border-2 transition-colors ${props.chest.items.length > 0 ? 'border-transparent' : 'border-dashed border-neutral-700'}`}
                 style={{ 'overflow-y': 'auto', 'overflow-x': 'hidden', 'min-height': '110px' }}
             >

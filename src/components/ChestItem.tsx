@@ -39,14 +39,18 @@ const ChestItem: Component<ChestItemProps> = (props) => {
         !props.preview && drag.isDragging() && drag.draggedItems().some((i) => i.uid === props.item.uid);
 
     // Only register the droppable outside chest drags, so a dragged chest's
-    // sortable can be detected through the items
-    const setRef = draggable && droppable ? (el: HTMLElement) => {
+    // sortable can be detected through the items.
+    // NOTE: ref/handlers must ALWAYS be functions - Solid compiles ref={setRef}
+    // to an unconditional call, so undefined crashes at render.
+    const setRef = (el: HTMLElement) => {
+        if (!draggable || !droppable) return; // preview
         draggable.ref(el);
         if (!isChestDragId(dndContext?.[0]?.active.draggableId)) droppable.ref(el);
-    } : undefined;
+    };
 
+    const noop = () => {};
     const handlers = props.preview
-        ? { onPointerDown: undefined, onClick: undefined }
+        ? { onPointerDown: noop, onClick: noop }
         : createSelectAndDragHandlers({
             uid: () => props.item.uid,
             dragActivators: () => draggable!.dragActivators,
