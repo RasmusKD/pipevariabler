@@ -1,8 +1,6 @@
 // ChestGrid - all tabs' chest grids. Inactive tabs stay mounted (hidden with
 // CSS) so draggables never unmount mid-drag when the tab auto-switches.
-import {
-    createDroppable, createSortable, SortableProvider, useDragDropContext,
-} from '@thisbeyond/solid-dnd';
+import { createDraggable, createDroppable, useDragDropContext } from '@thisbeyond/solid-dnd';
 import { FaSolidPlus } from 'solid-icons/fa';
 import { createEffect, createMemo, createSignal, For, Show, type Component } from 'solid-js';
 
@@ -45,21 +43,31 @@ const AddChestDropZone: Component<{ onAddChest: () => void }> = (props) => {
     );
 };
 
-const SortableChest: Component<{ chest: ChestData; index: number; gridView: boolean; liteItems?: boolean }> = (props) => {
-    const sortable = createSortable(props.chest.id);
+// Draggable + droppable chest wrapper. Deliberately NOT createSortable:
+// solid-dnd's sort-preview transforms are built for 1-D lists and shift both
+// visuals AND collision layouts nonsensically in a multi-row grid ("hit areas
+// land in the margins"). Chests reorder LIVE on dragOver instead (same proven
+// pattern as the tab bar), so no transforms are needed at all.
+const DraggableChest: Component<{ chest: ChestData; index: number; gridView: boolean; liteItems?: boolean }> = (props) => {
+    const draggable = createDraggable(props.chest.id);
+    const droppable = createDroppable(props.chest.id);
     const dndContext = useDragDropContext();
 
     const isChestDragActive = () => isChestDragId(dndContext?.[0]?.active.draggableId);
 
+    const setRef = (el: HTMLElement) => {
+        draggable.ref(el);
+        droppable.ref(el);
+    };
+
     return (
         <div
-            ref={sortable.ref}
+            ref={setRef}
             data-chest-id={props.chest.id}
             style={{
-                transform: `translate3d(${sortable.transform.x}px, ${sortable.transform.y}px, 0)`,
                 // Hidden while dragging - ChestDragOverlay carries the visual
-                opacity: sortable.isActiveDraggable ? 0 : 1,
-                cursor: sortable.isActiveDraggable ? 'grabbing' : undefined,
+                opacity: draggable.isActiveDraggable ? 0 : 1,
+                cursor: draggable.isActiveDraggable ? 'grabbing' : undefined,
                 margin: CHEST_MARGIN,
             }}
         >
@@ -67,7 +75,7 @@ const SortableChest: Component<{ chest: ChestData; index: number; gridView: bool
                 chest={props.chest}
                 index={props.index}
                 gridView={props.gridView}
-                dragHandle={sortable.dragActivators}
+                dragHandle={draggable.dragActivators}
                 isChestDragActive={isChestDragActive()}
                 liteItems={props.liteItems}
             />
@@ -129,7 +137,6 @@ const ChestGrid: Component = () => {
         <For each={app.state.tabs}>
             {(tab) => {
                 const isActive = () => app.state.activeTabId === tab.id;
-                const chestIds = createMemo(() => tab.chests.map((chest) => chest.id));
                 // MEMOIZED so renderItem only re-runs on a real true/false flip:
                 // isLiteTab reads isAnyDrag(), and an unmemoized read here would
                 // remount every item at drag start/end - each remount re-registers
@@ -156,18 +163,16 @@ const ChestGrid: Component = () => {
                             ...(isAnyDrag() && !isActive() ? { left: '-9999px', top: 0 } : {}),
                         }}
                     >
-                        <SortableProvider ids={chestIds()}>
-                            <For each={tab.chests}>
+                        <For each={tab.chests}>
                                 {(chest, index) => (
-                                    <SortableChest
+                                <DraggableChest
                                         chest={chest}
                                         index={index()}
                                         gridView={app.state.chestGridView}
                                         liteItems={liteItems()}
                                     />
-                                )}
-                            </For>
-                        </SortableProvider>
+                            )}
+                        </For>
 
                         <Show when={isActive()}>
                             <AddChestDropZone onAddChest={handleAddChest} />

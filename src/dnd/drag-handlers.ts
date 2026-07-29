@@ -106,6 +106,24 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
         if (fromIndex !== -1 && toIndex !== -1) app.moveChest(fromIndex, toIndex);
     };
 
+    /**
+     * Chests reorder LIVE while dragging over them (same pattern as the tabs).
+     * solid-dnd's transform-based sort preview is built for 1-D lists and falls
+     * apart in a multi-row grid; instant reordering re-lays the grid instead.
+     * Undo-batching collapses all live moves into one step.
+     */
+    const onDragOver: DragEventHandler = ({ draggable, droppable }) => {
+        if (!droppable || !isChestDragId(draggable.id)) return;
+        const target = classifyDropTarget(droppable.id);
+        let targetChestId: number | null = null;
+        if (target.kind === 'chest-sortable' || target.kind === 'chest-zone') {
+            targetChestId = target.chestId;
+        } else if (target.kind === 'item') {
+            targetChestId = findChestContaining(target.uid)?.chest.id ?? null;
+        }
+        if (targetChestId !== null) reorderChestTo(draggable.id, targetChestId);
+    };
+
     const handleChestDrop = (chestId: number, dropId: string | number) => {
         const target = classifyDropTarget(dropId);
         switch (target.kind) {
@@ -194,5 +212,5 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
         }
     };
 
-    return { onDragStart, onDragEnd };
+    return { onDragStart, onDragOver, onDragEnd };
 };
