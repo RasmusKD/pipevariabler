@@ -51,6 +51,7 @@ export const ChestItemView: Component<ChestItemViewProps> = (props) => {
             when={props.view === 'grid'}
             fallback={
                 <li
+                    data-selectable
                     ref={(el) => props.elementRef?.(el)}
                     onPointerDown={props.onPointerDown}
                     onClick={props.onClick}
@@ -74,6 +75,7 @@ export const ChestItemView: Component<ChestItemViewProps> = (props) => {
             }
         >
             <div
+                data-selectable
                 ref={(el) => props.elementRef?.(el)}
                 onPointerDown={props.onPointerDown}
                 onClick={props.onClick}
