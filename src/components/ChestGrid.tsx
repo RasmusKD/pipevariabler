@@ -45,7 +45,7 @@ const AddChestDropZone: Component<{ onAddChest: () => void }> = (props) => {
     );
 };
 
-const SortableChest: Component<{ chest: ChestData; index: number; gridView: boolean }> = (props) => {
+const SortableChest: Component<{ chest: ChestData; index: number; gridView: boolean; liteItems?: boolean }> = (props) => {
     const sortable = createSortable(props.chest.id);
     const dndContext = useDragDropContext();
 
@@ -69,6 +69,7 @@ const SortableChest: Component<{ chest: ChestData; index: number; gridView: bool
                 gridView={props.gridView}
                 dragHandle={sortable.dragActivators}
                 isChestDragActive={isChestDragActive()}
+                liteItems={props.liteItems}
             />
         </div>
     );
@@ -89,14 +90,22 @@ const ChestGrid: Component = () => {
     // mid-drag breaks solid-dnd), but tabs the drag never visited don't need to
     // mount at all - mounting everything at drag start froze big profiles.
     const [dragVisitedTabIds, setDragVisitedTabIds] = createSignal(new Set<number>());
+    // The tab the drag STARTED on keeps full item interactivity; tabs visited
+    // mid-drag mount in "lite" mode (pure item views, no dnd hooks) - mounting
+    // hundreds of draggables/droppables mid-drag froze the hover-switch, and
+    // their guarded registration left unbalanced removals behind.
+    const [dragOriginTabId, setDragOriginTabId] = createSignal<number | null>(null);
     createEffect(() => {
         if (isAnyDrag()) {
             const activeId = app.state.activeTabId;
+            if (dragOriginTabId() === null) setDragOriginTabId(activeId);
             setDragVisitedTabIds((prev) => (prev.has(activeId) ? prev : new Set(prev).add(activeId)));
         } else {
+            setDragOriginTabId(null);
             setDragVisitedTabIds((prev) => (prev.size ? new Set<number>() : prev));
         }
     });
+    const isLiteTab = (tabId: number) => isAnyDrag() && dragOriginTabId() !== tabId;
 
     const handleAddChest = () => {
         app.addChest({
@@ -140,6 +149,7 @@ const ChestGrid: Component = () => {
                                         chest={chest}
                                         index={index()}
                                         gridView={app.state.chestGridView}
+                                        liteItems={isLiteTab(tab.id)}
                                     />
                                 )}
                             </For>

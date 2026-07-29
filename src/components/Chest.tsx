@@ -8,7 +8,7 @@ import { useApp } from '../stores/app-store';
 import { useDrag } from '../stores/drag-store';
 import type { Chest as ChestData } from '../types';
 import ChestItem from './ChestItem';
-import { ChestCardView, type ChestRing } from './ChestView';
+import { ChestCardView, ChestItemView, type ChestRing } from './ChestView';
 
 type ChestProps = {
     chest: ChestData;
@@ -18,6 +18,12 @@ type ChestProps = {
     dragHandle?: JSX.HTMLAttributes<HTMLDivElement>;
     /** True while a chest is being dragged (disables item pointer events) */
     isChestDragActive?: boolean;
+    /**
+     * Tab mounted mid-drag: render items as pure views (no dnd hooks).
+     * Mounting hundreds of draggables/droppables mid-drag freezes the
+     * hover-switch; the items upgrade to interactive when the drag ends.
+     */
+    liteItems?: boolean;
 };
 
 const Chest: Component<ChestProps> = (props) => {
@@ -89,7 +95,15 @@ const Chest: Component<ChestProps> = (props) => {
             dragHandle={props.dragHandle}
             ring={ring()}
             dropZoneRef={droppable.ref}
-            renderItem={(item, index, view) => (
+            renderItem={(item, index, view) => props.liteItems ? (
+                <ChestItemView
+                    item={item}
+                    index={index}
+                    view={view}
+                    isSelected={app.state.selectedItems.has(item.uid)}
+                    disablePointerEvents={props.isChestDragActive}
+                />
+            ) : (
                 <ChestItem
                     item={item}
                     index={index}
