@@ -5,6 +5,7 @@ import { FaSolidPlus } from 'solid-icons/fa';
 import { createEffect, createMemo, createSignal, For, Show, type Component } from 'solid-js';
 
 import { CHEST_ROW_HEIGHT } from '../constants';
+import { markDroppable } from '../dnd/collision';
 import { ADD_CHEST_ZONE_ID, isChestDragId } from '../dnd/ids';
 import { useApp } from '../stores/app-store';
 import { useDrag } from '../stores/drag-store';
@@ -26,7 +27,10 @@ const AddChestDropZone: Component<{ onAddChest: () => void }> = (props) => {
     return (
         <div style={{ margin: CHEST_MARGIN }}>
             <div
-                ref={droppable.ref}
+                ref={(el) => {
+                    markDroppable(el, ADD_CHEST_ZONE_ID);
+                    droppable.ref(el);
+                }}
                 onClick={props.onAddChest}
                 class={`h-full flex items-center justify-center border-2 border-dashed rounded-2xl p-4 transition-colors cursor-pointer ${showHighlight()
                     ? 'border-blue-500 bg-blue-500/10'
@@ -56,6 +60,7 @@ const DraggableChest: Component<{ chest: ChestData; index: number; gridView: boo
     const isChestDragActive = () => isChestDragId(dndContext?.[0]?.active.draggableId);
 
     const setRef = (el: HTMLElement) => {
+        markDroppable(el, props.chest.id);
         draggable.ref(el);
         droppable.ref(el);
     };

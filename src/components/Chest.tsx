@@ -3,6 +3,7 @@
 // All markup lives in ChestView.tsx (which the drag overlay also renders).
 import { createDroppable, useDragDropContext } from '@thisbeyond/solid-dnd';
 import { createEffect, createMemo, type Component, type JSX } from 'solid-js';
+import { markDroppable } from '../dnd/collision';
 import { chestZoneId } from '../dnd/ids';
 import { useApp } from '../stores/app-store';
 import { useDrag } from '../stores/drag-store';
@@ -110,7 +111,10 @@ const Chest: Component<ChestProps> = (props) => {
             gridView={props.gridView}
             dragHandle={props.dragHandle}
             ring={ring()}
-            dropZoneRef={droppable.ref}
+            dropZoneRef={(el) => {
+                markDroppable(el, chestZoneId(props.chest.id));
+                droppable.ref(el);
+            }}
             renderItem={(item, index, view) => props.liteItems ? (
                 <ChestItemView
                     item={item}

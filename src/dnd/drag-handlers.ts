@@ -12,7 +12,6 @@ import { pointerPosition } from './pointer';
 
 /** De solid-dnd context-actions handlerne skal bruge til scroll-resync */
 export type DndActions = {
-    recomputeLayouts: () => boolean;
     detectCollisions: () => void;
 };
 
@@ -82,10 +81,10 @@ export const createDragHandlers = (app: AppStore, drag: DragStore, dnd: DndActio
     let activeDragId: string | number | null = null;
 
     // Scroll under et drag (auto ELLER manuelt hjul) flytter alt under
-    // cursoren, men solid-dnd cacher layouts ved drag-start og collision koerer
-    // kun ved pointer-BEVAEGELSE - saa hvert scroll-ryk skal resynce layouts,
-    // aktiv droppable og (for kister) omrokerings-geometrien. RAF-throttled:
-    // eet resync pr. frame uanset hvor mange scroll-events der lander.
+    // cursoren, men solid-dnd fyrer kun collision ved pointer-BEVAEGELSE - saa
+    // hvert scroll-ryk skal re-koere hit-testen og (for kister) omrokerings-
+    // geometrien. Begge er DOM-baserede og billige (ingen layout-recompute).
+    // RAF-throttled: eet resync pr. frame uanset antal scroll-events.
     let resyncQueued = false;
     const queueScrollResync = () => {
         if (resyncQueued) return;
@@ -93,7 +92,6 @@ export const createDragHandlers = (app: AppStore, drag: DragStore, dnd: DndActio
         requestAnimationFrame(() => {
             resyncQueued = false;
             if (activeDragId === null) return;
-            dnd.recomputeLayouts();
             dnd.detectCollisions();
             if (isChestDragId(activeDragId)) updateChestReorder(activeDragId);
         });
@@ -168,14 +166,19 @@ export const createDragHandlers = (app: AppStore, drag: DragStore, dnd: DndActio
             return;
         }
 
+        // Een scoped DOM-pass i stedet for et querySelector pr. kiste
+        const rects = new Map<number, DOMRect>();
+        for (const el of grid.querySelectorAll('[data-chest-id]')) {
+            rects.set(Number(el.getAttribute('data-chest-id')), el.getBoundingClientRect());
+        }
+
         let insertionIndex = 0;
         let hoveredIndex = -1;
         for (let i = 0; i < chests.length; i++) {
             const chest = chests[i];
             if (chest.id === draggableId) continue;
-            const el = document.querySelector(`[data-chest-id="${chest.id}"]`);
-            if (!el) continue;
-            const rect = el.getBoundingClientRect();
+            const rect = rects.get(chest.id);
+            if (!rect) continue;
             // Direkte over en anden kiste: tag dens plads med det samme - der
             // skal ikke ventes paa at cursoren krydser kistens midtpunkt
             if (rect.left <= x && x <= rect.right && rect.top <= y && y <= rect.bottom) hoveredIndex = i;

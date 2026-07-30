@@ -5,9 +5,9 @@
 import { pointerPosition } from './pointer';
 
 /** Afstand fra containerkant hvor autoscroll sætter ind */
-const EDGE_ZONE_PX = 80;
+const EDGE_ZONE_PX = 100;
 /** Maksimal rullehastighed i px pr. frame (nås ved selve kanten) */
-const MAX_SPEED_PX = 22;
+const MAX_SPEED_PX = 40;
 
 /**
  * RAF-løkke der kører hele dragget: solid-dnd's sensor fyrer kun events ved
