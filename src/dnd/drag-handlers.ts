@@ -70,6 +70,7 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
     };
 
     const onDragStart: DragEventHandler = ({ draggable }) => {
+        document.body.classList.add('is-dragging'); // global grabbing-cursor (se _layout.scss)
         app.beginUndoBatch(); // ét drag = ét undo-trin, uanset hvor mange actions det udløser
         if (isChestDragId(draggable.id)) return; // chest drags live in solid-dnd's context
         const uid = draggable.id as string;
@@ -203,6 +204,7 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
             if (isChestDragId(draggable.id)) handleChestDrop(draggable.id, droppable.id);
             else handleItemDrop(draggable.id as string, droppable.id);
         } finally {
+            document.body.classList.remove('is-dragging');
             drag.endDrag();
             app.endUndoBatch();
         }
