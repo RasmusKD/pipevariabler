@@ -6,10 +6,17 @@ import { cloneItemWithNewUid } from '../lib/items';
 import type { AppStore } from '../stores/app-store';
 import type { DragStore } from '../stores/drag-store';
 import type { Item } from '../types';
+import { createAutoScroll } from './auto-scroll';
 import { assertNever, classifyDropTarget, isChestDragId } from './ids';
 import { pointerPosition } from './pointer';
 
-export const createDragHandlers = (app: AppStore, drag: DragStore) => {
+/** De solid-dnd context-actions handlerne skal bruge til scroll-resync */
+export type DndActions = {
+    recomputeLayouts: () => boolean;
+    detectCollisions: () => void;
+};
+
+export const createDragHandlers = (app: AppStore, drag: DragStore, dnd: DndActions) => {
     const findChestContaining = (itemUid: string) => {
         for (const tab of app.state.tabs) {
             for (const chest of tab.chests) {
@@ -72,9 +79,34 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
     // Kistens index ved drag-start: uden for grid'et snapper den tilbage
     // hertil, saa et drop paa tabs/sidebar/tomrum annullerer omrokeringen
     let chestDragStartIndex = -1;
+    let activeDragId: string | number | null = null;
+
+    // Scroll under et drag (auto ELLER manuelt hjul) flytter alt under
+    // cursoren, men solid-dnd cacher layouts ved drag-start og collision koerer
+    // kun ved pointer-BEVAEGELSE - saa hvert scroll-ryk skal resynce layouts,
+    // aktiv droppable og (for kister) omrokerings-geometrien. RAF-throttled:
+    // eet resync pr. frame uanset hvor mange scroll-events der lander.
+    let resyncQueued = false;
+    const queueScrollResync = () => {
+        if (resyncQueued) return;
+        resyncQueued = true;
+        requestAnimationFrame(() => {
+            resyncQueued = false;
+            if (activeDragId === null) return;
+            dnd.recomputeLayouts();
+            dnd.detectCollisions();
+            if (isChestDragId(activeDragId)) updateChestReorder(activeDragId);
+        });
+    };
+    const autoScroll = createAutoScroll(queueScrollResync);
 
     const onDragStart: DragEventHandler = ({ draggable }) => {
         document.body.classList.add('is-dragging'); // global grabbing-cursor (se _layout.scss)
+        activeDragId = draggable.id;
+        autoScroll.start();
+        // Capture: scroll-events bobler ikke, men de captures - fanger baade
+        // autoscroll-ryk og brugerens egne hjul-scroll paa alle containere
+        document.addEventListener('scroll', queueScrollResync, { capture: true, passive: true });
         app.beginUndoBatch(); // ét drag = ét undo-trin, uanset hvor mange actions det udløser
         if (isChestDragId(draggable.id)) {
             chestDragStartIndex = app.chests().findIndex((c) => c.id === draggable.id);
@@ -118,14 +150,13 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
      * layouts. The dragged chest's own hidden slot IS the live preview, and
      * undo-batching collapses all moves into one step.
      */
-    const onDragMove: DragEventHandler = ({ draggable }) => {
-        if (!isChestDragId(draggable.id)) return;
+    const updateChestReorder = (draggableId: number) => {
         const grid = document.querySelector('[data-active-grid]');
         if (!grid) return;
         const gridRect = grid.getBoundingClientRect();
         const { x, y } = pointerPosition;
         const chests = app.chests();
-        const fromIndex = chests.findIndex((c) => c.id === draggable.id);
+        const fromIndex = chests.findIndex((c) => c.id === draggableId);
         if (fromIndex === -1) return; // fx efter dwell-skift til en anden tab
 
         // Outside the grid (tab zones, sidebar, blank chrome): snap back to the
@@ -141,7 +172,7 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
         let hoveredIndex = -1;
         for (let i = 0; i < chests.length; i++) {
             const chest = chests[i];
-            if (chest.id === draggable.id) continue;
+            if (chest.id === draggableId) continue;
             const el = document.querySelector(`[data-chest-id="${chest.id}"]`);
             if (!el) continue;
             const rect = el.getBoundingClientRect();
@@ -155,6 +186,10 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
         // Margener og tom grid-plads falder tilbage til laeseordens-taellingen
         const targetIndex = hoveredIndex !== -1 ? hoveredIndex : insertionIndex;
         if (targetIndex !== fromIndex) app.moveChest(fromIndex, targetIndex);
+    };
+
+    const onDragMove: DragEventHandler = ({ draggable }) => {
+        if (isChestDragId(draggable.id)) updateChestReorder(draggable.id);
     };
 
     // Reordering happens live in onDragMove - at drop time only the tab-zone
@@ -227,6 +262,9 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
             else handleItemDrop(draggable.id as string, droppable.id);
         } finally {
             chestDragStartIndex = -1;
+            activeDragId = null;
+            autoScroll.stop();
+            document.removeEventListener('scroll', queueScrollResync, { capture: true });
             document.body.classList.remove('is-dragging');
             drag.endDrag();
             app.endUndoBatch();
