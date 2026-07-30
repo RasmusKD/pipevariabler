@@ -101,9 +101,11 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
 
     /**
      * LIVE chest reordering, driven by cursor GEOMETRY instead of droppable
-     * hover: the insertion index is "how many other chests come before the
-     * cursor in reading order" (rows fully above the cursor, plus chests on
-     * the cursor's row whose center is left of it). This makes first and last
+     * hover: directly over another chest the dragged chest takes its index
+     * immediately; in margins/empty space the insertion index is "how many
+     * other chests come before the cursor in reading order" (rows fully above
+     * the cursor, plus chests on the cursor's row whose center is left of
+     * it). This makes first and last
      * positions trivially reachable (cursor before the first chest / past the
      * last or over empty grid space) and never depends on solid-dnd's cached
      * layouts. The dragged chest's own hidden slot IS the live preview, and
@@ -123,16 +125,23 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
         if (fromIndex === -1) return;
 
         let insertionIndex = 0;
-        for (const chest of chests) {
+        let hoveredIndex = -1;
+        for (let i = 0; i < chests.length; i++) {
+            const chest = chests[i];
             if (chest.id === draggable.id) continue;
             const el = document.querySelector(`[data-chest-id="${chest.id}"]`);
             if (!el) continue;
             const rect = el.getBoundingClientRect();
+            // Direkte over en anden kiste: tag dens plads med det samme - der
+            // skal ikke ventes paa at cursoren krydser kistens midtpunkt
+            if (rect.left <= x && x <= rect.right && rect.top <= y && y <= rect.bottom) hoveredIndex = i;
             if (rect.bottom < y) insertionIndex++; // hele raekken er over cursoren
             else if (rect.top <= y && y <= rect.bottom && rect.left + rect.width / 2 < x) insertionIndex++;
         }
 
-        if (insertionIndex !== fromIndex) app.moveChest(fromIndex, insertionIndex);
+        // Margener og tom grid-plads falder tilbage til laeseordens-taellingen
+        const targetIndex = hoveredIndex !== -1 ? hoveredIndex : insertionIndex;
+        if (targetIndex !== fromIndex) app.moveChest(fromIndex, targetIndex);
     };
 
     // Reordering happens live in onDragMove - at drop time only the tab-zone
