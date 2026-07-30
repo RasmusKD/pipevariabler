@@ -69,10 +69,17 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
         };
     };
 
+    // Kistens index ved drag-start: uden for grid'et snapper den tilbage
+    // hertil, saa et drop paa tabs/sidebar/tomrum annullerer omrokeringen
+    let chestDragStartIndex = -1;
+
     const onDragStart: DragEventHandler = ({ draggable }) => {
         document.body.classList.add('is-dragging'); // global grabbing-cursor (se _layout.scss)
         app.beginUndoBatch(); // ét drag = ét undo-trin, uanset hvor mange actions det udløser
-        if (isChestDragId(draggable.id)) return; // chest drags live in solid-dnd's context
+        if (isChestDragId(draggable.id)) {
+            chestDragStartIndex = app.chests().findIndex((c) => c.id === draggable.id);
+            return; // chest drags live in solid-dnd's context
+        }
         const uid = draggable.id as string;
         const isMultiSelect = app.state.selectedItems.has(uid) && app.state.selectedItems.size > 1;
 
@@ -117,12 +124,18 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
         if (!grid) return;
         const gridRect = grid.getBoundingClientRect();
         const { x, y } = pointerPosition;
-        // Outside the grid (tab zones, sidebar): leave the order as-is
-        if (x < gridRect.left || x > gridRect.right || y < gridRect.top || y > gridRect.bottom) return;
-
         const chests = app.chests();
         const fromIndex = chests.findIndex((c) => c.id === draggable.id);
-        if (fromIndex === -1) return;
+        if (fromIndex === -1) return; // fx efter dwell-skift til en anden tab
+
+        // Outside the grid (tab zones, sidebar, blank chrome): snap back to the
+        // start position, so dropping out there cancels the reorder entirely
+        if (x < gridRect.left || x > gridRect.right || y < gridRect.top || y > gridRect.bottom) {
+            if (chestDragStartIndex !== -1 && fromIndex !== chestDragStartIndex) {
+                app.moveChest(fromIndex, chestDragStartIndex);
+            }
+            return;
+        }
 
         let insertionIndex = 0;
         let hoveredIndex = -1;
@@ -213,6 +226,7 @@ export const createDragHandlers = (app: AppStore, drag: DragStore) => {
             if (isChestDragId(draggable.id)) handleChestDrop(draggable.id, droppable.id);
             else handleItemDrop(draggable.id as string, droppable.id);
         } finally {
+            chestDragStartIndex = -1;
             document.body.classList.remove('is-dragging');
             drag.endDrag();
             app.endUndoBatch();
