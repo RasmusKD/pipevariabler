@@ -80,6 +80,11 @@ export const ChestItemView: Component<ChestItemViewProps> = (props) => {
                 ref={(el) => props.elementRef?.(el)}
                 onPointerDown={props.onPointerDown}
                 onClick={props.onClick}
+                // p-1 i stedet for gap paa grid'et (samme trick som kisternes
+                // margin): hit-arealet daekker ogsaa "mellemrummet", saa
+                // drag-hover altid rammer et item og aldrig falder igennem
+                // til zonen (som ville betyde "indsaet sidst")
+                class="p-1"
                 style={interactionStyle()}
             >
                 <div
@@ -135,12 +140,11 @@ export const ChestItemPlaceholder: Component<{
             </li>
         }
     >
-        <div
-            data-droppable-id={props.anchorId}
-            class="group relative p-1 rounded border bg-neutral-800 border-neutral-700 opacity-50 ring-2 ring-inset ring-blue-500"
-        >
-            <div class="w-8 h-8 mx-auto flex items-center justify-center">
-                <SpriteIcon icon={props.item?.image ?? ''} size={32} />
+        <div data-droppable-id={props.anchorId} class="p-1">
+            <div class="group relative p-1 rounded border bg-neutral-800 border-neutral-700 opacity-50 ring-2 ring-inset ring-blue-500">
+                <div class="w-8 h-8 mx-auto flex items-center justify-center">
+                    <SpriteIcon icon={props.item?.image ?? ''} size={32} />
+                </div>
             </div>
         </div>
     </Show>
@@ -392,7 +396,8 @@ export const ChestCardView: Component<ChestCardViewProps> = (props) => {
                         when={view() === 'grid'}
                         fallback={<ul class="chest-items dark-theme">{itemsWithPlaceholders('list')}</ul>}
                     >
-                        <div class="grid grid-cols-6 gap-2">{itemsWithPlaceholders('grid')}</div>
+                        {/* Intet gap - cellerne baerer p-1 selv (droppable hit-areal) */}
+                        <div class="grid grid-cols-6">{itemsWithPlaceholders('grid')}</div>
                     </Show>
                 </Show>
             </div>
